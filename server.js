@@ -160,6 +160,8 @@ app.get('/api/sessions/:id', wrap(async (req, res) => {
     user_name: s.user_name,
     contact_name: s.contact_name,
     checkin_every_s: s.checkin_every_s,
+    // Length of the current window, so the phone can draw a draining ring.
+    window_s: s.level === 'ARMED' ? s.checkin_every_s : ({ NUDGE: TIMINGS.nudge, ALARM: TIMINGS.alarm, CONTACT: TIMINGS.contact })[s.level] ?? null,
     demo: DEMO,
   });
 }));
