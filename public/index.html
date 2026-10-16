@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Night Out Switch</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
+  <main class="mx-auto max-w-lg px-5 py-16">
+    <p class="text-sm font-semibold uppercase tracking-widest text-violet-400">Night Out Switch</p>
+    <h1 class="mt-3 text-4xl font-bold leading-tight sm:text-5xl">Help starts when you stop answering.</h1>
+    <p class="mt-4 text-lg text-slate-300">It's a dead man's switch, but for a night out.</p>
+
+    <button id="demo" class="mt-10 w-full rounded-2xl bg-violet-500 px-6 py-5 text-xl font-semibold text-white shadow-lg shadow-violet-900/40 hover:bg-violet-400 active:scale-[.99] disabled:opacity-60">
+      Start demo
+    </button>
+    <p class="mt-3 text-center text-sm text-slate-400">Maya goes out, stops answering, and Jordan gets alerted. Demo timings are seconds, not minutes.</p>
+    <p id="demoErr" class="mt-2 hidden text-center text-sm text-red-400"></p>
+
+    <section class="mt-16 rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+      <h2 class="text-lg font-semibold">Arm a real night</h2>
+      <form id="arm" class="mt-4 space-y-4 text-sm">
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">Your name
+            <input name="user_name" required maxlength="40" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base" />
+          </label>
+          <label class="block">Trusted contact
+            <input name="contact_name" required maxlength="40" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base" />
+          </label>
+          <label class="block">Contact phone
+            <input name="contact_phone" type="tel" placeholder="+1…" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base" />
+          </label>
+          <label class="block">Backup phone
+            <input name="backup_phone" type="tel" placeholder="optional" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base" />
+          </label>
+          <label class="block">Check in every (min)
+            <input name="checkin_every_min" type="number" min="1" max="240" value="20" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base" />
+          </label>
+          <label class="block">Home by
+            <input name="home_by" type="time" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base" />
+          </label>
+        </div>
+        <label class="block">PIN to stand down (4–8 digits)
+          <input name="pin" required inputmode="numeric" pattern="\d{4,8}" type="password" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base tracking-widest" />
+        </label>
+        <button class="w-full rounded-xl border border-violet-400 px-4 py-3 text-base font-semibold text-violet-300 hover:bg-violet-500/10">Arm it</button>
+        <p id="armErr" class="hidden text-red-400"></p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const post = (url, body) => fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    }).then(async (r) => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `Request failed (${r.status})`);
+      return data;
+    });
+
+    document.getElementById('demo').addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      try {
+        const { id } = await post('/api/demo');
+        location.href = `/demo.html?id=${id}`;
+      } catch (err) {
+        e.target.disabled = false;
+        const el = document.getElementById('demoErr');
+        el.textContent = err.message;
+        el.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('arm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const body = Object.fromEntries(new FormData(e.target));
+      if (body.home_by) {
+        // "Home by" is a time today, or tomorrow if that time has already passed.
+        const [h, m] = body.home_by.split(':').map(Number);
+        const d = new Date();
+        d.setHours(h, m, 0, 0);
+        if (d < new Date()) d.setDate(d.getDate() + 1);
+        body.home_by = d.toISOString();
+      }
+      try {
+        const { id } = await post('/api/sessions', body);
+        location.href = `/demo.html?id=${id}`;
+      } catch (err) {
+        const el = document.getElementById('armErr');
+        el.textContent = err.message;
+        el.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

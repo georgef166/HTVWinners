@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Night Out Switch · Links</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
+  <main class="mx-auto max-w-3xl px-5 py-12">
+    <a href="/" class="text-sm font-semibold uppercase tracking-widest text-violet-400">Night Out Switch</a>
+    <h1 class="mt-3 text-3xl font-bold">Two phones, one night</h1>
+    <p class="mt-2 text-slate-400">Open both links side by side, then just stop answering on Maya's phone.</p>
+
+    <div class="mt-8 grid gap-6 md:grid-cols-2">
+      <div class="space-y-4">
+        <a id="me" target="_blank" class="block rounded-2xl bg-violet-500 px-6 py-6 text-center text-xl font-semibold text-white hover:bg-violet-400">
+          Open <span class="who">Maya</span>'s phone →
+        </a>
+        <a id="contact" target="_blank" class="block rounded-2xl border-2 border-violet-400 px-6 py-6 text-center text-xl font-semibold text-violet-300 hover:bg-violet-500/10">
+          Contact link →
+        </a>
+        <p id="contactUrl" class="break-all rounded-lg bg-slate-900 p-3 font-mono text-xs text-slate-400"></p>
+      </div>
+      <figure class="rounded-2xl bg-white p-5 text-center">
+        <img id="qr" alt="QR code for the contact link" class="mx-auto aspect-square w-full max-w-xs" />
+        <figcaption class="mt-3 text-base font-semibold text-slate-900">Scan to be <span class="who">Maya</span>'s trusted contact tonight.</figcaption>
+      </figure>
+    </div>
+    <p id="err" class="mt-6 hidden text-red-400"></p>
+  </main>
+
+  <script>
+    const id = new URLSearchParams(location.search).get('id');
+    Promise.all([
+      fetch(`/api/demo/${encodeURIComponent(id)}`).then((r) => r.ok ? r.json() : Promise.reject(new Error('Session not found'))),
+      fetch(`/api/sessions/${encodeURIComponent(id)}`).then((r) => r.json()),
+    ]).then(([links, state]) => {
+      document.getElementById('me').href = links.meUrl;
+      document.getElementById('contact').href = links.contactUrl;
+      document.getElementById('contactUrl').textContent = links.contactUrl;
+      document.getElementById('qr').src = links.qr;
+      document.querySelectorAll('.who').forEach((el) => { el.textContent = state.user_name; });
+    }).catch((err) => {
+      const el = document.getElementById('err');
+      el.textContent = err.message;
+      el.classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
