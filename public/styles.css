@@ -1,0 +1,142 @@
+:root {
+  --ink: #0E1430;
+  --dusk: #18204A;
+  --line: #2C3670;
+  --sodium: #FFB547;
+  --signal: #E5303A;
+  --mint: #5BE3B0;
+  --mist: #AEB5DA;
+  --paper: #F4F5FB;
+}
+
+html { background: var(--ink); }
+body {
+  margin: 0;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  color: var(--paper);
+  background-color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+.display { font-family: 'Unbounded', system-ui, sans-serif; letter-spacing: -0.02em; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* A single streetlight pooling light from above. */
+.streetlight {
+  background:
+    radial-gradient(60% 42% at 50% -8%, rgba(255, 176, 64, 0.30), rgba(255, 150, 40, 0.07) 50%, transparent 72%),
+    var(--ink);
+}
+
+:focus-visible { outline: 3px solid var(--sodium); outline-offset: 3px; border-radius: 12px; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+  min-height: 3.5rem; padding: 0 1.75rem; border-radius: 999px;
+  font-weight: 700; font-size: 1.0625rem; letter-spacing: .005em;
+  transition: transform .12s ease, background-color .15s ease, box-shadow .15s ease;
+  cursor: pointer;
+}
+.btn:active { transform: scale(.98); }
+.btn-sodium { background: var(--sodium); color: var(--ink); box-shadow: 0 10px 40px -12px rgba(255, 181, 71, .7); }
+.btn-sodium:hover { background: #FFC56E; }
+.btn-ghost { border: 1.5px solid var(--line); color: var(--paper); }
+.btn-ghost:hover { border-color: var(--mist); }
+.btn:disabled { opacity: .6; cursor: progress; }
+
+/* ---------- Form fields ---------- */
+.field { display: block; font-size: .9375rem; font-weight: 600; color: var(--mist); }
+.field input {
+  display: block; width: 100%; margin-top: .4rem; padding: .8rem 1rem;
+  font: 500 1.0625rem 'Hanken Grotesk', sans-serif; color: var(--paper);
+  background: var(--ink); border: 1.5px solid var(--line); border-radius: 14px;
+  transition: border-color .15s ease;
+}
+.field input::placeholder { color: #5D6699; }
+.field input:focus { outline: none; border-color: var(--sodium); }
+.field input[type="time"] { color-scheme: dark; }
+
+/* ---------- Route (the escalation ladder as a night-bus line) ---------- */
+.route ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); position: relative; }
+.route .stop { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; }
+/* line segment to the next stop */
+.route .stop:not(:last-child)::after {
+  content: ''; position: absolute; top: var(--dot-mid); left: 50%; width: 100%; height: var(--track);
+  transform: translateY(-50%); background: var(--line); z-index: 0;
+}
+.route .stop.is-past::after { background: var(--sodium); }
+.route .stop-dot {
+  position: relative; z-index: 1; width: var(--dot); height: var(--dot); border-radius: 50%;
+  background: var(--ink); border: var(--track) solid var(--line); box-sizing: border-box;
+}
+.route .stop.is-past .stop-dot { background: var(--sodium); border-color: var(--sodium); }
+.route .stop.is-here .stop-dot { background: var(--paper); border-color: var(--sodium); box-shadow: 0 0 0 6px rgba(255, 181, 71, .25); }
+.route .stop-name { margin-top: .55rem; font-weight: 700; color: var(--mist); }
+.route .is-here .stop-name, .route .is-past .stop-name { color: var(--paper); }
+
+.route-mini { --dot: 14px; --track: 3px; --dot-mid: 7px; }
+.route-mini .stop-name { font-size: .75rem; }
+
+.route-full { --dot: 22px; --track: 4px; --dot-mid: 11px; container-type: inline-size; }
+.route-full .stop { align-items: flex-start; text-align: left; padding-right: 1.25rem; }
+.route-full .stop:not(:last-child)::after { left: 0; width: 100%; }
+.route-full .stop-name { font-family: 'Unbounded', sans-serif; font-weight: 600; font-size: 1.05rem; margin-top: 1rem; color: var(--paper); }
+.route-full .stop-desc { margin-top: .4rem; color: var(--mist); font-size: .975rem; line-height: 1.5; max-width: 22ch; }
+.route-full .stop-dot { border-color: var(--sodium); }
+.route-full .stop:nth-child(1)::after { background: var(--sodium); }
+.route-full .stop:nth-child(2)::after { background: linear-gradient(90deg, var(--sodium), var(--signal)); }
+.route-full .stop:nth-child(n+3)::after { background: var(--signal); }
+.route-full .stop:nth-child(n+3) .stop-dot { border-color: var(--signal); }
+.route-draw .stop:not(:last-child)::after { transform-origin: left center; animation: draw .5s cubic-bezier(.3, .7, .2, 1) both; }
+.route-draw .stop:nth-child(2)::after { animation-delay: .25s; }
+.route-draw .stop:nth-child(3)::after { animation-delay: .5s; }
+.route-draw .stop:nth-child(4)::after { animation-delay: .75s; }
+@keyframes draw { from { transform: translateY(-50%) scaleX(0); } to { transform: translateY(-50%) scaleX(1); } }
+
+@container (max-width: 640px) {
+  .route-full ol { grid-template-columns: 1fr; gap: 1.6rem; }
+  .route-full .stop { display: grid; grid-template-columns: var(--dot) 1fr; column-gap: 1rem; padding: 0; }
+  .route-full .stop-dot { grid-row: 1 / span 2; margin-top: .05rem; }
+  .route-full .stop-name { margin-top: 0; }
+  .route-full .stop-desc { max-width: none; }
+  .route-full .stop:not(:last-child)::after {
+    top: var(--dot); left: calc(var(--dot) / 2); width: var(--track); height: calc(100% + 1.6rem - var(--dot));
+    transform: translateX(-50%);
+  }
+  .route-full .stop:nth-child(2)::after { background: linear-gradient(180deg, var(--sodium), var(--signal)); }
+  .route-draw .stop:not(:last-child)::after { animation: none; }
+}
+
+/* ---------- Countdown ring ---------- */
+.ring-track { stroke: var(--line); }
+.ring-fill { stroke: var(--sodium); stroke-linecap: round; transition: stroke-dashoffset .25s linear; }
+
+/* ---------- Keypad ---------- */
+.keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem; }
+.key {
+  height: 4.25rem; border-radius: 999px; font-family: 'Unbounded', sans-serif; font-weight: 500; font-size: 1.6rem;
+  color: inherit; background: rgba(255, 255, 255, .07); border: 1.5px solid rgba(255, 255, 255, .14);
+  transition: background-color .1s ease, transform .1s ease;
+}
+.key:active { transform: scale(.95); background: rgba(255, 255, 255, .18); }
+.key-text { font-family: 'Hanken Grotesk', sans-serif; font-size: 1rem; font-weight: 700; background: transparent; border-color: transparent; }
+.pin-dots { display: flex; justify-content: center; gap: .9rem; height: 1rem; }
+.pin-dots span { width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid currentColor; opacity: .5; }
+.pin-dots span.on { background: currentColor; opacity: 1; }
+.shake { animation: shake .35s ease; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
+/* ---------- Alarm flash (red/white) ---------- */
+@keyframes flash { 0%, 49% { background-color: var(--signal); color: #fff; } 50%, 100% { background-color: #fff; color: var(--signal); } }
+.flash { animation: flash .6s steps(1) infinite; }
+.flash .key { background: transparent; border-color: currentColor; }
+
+/* Breathing pilot light while armed */
+@keyframes breathe { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+.breathe { animation: breathe 3.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .flash { background-color: var(--signal); color: #fff; }
+}
