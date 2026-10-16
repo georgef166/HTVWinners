@@ -4,7 +4,8 @@ import { hashPin } from './store.js';
 import { summarize } from './summary.js';
 import { sendSms } from './notify.js';
 
-export const DEMO = process.env.DEMO === '1';
+// Demo timings unless DEMO=0, so an empty .env still gives a seconds-long demo.
+export const DEMO = process.env.DEMO !== '0';
 
 export const TIMINGS = DEMO
   ? { interval: 15, nudge: 10, alarm: 15, contact: 30 }
