@@ -6,7 +6,7 @@ const INSTRUCTION = `Write 2–3 short factual sentences for a trusted friend ab
 const TIMEOUT_MS = 3000;
 
 const fmtTime = (d) => new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-const minutesBetween = (a, b) => Math.max(0, Math.round((b - a) / 60000));
+const minutesBetween = (a, b) => Math.max(0, Math.floor((b - a) / 60000));
 
 function facts(session, events, now) {
   const responses = events.filter((e) => e.kind === 'checkin_ack' || e.kind === 'stand_down');
@@ -26,7 +26,7 @@ function facts(session, events, now) {
 
 export function templateSummary(session, events, now = new Date()) {
   const f = facts(session, events, now);
-  const mins = f.minutesSince === 1 ? '1 minute' : `${f.minutesSince} minutes`;
+  const mins = f.minutesSince < 1 ? 'under a minute' : f.minutesSince === 1 ? '1 minute' : `${f.minutesSince} minutes`;
   const parts = [
     `${f.name} armed Night Out Switch at ${fmtTime(f.armedAt)} and last responded at ${fmtTime(f.lastResponse)}; ${f.name} hasn't responded for ${mins}.`,
     f.lastLocationAt
