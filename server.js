@@ -112,6 +112,8 @@ const links = (s) => ({
 
 // ---- API ----
 
+app.get('/api/health', (req, res) => res.json({ app: 'night-out-switch', demo: DEMO, store: store.kind }));
+
 app.post('/api/demo', wrap(async (req, res) => {
   const s = await arm({
     user_name: 'Maya',

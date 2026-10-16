@@ -18,8 +18,8 @@ function fail(msg) {
 
 async function up(url) {
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(1000) });
-    return r.ok;
+    const r = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(1000) });
+    return r.ok && (await r.json()).app === 'night-out-switch';
   } catch {
     return false;
   }
