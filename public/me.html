@@ -3,82 +3,129 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#020617" />
+  <meta name="theme-color" content="#0E1430" />
   <title>Night Out Switch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Unbounded:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/styles.css" />
   <style>
-    @keyframes flash { 0%, 49% { background: #dc2626; color: #fff; } 50%, 100% { background: #fff; color: #dc2626; } }
-    .flash { animation: flash .6s steps(1) infinite; }
-    .flash .key { border-color: currentColor; color: inherit; background: transparent; }
-    .key { -webkit-tap-highlight-color: transparent; }
+    body { transition: background-color .4s ease; user-select: none; }
+    body.state-nudge {
+      background: radial-gradient(70% 50% at 50% 45%, rgba(255, 181, 71, .32), rgba(255, 181, 71, .06) 60%, transparent 80%), #1A1834;
+    }
+    body.state-contact {
+      background: radial-gradient(80% 50% at 50% -5%, rgba(229, 48, 58, .45), transparent 70%), #240F26;
+    }
+    body.state-resolved { background: radial-gradient(60% 40% at 50% -5%, rgba(91, 227, 176, .18), transparent 70%), var(--ink); }
+    .ok-button { box-shadow: 0 30px 90px -20px rgba(255, 181, 71, .8); }
+    .flash header * { color: inherit; border-color: currentColor; }
+    .state-contact .route .stop.is-here .stop-dot { border-color: var(--signal); box-shadow: 0 0 0 6px rgba(229, 48, 58, .3); }
+    .state-contact .route .stop.is-past::after, .state-contact .route .stop.is-past .stop-dot { background: var(--signal); border-color: var(--signal); }
   </style>
 </head>
-<body class="min-h-[100dvh] bg-slate-950 text-slate-100 antialiased select-none">
+<body class="streetlight min-h-[100dvh]">
 
-  <!-- Unlocks audio: browsers only allow sound after a user gesture. -->
-  <button id="unlock" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-slate-950/95 px-8 text-center">
-    <span class="flex h-24 w-24 items-center justify-center rounded-full bg-violet-500 text-4xl">🔔</span>
-    <span class="text-3xl font-bold">Tap to arm alerts</span>
-    <span class="text-slate-400">This lets your phone sound an alarm if you stop answering.</span>
+  <!-- Browsers only allow sound after a tap, so ask for one up front. -->
+  <button id="unlock" class="streetlight fixed inset-0 z-50 flex flex-col items-center justify-center px-8 text-center">
+    <span class="breathe flex h-28 w-28 items-center justify-center rounded-full bg-sodium/15 text-sodium" id="unlockIcon"></span>
+    <span class="display mt-8 text-3xl font-bold">Tap to arm alerts</span>
+    <span class="mt-3 max-w-xs text-lg text-mist">This lets your phone sound an alarm if you stop answering.</span>
   </button>
 
-  <main class="mx-auto flex min-h-[100dvh] max-w-md flex-col px-6 py-10">
+  <div class="mx-auto flex min-h-[100dvh] max-w-md flex-col px-6 pb-8 pt-5">
+    <header class="flex items-center justify-between">
+      <span class="flex items-center gap-2.5 text-sodium" id="brand">
+        <span id="logo"></span>
+        <span class="display text-[13px] font-semibold text-paper">Night Out Switch</span>
+      </span>
+      <span class="chip rounded-full border border-white/15 px-3 py-1.5 text-[13px] font-semibold text-mist">
+        Contact: <span class="contact-name text-paper">…</span>
+      </span>
+    </header>
 
-    <!-- ARMED -->
-    <section data-view="ARMED" class="view hidden flex-1 flex-col">
-      <p class="text-sm font-semibold uppercase tracking-widest text-violet-400">Night Out Switch</p>
-      <div class="flex flex-1 flex-col items-center justify-center text-center">
-        <span class="relative flex h-5 w-5"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-60"></span><span class="relative inline-flex h-5 w-5 rounded-full bg-violet-500"></span></span>
-        <h1 class="mt-6 text-6xl font-bold">Armed</h1>
-        <p class="mt-6 text-slate-400">Next check-in in</p>
-        <p id="countdown" class="font-mono text-6xl font-semibold tabular-nums">–:––</p>
-        <p class="mt-8 text-lg text-slate-300">If you stop answering, <b class="contact-name text-white">your contact</b> gets alerted.</p>
-      </div>
-      <button id="disarmBtn" class="w-full rounded-2xl border border-slate-700 px-6 py-5 text-lg font-semibold hover:bg-slate-900">Disarm, I'm home</button>
-      <button id="earlyOk" class="mt-3 w-full py-3 text-sm text-slate-400 underline-offset-4 hover:underline">I'm fine, reset the timer</button>
-    </section>
+    <main class="flex flex-1 flex-col">
 
-    <!-- NUDGE -->
-    <section data-view="NUDGE" class="view hidden flex-1 flex-col items-center justify-center text-center">
-      <h1 class="text-5xl font-bold">Still good?</h1>
-      <p class="mt-3 text-slate-400">Tap within <span id="nudgeLeft" class="tabular-nums">10</span>s</p>
-      <button id="okBtn" class="mt-10 flex aspect-square w-full max-w-xs items-center justify-center rounded-full bg-violet-500 text-5xl font-bold text-white shadow-2xl shadow-violet-900/60 active:scale-95">I'm OK</button>
-    </section>
+      <!-- ARMED -->
+      <section data-view="ARMED" class="view hidden flex-1 flex-col">
+        <div class="flex flex-1 flex-col items-center justify-center py-8">
+          <div class="relative aspect-square w-full max-w-[300px]">
+            <svg viewBox="0 0 300 300" class="absolute inset-0 -rotate-90" aria-hidden="true">
+              <circle cx="150" cy="150" r="136" fill="none" stroke-width="8" class="ring-track" />
+              <circle cx="150" cy="150" r="136" fill="none" stroke-width="8" class="ring-fill" data-ring />
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span class="breathe h-3 w-3 rounded-full bg-sodium shadow-[0_0_18px_4px_rgba(255,181,71,.6)]"></span>
+              <span class="display tnum mt-5 text-[4.25rem] font-semibold leading-none" data-clock>–:––</span>
+              <span class="mt-3 text-[15px] font-semibold text-mist">until your next check-in</span>
+            </div>
+          </div>
+          <h1 class="display mt-10 text-3xl font-bold">You're armed</h1>
+          <p class="mt-3 max-w-[30ch] text-center text-lg leading-snug text-mist">If you go quiet, <span class="contact-name text-paper">your contact</span> hears about it.</p>
+        </div>
+        <div class="route-slot mb-8"></div>
+        <button id="disarmBtn" class="btn btn-ghost w-full">Disarm, I'm home</button>
+        <button id="earlyOk" class="mt-2 min-h-[3rem] w-full text-[15px] font-semibold text-mist hover:text-paper">I'm fine, reset the timer</button>
+      </section>
 
-    <!-- ALARM -->
-    <section data-view="ALARM" class="view hidden flex-1 flex-col items-center justify-center text-center">
-      <h1 class="text-5xl font-black uppercase">Tap if you're OK</h1>
-      <p class="mt-2 text-lg font-semibold">Enter your PIN. <span class="contact-name">Your contact</span> is alerted in <span id="alarmLeft" class="tabular-nums">15</span>s.</p>
-      <div class="keypad mt-6 w-full max-w-xs"></div>
-    </section>
+      <!-- NUDGE -->
+      <section data-view="NUDGE" class="view hidden flex-1 flex-col items-center justify-center pt-10 text-center">
+        <h1 class="display text-5xl font-extrabold">Still good?</h1>
+        <p class="mt-4 text-lg text-mist">Tap within <b class="tnum text-paper" data-secs>10</b> seconds or your phone sounds an alarm.</p>
+        <div class="relative mt-10 aspect-square w-full max-w-[300px]">
+          <svg viewBox="0 0 320 320" class="absolute inset-0 -rotate-90" aria-hidden="true">
+            <circle cx="160" cy="160" r="152" fill="none" stroke-width="6" class="ring-track" />
+            <circle cx="160" cy="160" r="152" fill="none" stroke-width="6" class="ring-fill" data-ring />
+          </svg>
+          <button id="okBtn" class="ok-button display absolute inset-[26px] rounded-full bg-sodium text-5xl font-extrabold text-ink transition active:scale-95">I'm OK</button>
+        </div>
+        <div class="route-slot mt-auto w-full pt-10"></div>
+      </section>
 
-    <!-- CONTACT / WIDER -->
-    <section data-view="CONTACT" class="view hidden flex-1 flex-col items-center justify-center text-center">
-      <span id="contactIcon" class="text-5xl">📣</span>
-      <h1 id="contactHeadline" class="mt-4 text-4xl font-bold">Your contact has been alerted</h1>
-      <p id="contactSub" class="mt-3 text-slate-300">They can see your last location. Enter your PIN if you're OK.</p>
-      <div class="keypad mt-8 w-full max-w-xs"></div>
-    </section>
+      <!-- ALARM: flashing red/white, PIN to stand down -->
+      <section data-view="ALARM" class="view hidden flex-1 flex-col items-center justify-center text-center">
+        <h1 class="display text-[2.6rem] font-extrabold leading-[1.05]">Enter your PIN if you're OK</h1>
+        <p class="mt-4 text-lg font-bold"><span class="contact-name">Your contact</span> is alerted in <span class="tnum" data-secs>15</span>s</p>
+        <div class="keypad mt-8 w-full max-w-[300px]"></div>
+      </section>
 
-    <!-- RESOLVED -->
-    <section data-view="RESOLVED" class="view hidden flex-1 flex-col items-center justify-center text-center">
-      <span class="text-5xl">🌙</span>
-      <h1 class="mt-4 text-4xl font-bold">Night ended</h1>
-      <p class="mt-3 text-slate-400">The switch is off. Get home safe.</p>
-      <a href="/" class="mt-10 text-violet-400 underline underline-offset-4">Start over</a>
-    </section>
+      <!-- CONTACT / WIDER -->
+      <section data-view="CONTACT" class="view hidden flex-1 flex-col">
+        <div class="flex flex-1 flex-col items-center justify-center py-6 text-center">
+          <span id="contactBadge" class="flex h-16 w-16 items-center justify-center rounded-full bg-signal/20 text-signal">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+          </span>
+          <h1 id="contactHeadline" class="display mt-6 text-[2.1rem] font-bold leading-tight">Your contact has been alerted</h1>
+          <p id="contactSub" class="mt-3 max-w-[32ch] text-lg text-mist">They can see your last location.</p>
+          <div class="keypad mt-8 w-full max-w-[280px]"></div>
+        </div>
+        <div class="route-slot"></div>
+      </section>
 
-    <p id="err" class="mt-4 hidden text-center text-sm text-red-400"></p>
-  </main>
+      <!-- RESOLVED -->
+      <section data-view="RESOLVED" class="view hidden flex-1 flex-col items-center justify-center text-center">
+        <span class="flex h-20 w-20 items-center justify-center rounded-full bg-mint/15 text-mint">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg>
+        </span>
+        <h1 class="display mt-7 text-4xl font-bold">Night's over</h1>
+        <p class="mt-3 text-lg text-mist">The switch is off. Nobody will be alerted.</p>
+        <a href="/" class="btn btn-ghost mt-10">Back to the start</a>
+      </section>
+
+      <p id="err" class="mt-4 hidden text-center text-[15px] font-semibold text-signal" role="alert"></p>
+    </main>
+  </div>
 
   <!-- PIN sheet for disarm -->
-  <div id="disarmSheet" class="fixed inset-0 z-40 hidden items-end justify-center bg-black/70 sm:items-center">
-    <div class="w-full max-w-md rounded-t-3xl bg-slate-900 px-6 pb-8 pt-6 sm:rounded-3xl">
+  <div id="disarmSheet" class="fixed inset-0 z-40 hidden items-end justify-center bg-ink/80 backdrop-blur-sm sm:items-center">
+    <div class="w-full max-w-md rounded-t-[32px] border border-line bg-dusk px-6 pb-10 pt-6 sm:rounded-[32px]">
       <div class="flex items-center justify-between">
-        <h2 class="text-xl font-semibold">Enter PIN to disarm</h2>
-        <button id="disarmCancel" class="px-2 py-1 text-slate-400">Cancel</button>
+        <h2 class="display text-xl font-semibold">Enter your PIN to disarm</h2>
+        <button id="disarmCancel" class="min-h-[2.75rem] px-2 text-[15px] font-semibold text-mist hover:text-paper">Cancel</button>
       </div>
-      <div class="keypad mt-6"></div>
+      <div class="keypad mx-auto mt-8 max-w-[300px]"></div>
     </div>
   </div>
 
@@ -94,10 +141,14 @@
       return data;
     });
 
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+    const showErr = (msg) => { const el = $('#err'); el.textContent = msg || ''; el.classList.toggle('hidden', !msg); };
+    $('#logo').innerHTML = NOS.logo('sm');
+    $('#unlockIcon').innerHTML = NOS.logo().replace('width="38"', 'width="56"').replace(/height="[\d.]+"/, 'height="33"');
+
     let state = null;
     let deadline = null; // local timestamp of the next server deadline
-    const $ = (sel) => document.querySelector(sel);
-    const showErr = (msg) => { const el = $('#err'); el.textContent = msg || ''; el.classList.toggle('hidden', !msg); };
 
     // ---- Audio ----
     let audio = null;
@@ -134,28 +185,34 @@
     function keypad(container, onSubmit) {
       let pin = '';
       container.innerHTML = `
-        <div class="dots mb-5 flex h-6 justify-center gap-3"></div>
-        <div class="grid grid-cols-3 gap-3">
-          ${[1,2,3,4,5,6,7,8,9].map((d) => `<button class="key h-16 rounded-2xl border border-slate-700 bg-slate-900 text-2xl font-semibold" data-d="${d}">${d}</button>`).join('')}
-          <button class="key h-16 rounded-2xl text-base font-semibold" data-act="clear">Clear</button>
-          <button class="key h-16 rounded-2xl border border-slate-700 bg-slate-900 text-2xl font-semibold" data-d="0">0</button>
-          <button class="key h-16 rounded-2xl text-base font-semibold" data-act="ok">OK</button>
+        <div class="pin-dots" aria-live="polite"></div>
+        <div class="keypad-grid mt-7">
+          ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => `<button class="key" data-d="${d}" aria-label="${d}">${d}</button>`).join('')}
+          <button class="key key-text" data-act="clear">Clear</button>
+          <button class="key" data-d="0" aria-label="0">0</button>
+          <button class="key key-text" data-act="ok">Done</button>
         </div>
-        <p class="pin-err mt-3 h-5 text-sm font-semibold"></p>`;
-      const dots = container.querySelector('.dots');
+        <p class="pin-err mt-4 h-5 text-[15px] font-bold" role="alert"></p>`;
+      const dots = container.querySelector('.pin-dots');
       const errEl = container.querySelector('.pin-err');
       const render = () => {
-        dots.innerHTML = pin.split('').map(() => '<span class="h-4 w-4 rounded-full bg-current"></span>').join('')
-          || '<span class="text-sm opacity-60">PIN</span>';
+        const slots = Math.max(4, pin.length);
+        dots.innerHTML = Array.from({ length: slots }, (_, i) => `<span class="${i < pin.length ? 'on' : ''}"></span>`).join('');
+        dots.setAttribute('aria-label', `${pin.length} digits entered`);
       };
       const submit = async () => {
-        if (pin.length < 4) return;
+        if (pin.length < 4) { errEl.textContent = 'Your PIN is at least 4 digits'; return; }
         const p = pin; pin = ''; render();
         try { await onSubmit(p); errEl.textContent = ''; }
-        catch (err) { errEl.textContent = err.status === 403 ? 'Wrong PIN, try again' : err.message; vibrate(200); }
+        catch (err) {
+          errEl.textContent = err.status === 403 ? 'That PIN didn’t match. Try again.' : err.message;
+          dots.classList.remove('shake'); void dots.offsetWidth; dots.classList.add('shake');
+          vibrate(200);
+        }
       };
       container.addEventListener('click', (e) => {
         const b = e.target.closest('button'); if (!b) return;
+        errEl.textContent = '';
         if (b.dataset.d) { if (pin.length < 8) pin += b.dataset.d; }
         else if (b.dataset.act === 'clear') pin = '';
         else if (b.dataset.act === 'ok') return submit();
@@ -164,15 +221,18 @@
       render();
     }
 
-    const standDown = async (pin) => { applyState(await api('/stand-down', { pin }).then(() => api(''))); };
-    document.querySelectorAll('main .keypad').forEach((el) => keypad(el, standDown));
+    const standDown = async (pin) => { await api('/stand-down', { pin }); applyState(await api('')); };
+    $$('main .keypad').forEach((el) => keypad(el, standDown));
     keypad($('#disarmSheet .keypad'), async (pin) => {
       await api('/disarm', { pin });
-      $('#disarmSheet').classList.replace('flex', 'hidden');
+      closeSheet();
       applyState(await api(''));
     });
-    $('#disarmBtn').addEventListener('click', () => $('#disarmSheet').classList.replace('hidden', 'flex'));
-    $('#disarmCancel').addEventListener('click', () => $('#disarmSheet').classList.replace('flex', 'hidden'));
+    const openSheet = () => $('#disarmSheet').classList.replace('hidden', 'flex');
+    const closeSheet = () => $('#disarmSheet').classList.replace('flex', 'hidden');
+    $('#disarmBtn').addEventListener('click', openSheet);
+    $('#disarmCancel').addEventListener('click', closeSheet);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
 
     const ack = async () => {
       try { await api('/checkin-ack', {}); applyState(await api('')); }
@@ -182,15 +242,20 @@
     $('#earlyOk').addEventListener('click', ack);
 
     // ---- Rendering ----
+    const RING_C = { 136: 2 * Math.PI * 136, 152: 2 * Math.PI * 152 };
     const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    let lastRouteLevel = null;
+    const ICON_ALERTED = $('#contactBadge').innerHTML;
+    const ICON_ON_WAY = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 19-9-9 19-2-8-8-2Z"/></svg>';
+
     function applyState(next) {
       const prev = state?.level;
       state = next;
       deadline = next.seconds_left == null ? null : Date.now() + next.seconds_left * 1000;
-      document.querySelectorAll('.contact-name').forEach((el) => { el.textContent = next.contact_name; });
+      $$('.contact-name').forEach((el) => { el.textContent = next.contact_name; });
 
       const view = next.level === 'WIDER' ? 'CONTACT' : next.level;
-      document.querySelectorAll('.view').forEach((el) => {
+      $$('.view').forEach((el) => {
         const on = el.dataset.view === view;
         el.classList.toggle('hidden', !on);
         el.classList.toggle('flex', on);
@@ -198,33 +263,52 @@
 
       const alarm = next.level === 'ALARM';
       document.body.classList.toggle('flash', alarm);
+      document.body.classList.toggle('streetlight', view === 'ARMED');
+      document.body.classList.toggle('state-nudge', view === 'NUDGE');
+      document.body.classList.toggle('state-contact', view === 'CONTACT');
+      document.body.classList.toggle('state-resolved', view === 'RESOLVED');
+      $('#brand').classList.toggle('text-sodium', !alarm);
       setAlarmSound(alarm);
 
+      if (next.level !== lastRouteLevel) {
+        $$('.route-slot').forEach((el) => NOS.route(el, { level: next.level, variant: 'mini' }));
+        lastRouteLevel = next.level;
+      }
+
       if (view === 'CONTACT') {
-        $('#contactIcon').textContent = next.contact_acked ? '🚗' : '📣';
-        $('#contactHeadline').textContent = next.contact_acked
-          ? `${next.contact_name} is on the way`
-          : `${next.contact_name} has been alerted`;
-        $('#contactSub').textContent = next.level === 'WIDER' && !next.contact_acked
-          ? 'Your backup contact has been alerted too. Enter your PIN if you\'re OK.'
-          : `${next.contact_name} can see your last location. Enter your PIN if you're OK.`;
+        const onWay = next.contact_acked;
+        $('#contactBadge').className = `flex h-16 w-16 items-center justify-center rounded-full ${onWay ? 'bg-mint/15 text-mint' : 'bg-signal/20 text-signal'}`;
+        $('#contactBadge').innerHTML = onWay ? ICON_ON_WAY : ICON_ALERTED;
+        $('#contactHeadline').textContent = onWay ? `${next.contact_name} is on the way` : `${next.contact_name} has been alerted`;
+        $('#contactSub').textContent = next.level === 'WIDER' && !onWay
+          ? 'Your backup contact has the link too. Enter your PIN if you’re OK.'
+          : onWay
+            ? `${next.contact_name} can see your last location. Enter your PIN if you’re OK.`
+            : `${next.contact_name} can see your last location and is being asked to check on you.`;
       }
       if (next.level === 'NUDGE' && prev !== 'NUDGE') { vibrate([400, 150, 400, 150, 400]); beep(660, 300); }
       if (next.level === 'RESOLVED') { clearInterval(pollTimer); clearInterval(beatTimer); }
       renderClock();
     }
+
     function renderClock() {
       if (!state) return;
-      const left = deadline == null ? 0 : Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-      $('#countdown').textContent = fmt(left);
-      $('#nudgeLeft').textContent = left;
-      $('#alarmLeft').textContent = left;
+      const leftMs = deadline == null ? 0 : Math.max(0, deadline - Date.now());
+      const left = Math.ceil(leftMs / 1000);
+      $$('[data-clock]').forEach((el) => { el.textContent = fmt(left); });
+      $$('[data-secs]').forEach((el) => { el.textContent = left; });
+      const frac = state.window_s ? Math.min(1, leftMs / 1000 / state.window_s) : 0;
+      $$('[data-ring]').forEach((el) => {
+        const C = RING_C[el.getAttribute('r')];
+        el.style.strokeDasharray = C;
+        el.style.strokeDashoffset = C * (1 - frac);
+      });
     }
     setInterval(renderClock, 250);
 
     async function poll() {
       try { applyState(await api('')); showErr(''); }
-      catch (err) { showErr(err.status === 404 ? 'This session doesn\'t exist.' : 'Connection lost, retrying…'); }
+      catch (err) { showErr(err.status === 404 ? 'This session doesn’t exist. Start a new one from the home page.' : 'Lost the connection. Retrying…'); }
     }
 
     // ---- Heartbeats: location + battery every 10 s ----
