@@ -1,5 +1,5 @@
 // Tailwind is compiled ahead of time into public/tw.css (npm run build:css), so pages don't run a JIT compiler.
-// Colors are CSS-variable tokens (see public/styles.css): light theme by default, .theme-dark for the stage.
+// Colors are CSS-variable tokens (see public/styles.css): dark Midnight theme.
 module.exports = {
   content: ['./public/**/*.{html,js}'],
   theme: {
@@ -13,10 +13,13 @@ module.exports = {
         mint: 'rgb(var(--mint-rgb) / <alpha-value>)',     // OK green
         mist: 'rgb(var(--mist-rgb) / <alpha-value>)',     // secondary text
         paper: 'rgb(var(--paper-rgb) / <alpha-value>)',   // primary text
+        amber: 'rgb(var(--amber-rgb) / <alpha-value>)',   // check-in due
+        gold: 'rgb(var(--gold-rgb) / <alpha-value>)',     // brand sand
       },
       fontFamily: {
-        display: ['Geist', 'Inter', 'system-ui', 'sans-serif'],
-        sans: ['Geist', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'Menlo', 'monospace'],
       },
     },
   },

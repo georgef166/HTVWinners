@@ -9,12 +9,10 @@ window.NOS = {
     { level: 'WIDER', name: 'Wider', desc: 'If they don’t confirm they’re on it, your backup gets the link too.' },
   ],
 
-  logo(size = 'md') {
-    const w = size === 'sm' ? 30 : 38;
-    return `<svg width="${w}" height="${w * 0.58}" viewBox="0 0 38 22" aria-hidden="true">
-      <rect x="1.5" y="1.5" width="35" height="19" rx="9.5" fill="none" stroke="currentColor" stroke-width="2.5"/>
-      <circle class="logo-knob" cx="27" cy="11" r="5.5" fill="currentColor"/>
-    </svg>`;
+  // Tenshi wings and halo (asset exported from the Figma design). `w` overrides the width in px.
+  logo(size = 'md', w) {
+    const width = w || (size === 'sm' ? 44 : 64);
+    return `<img src="/assets/logo-mark.svg" width="${width}" height="${(width * 68.9 / 140).toFixed(1)}" alt="" aria-hidden="true" style="display:block;overflow:visible">`;
   },
 
   // The escalation ladder drawn as a night-bus route. variant: 'full' (with descriptions) or 'mini'.
