@@ -94,7 +94,7 @@ async function main() {
   const ack = await call('POST', `/api/contact/${demo.contactToken}/ack`);
   if (ack.status !== 200 || !ack.data.contact_acked) fail('contact ack failed');
   console.log('✓ contact acked, waiting past the CONTACT window…');
-  await sleep(34_000);
+  await sleep(19_000); // past the 15 s demo CONTACT window
   const after = await level(demo.id);
   if (after !== 'CONTACT') fail(`expected CONTACT after ack, got ${after}`);
   console.log('✓ still CONTACT (did not climb to WIDER)');

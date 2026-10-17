@@ -5,7 +5,7 @@
 const DEMO = process.env.DEMO !== '0';
 
 const T = DEMO
-  ? { readingFreshMs: 60e3, batteryHorizonMs: 3 * 60e3, minBatterySpanMs: 15e3, slowReplyMs: 5e3, quickReplyMs: 3e3, offlineMs: 25e3, minIntervalS: 8 }
+  ? { readingFreshMs: 60e3, batteryHorizonMs: 3 * 60e3, minBatterySpanMs: 15e3, slowReplyMs: 3.5e3, quickReplyMs: 2e3, offlineMs: 25e3, minIntervalS: 5 }
   : { readingFreshMs: 5 * 60e3, batteryHorizonMs: 60 * 60e3, minBatterySpanMs: 10 * 60e3, slowReplyMs: 60e3, quickReplyMs: 15e3, offlineMs: 3 * 60e3, minIntervalS: 5 * 60 };
 
 const COLD_C = 5; // at or below this, being outside for long is a real risk

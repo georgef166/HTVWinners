@@ -126,7 +126,7 @@ app.post('/api/demo', wrap(async (req, res) => {
     contact_phone: PLACEHOLDER_PHONE,
     backup_phone: '+15555550199',
     pin_hash: hashPin('1234'),
-    checkin_every_s: 15,
+    checkin_every_s: TIMINGS.interval,
     home_by: null,
   });
   res.json(links(s));
@@ -197,7 +197,7 @@ app.get('/api/sessions/:id', wrap(async (req, res) => {
 
 // The signal trace: her night as a time series (responses, phone heartbeats, level changes).
 // No location in here, just timing.
-const TRACE_WINDOW_S = DEMO ? 120 : 45 * 60;
+const TRACE_WINDOW_S = DEMO ? 60 : 45 * 60;
 const TRACE_KINDS = ['heartbeat', 'checkin_sent', 'checkin_ack', 'level_change', 'contact_ack', 'stand_down', 'resolved', 'device'];
 async function traceFor(s) {
   const now = new Date();
