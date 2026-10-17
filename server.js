@@ -415,7 +415,7 @@ app.get('/api/switch/state', wrap(async (req, res) => {
   const window = s.level === 'ARMED'
     ? Math.max(1, Math.round((new Date(s.next_checkin_at) - since) / 1000))
     : ({ NUDGE: TIMINGS.nudge, ALARM: TIMINGS.alarm, CONTACT: TIMINGS.contact })[s.level] ?? 0;
-  res.send(`L=${s.level};S=${secondsLeft(s) ?? 0};W=${window};A=${s.contact_acked ? 1 : 0};O=${outlook.level};C=${s.contact_name.replace(/[;=\n]/g, '')}\n`);
+  res.send(`L=${s.level};S=${secondsLeft(s) ?? 0};W=${window};A=${s.contact_acked ? 1 : 0};O=${outlook.level};C=${s.contact_name.replace(/[;=\n]/g, '')};U=${PUBLIC_URL}/me.html?id=${s.id}\n`);  // U: written to the Switch's NFC tag
 }));
 
 app.post('/api/switch/event', wrap(async (req, res) => {
