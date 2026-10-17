@@ -63,3 +63,12 @@
 - Temperature at or below 5°C within the last minute (demo) / 5 min (real) adds a "cold" signal (weight 1). Pressure is logged but not used for prediction yet (too noisy for fall detection without more work).
 - `POST /api/demo/:id/cold` toggles a fake −2°C reading for demos. `npm run switch-sim` speaks the same protocol from the keyboard or piped commands.
 - Ideas not built: pairing several Switches to sessions (e.g. by tapping the Switch's NFC tag on the phone), a "panic" long-press that skips straight to CONTACT, using pressure changes for fall detection, running the Switch's own countdown offline if WiFi drops.
+
+## Demo wow pass + Vultr / Tiger Data
+
+- Landing intro (about 3.7 s, skippable, off with reduced motion): check-ins drawn as heartbeat spikes, then a red flatline races to "Jordan" and a shockwave reveals the page. One rAF clock drives it so lines and labels never drift.
+- `stage.html`: both phones in iframes with `?stage=1` (they borrow the stage's AudioContext, unlocked by its Start click), a status line, the signal trace, the route, a live event feed, and packets on the wires driven by real events (heartbeats, check-ins, the alert to Jordan, acks).
+- Signal trace (`public/trace.js`, `GET /api/sessions/:id/trace`, and `trace` on the contact API while alerting): calm wave while answering, spikes on responses, flat red when silent, phone heartbeat dots underneath. No location in the trace.
+- Jordan's takeover: white shockwave, headline slam, OSM tiles darkened with a CSS filter (CARTO dark tiles now want an API key), map flies from city level to street level, radar rings on the pin.
+- Summary providers: self-hosted OpenAI-compatible model (`LLM_BASE_URL`) → Gemini → template. The source is logged as a `summary` event and shown on Jordan's page.
+- Tiger Data: extension, hypertable, compression (1 day), retention (7 days), continuous aggregate `heartbeat_1m` used for the 45-minute real-night trace. Tested on plain Postgres 14 (features skipped cleanly, smoke passes); the TimescaleDB-only SQL has not been run against a real Timescale instance yet.
