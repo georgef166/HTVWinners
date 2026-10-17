@@ -36,14 +36,32 @@ CREATE TABLE IF NOT EXISTS events (
   detail jsonb
 );
 CREATE INDEX IF NOT EXISTS events_session_time ON events (session_id, time DESC);
+-- Signals over time (movement, sound level, battery, temperature, reply time, distress score).
+-- Long format: one row per reading, which is what Grafana and continuous aggregates like best.
+CREATE TABLE IF NOT EXISTS metrics (
+  time timestamptz NOT NULL,
+  session_id uuid NOT NULL,
+  metric text NOT NULL,
+  value double precision NOT NULL,
+  source text
+);
+CREATE INDEX IF NOT EXISTS metrics_session_metric_time ON metrics (session_id, metric, time DESC);
 `;
 
 function memoryStore() {
   const sessions = new Map();
   const events = [];
+  const metrics = [];
   return {
     kind: 'memory',
     async init() {},
+    async addMetrics(sessionId, rows) {
+      const now = new Date();
+      for (const r of rows) metrics.push({ time: r.time || now, session_id: sessionId, metric: r.metric, value: r.value, source: r.source || null });
+    },
+    async metricsSince(sessionId, since) {
+      return metrics.filter((m) => m.session_id === sessionId && m.time >= since).sort((a, b) => a.time - b.time);
+    },
     async createSession(s) {
       sessions.set(s.id, { ...s });
       return { ...s };
@@ -125,6 +143,31 @@ async function pgStore(url) {
         FROM events WHERE kind = 'heartbeat' GROUP BY session_id, bucket WITH NO DATA`);
       await tryQ(`SELECT add_continuous_aggregate_policy('heartbeat_1m',
         start_offset => INTERVAL '2 hours', end_offset => INTERVAL '1 minute', schedule_interval => INTERVAL '1 minute', if_not_exists => TRUE)`);
+      // Signals: hypertable, compression per session+metric, the same 7-day retention, and a per-minute rollup
+      await tryQ(`SELECT create_hypertable('metrics', 'time', if_not_exists => TRUE, migrate_data => TRUE)`);
+      await tryQ(`ALTER TABLE metrics SET (timescaledb.compress, timescaledb.compress_segmentby = 'session_id, metric', timescaledb.compress_orderby = 'time DESC')`);
+      await tryQ(`SELECT add_compression_policy('metrics', INTERVAL '1 day', if_not_exists => TRUE)`);
+      await tryQ(`SELECT add_retention_policy('metrics', INTERVAL '7 days', if_not_exists => TRUE)`);
+      await tryQ(`CREATE MATERIALIZED VIEW IF NOT EXISTS metrics_1m
+        WITH (timescaledb.continuous, timescaledb.materialized_only = false) AS
+        SELECT session_id, metric, time_bucket('1 minute', time) AS bucket,
+               avg(value) AS avg, min(value) AS min, max(value) AS max, count(*) AS n
+        FROM metrics GROUP BY session_id, metric, bucket WITH NO DATA`);
+      await tryQ(`SELECT add_continuous_aggregate_policy('metrics_1m',
+        start_offset => INTERVAL '2 hours', end_offset => INTERVAL '30 seconds', schedule_interval => INTERVAL '30 seconds', if_not_exists => TRUE)`);
+    },
+    async addMetrics(sessionId, rows) {
+      if (!rows.length) return;
+      const vals = [];
+      const ph = rows.map((r, i) => {
+        vals.push(r.time || new Date(), sessionId, r.metric, r.value, r.source || null);
+        return `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`;
+      });
+      await q(`INSERT INTO metrics (time, session_id, metric, value, source) VALUES ${ph.join(',')}`, vals);
+    },
+    async metricsSince(sessionId, since) {
+      const { rows } = await q('SELECT time, metric, value, source FROM metrics WHERE session_id = $1 AND time >= $2 ORDER BY time', [sessionId, since]);
+      return rows;
     },
     async heartbeatBuckets(sessionId, since) {
       if (this.timescale) {
