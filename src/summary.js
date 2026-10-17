@@ -4,7 +4,7 @@ import { assess } from './predict.js';
 
 const INSTRUCTION = `Write 2–3 short factual sentences for a trusted friend about this person's night, using ONLY the events given: when they armed it, the last time they responded, how long since, the last known location time, and battery. Then one line starting "Suggested next step:" (call them; if no answer and you are nearby, go to the last location; if you believe they are in danger, call 911). Never guess at causes, substances, intoxication or intent. Never say "drugged" or "drunk". Say "hasn't responded". You may also use the phone_status facts (whether the phone is still reporting, and the battery forecast) to say whether the phone still has signal.`;
 
-const TIMEOUT_MS = 3000;
+const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 3000;
 
 const fmtTime = (d) => new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 const minutesBetween = (a, b) => Math.max(0, Math.floor((b - a) / 60000));
@@ -64,27 +64,59 @@ function compactEvents(session, events) {
   };
 }
 
-export async function summarize(session, events, now = new Date()) {
-  const fallback = () => templateSummary(session, events, now);
-  if (!process.env.GEMINI_API_KEY) return fallback();
+// Race a model call against the timeout so a slow model never delays the alert.
+async function withTimeout(promise) {
   let timer;
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const call = ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-      contents: `${INSTRUCTION}\n\nEvents (JSON):\n${JSON.stringify(compactEvents(session, events))}`,
-    });
-    const timeout = new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error('Gemini timeout')), TIMEOUT_MS);
-    });
-    const res = await Promise.race([call, timeout]);
-    const text = (res.text || '').trim();
-    if (!text) throw new Error('Empty Gemini response');
-    return text;
-  } catch (err) {
-    console.warn('[summary] falling back to template:', err.message);
-    return fallback();
-  } finally {
-    clearTimeout(timer);
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS); });
+  try { return await Promise.race([promise, timeout]); } finally { clearTimeout(timer); }
+}
+
+// Our own model, self-hosted on Vultr (Ollama or vLLM) or Vultr Serverless Inference.
+// Both speak the OpenAI-compatible chat API, so one client covers them.
+async function selfHosted(prompt) {
+  const base = process.env.LLM_BASE_URL.replace(/\/$/, '');
+  const res = await fetch(`${base}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(process.env.LLM_API_KEY ? { Authorization: `Bearer ${process.env.LLM_API_KEY}` } : {}),
+    },
+    body: JSON.stringify({
+      model: process.env.LLM_MODEL || 'llama3.1:8b',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2,
+      max_tokens: 220,
+    }),
+  });
+  if (!res.ok) throw new Error(`model server ${res.status}`);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content;
+}
+
+async function gemini(prompt) {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const res = await ai.models.generateContent({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash', contents: prompt });
+  return res.text;
+}
+
+/**
+ * Summary for the trusted contact. Tries our self-hosted model first (private: her night never
+ * leaves our servers), then Gemini, then a factual template. Returns { text, source }.
+ */
+export async function summarize(session, events, now = new Date()) {
+  const prompt = `${INSTRUCTION}\n\nEvents (JSON):\n${JSON.stringify(compactEvents(session, events))}`;
+  const providers = [
+    process.env.LLM_BASE_URL && ['vultr', selfHosted],
+    process.env.GEMINI_API_KEY && ['gemini', gemini],
+  ].filter(Boolean);
+  for (const [source, call] of providers) {
+    try {
+      const text = ((await withTimeout(call(prompt))) || '').trim();
+      if (text) return { text, source };
+      throw new Error('empty response');
+    } catch (err) {
+      console.warn(`[summary] ${source} failed (${err.message}), trying the next option`);
+    }
   }
+  return { text: templateSummary(session, events, now), source: 'template' };
 }

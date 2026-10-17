@@ -62,7 +62,8 @@ async function stepSession(store, s, now) {
     case 'ALARM':
       if (past(s.level_deadline)) {
         const events = await store.listEvents(s.id);
-        const summary = await summarize(s, events, now);
+        const { text: summary, source } = await summarize(s, events, now);
+        await store.addEvent({ session_id: s.id, kind: 'summary', detail: { source } });
         await setLevel(store, s, 'CONTACT', now, { summary });
         await sendSms(
           s.contact_phone,
