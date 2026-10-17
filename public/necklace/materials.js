@@ -84,8 +84,8 @@ export function createMaterials({ lowPower = false } = {}) {
     gem: lowPower
       ? new THREE.MeshPhysicalMaterial({ color: 0xe6f4ff, roughness: 0.04, metalness: 0, transparent: true, opacity: 0.62, envMapIntensity: 2.2, flatShading: true, clearcoat: 1 })
       : new THREE.MeshPhysicalMaterial({
-          color: 0xffffff, roughness: 0.02, metalness: 0, transmission: 0.9, thickness: 1.5, ior: 1.5,
-          envMapIntensity: 2.2, flatShading: true, clearcoat: 1, clearcoatRoughness: 0.03,
+          color: 0xffffff, roughness: 0.02, metalness: 0, transmission: 0.75, thickness: 1.5, ior: 1.5,
+          emissive: 0xcfe0ff, emissiveIntensity: 0.0, envMapIntensity: 1.3, side: THREE.DoubleSide, flatShading: true, clearcoat: 1, clearcoatRoughness: 0.03,
           specularIntensity: 1, attenuationColor: new THREE.Color(0xe8f6ff), attenuationDistance: 6,
         }),
     // PCB

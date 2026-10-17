@@ -58,12 +58,13 @@ function registerPart(group, id) {
 }
 
 // ---------- pendant outline (view space, symmetric, scalloped by feather tips) ----------
-const TIPS = [[2.0, -1.9], [2.4, -0.9], [2.6, 0.3], [2.65, 1.5], [2.55, 2.6], [2.35, 3.6], [1.75, 3.15], [1.15, 2.9], [0.5, 2.78]];
+// Back PCB plate outline (independent of the front jewelry; do not change).
+const PLATE_TIPS = [[2.0, -1.9], [2.4, -0.9], [2.6, 0.3], [2.65, 1.5], [2.55, 2.6], [2.35, 3.6], [1.75, 3.15], [1.15, 2.9], [0.5, 2.78]];
 function outlinePoints() {
   const right = [[0, -3.05], [0.8, -2.95], [1.45, -2.6]];
-  TIPS.forEach((t, j) => {
+  PLATE_TIPS.forEach((t, j) => {
     if (j) {
-      const p = TIPS[j - 1];
+      const p = PLATE_TIPS[j - 1];
       const mx = (p[0] + t[0]) / 2, my = (p[1] + t[1]) / 2;
       const dx = mx, dy = my - 0.3, l = Math.hypot(dx, dy);
       right.push([mx - (dx / l) * 0.1, my - (dy / l) * 0.1]);
@@ -190,18 +191,41 @@ function drawBoard(outline, lowPower) {
   return { map: mkTex(A, true), emissiveMap: mkTex(E, true), bbox: { W, H, BYMAX } };
 }
 
+// Drop triangles facing +Z so the plate does not show as a solid shield behind the front jewelry.
+function stripFrontFaces(geo) {
+  const pos = geo.attributes.position, nor = geo.attributes.normal, uv = geo.attributes.uv;
+  const P = [], N = [], U = [];
+  for (let i = 0; i < pos.count; i += 3) {
+    if (nor.getZ(i) + nor.getZ(i + 1) + nor.getZ(i + 2) > 0.9) continue;
+    for (let k = 0; k < 3; k++) {
+      P.push(pos.getX(i + k), pos.getY(i + k), pos.getZ(i + k));
+      N.push(nor.getX(i + k), nor.getY(i + k), nor.getZ(i + k));
+      if (uv) U.push(uv.getX(i + k), uv.getY(i + k));
+    }
+  }
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+  if (uv) geo.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+  geo.clearGroups();
+}
+
 function buildPcb(M, lowPower) {
   const g = new THREE.Group();
   const outline = outlinePoints();
   const shape = new THREE.Shape(outline);
 
   // plate body (neat navy board edge)
-  const body = new THREE.Mesh(
-    new THREE.ExtrudeGeometry(shape, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1, curveSegments: 1 }),
-    M.maskEdge,
-  );
+  const bodyGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1, curveSegments: 1 });
+  stripFrontFaces(bodyGeo);
+  const body = new THREE.Mesh(bodyGeo, M.maskEdge);
   body.position.z = BZ + 0.02;
   g.add(body);
+  // depth-only occluder on the plate front: hides the mounted hardware from the front view without drawing a shield
+  const occ = new THREE.Mesh(new THREE.ShapeGeometry(shape, 1), new THREE.MeshBasicMaterial({ colorWrite: false }));
+  occ.position.z = BZ + 0.15;
+  occ.renderOrder = -10;
+  occ.userData.id = null;
+  g.add(occ);
 
   // textured back face
   const tex = drawBoard(outline, lowPower);
@@ -327,120 +351,186 @@ function buildBrain(M, lowPower) {
 }
 
 // ---------- front jewelry ----------
-const FEATHER_BEND = 0.2;
-function featherGeo(L, W, depth, low, sign) {
-  const n = low ? 7 : 11;
-  const R = [], Lf = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / n;
-    const xc = -sign * FEATHER_BEND * L * t * t;
-    const w = W * 0.72 * Math.pow(Math.sin(PI * Math.pow(t, 0.7)), 0.85);
-    R.push(new THREE.Vector2(xc + w, t * L));
-    Lf.push(new THREE.Vector2(xc - w, t * L));
-  }
-  const pts = [...R, ...Lf.reverse().slice(1, -1)];
-  const s = new THREE.Shape(pts);
-  return new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: low ? 1 : 2, curveSegments: 1 });
+// Two mirrored angel wings (4 stacked feathers each), a brilliant centre stone, and a large hanging pear gem.
+// Right-wing feather specs (wing space: x outward, y up). root, angle (deg above horizontal), length, half-width, upward bend.
+const WING_FEATHERS = [
+  { rx: 0.45, ry: 0.15, ang: 38, L: 2.6, W: 0.36, bend: 0.13, z: 0.15, pave: [0.26, 0.9, 3] },
+  { rx: 0.42, ry: 0.0, ang: 21, L: 2.3, W: 0.35, bend: 0.12, z: 0.1, pave: [0.4, 0.86, 2] },
+  { rx: 0.4, ry: -0.13, ang: 4, L: 1.9, W: 0.33, bend: 0.11, z: 0.05, barbs: true },
+  { rx: 0.36, ry: -0.26, ang: -17, L: 1.4, W: 0.3, bend: 0.1, z: 0.0, barbs: true },
+];
+const F_DEPTH = 0.04, F_BEVEL = 0.02;
+
+function featherCurve(f, sx) {
+  const a = (f.ang * PI) / 180, dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
+  const c = (t) => {
+    const u = f.bend * f.L * t * t;
+    return [sx * (f.rx + dx * f.L * t + nx * u), f.ry + dy * f.L * t + ny * u];
+  };
+  const nrm = (t) => { // unit normal (left of travel), mirrored for sx
+    const s = f.bend * f.L * 2 * t; // d/dt of bend term, perpendicular
+    const tx = dx * f.L + nx * s, ty = dy * f.L + ny * s, l = Math.hypot(tx, ty);
+    return [sx * (-ty / l), tx / l, sx * (tx / l), ty / l]; // [nx, ny, tx, ty]
+  };
+  const w = (t) => f.W * Math.pow(Math.sin(PI * Math.pow(t, 0.78)), 0.9);
+  return { c, nrm, w };
 }
 
-// right wing feather spec: one feather per tip, fanning from a spine on the centre line
-const FEATHERS = TIPS.map(([tx, ty], j) => {
-  const rx = 0.0, ry = -2.5 + (3.6 * j) / (TIPS.length - 1);
-  const dx = tx - rx, dy = ty - ry;
-  return { rx, ry, L: Math.hypot(dx, dy) / Math.sqrt(1 + FEATHER_BEND * FEATHER_BEND), th: Math.atan2(dx, dy) + Math.atan(FEATHER_BEND) };
-});
+function featherGeo(f, sx, low) {
+  const { c, nrm, w } = featherCurve(f, sx);
+  const n = low ? 8 : 16;
+  const A = [], B = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, [px, py] = c(t), [nx, ny] = nrm(t), ww = w(t);
+    A.push(new THREE.Vector2(px + nx * ww, py + ny * ww));
+    B.push(new THREE.Vector2(px - nx * ww, py - ny * ww));
+  }
+  const pts = [...A, ...B.reverse().slice(1, -1)];
+  return new THREE.ExtrudeGeometry(new THREE.Shape(pts), {
+    depth: F_DEPTH, bevelEnabled: true, bevelThickness: F_BEVEL, bevelSize: 0.02, bevelSegments: low ? 1 : 2, curveSegments: 1,
+  });
+}
 
 function buildWings(M, lowPower) {
   const g = new THREE.Group();
-  const rows = [
-    { k: 1.0, W: 0.7, z: -0.16, mat: M.goldDeep },
-    { k: 0.78, W: 0.6, z: -0.065, mat: M.gold },
-    { k: 0.55, W: 0.5, z: 0.03, mat: M.goldLight },
-  ];
-  const depth = 0.04;
-  const pave = [];
-  rows.forEach((row, ri) => {
-    FEATHERS.forEach((f, i) => {
-      const L = f.L * row.k;
-      const zz = row.z + i * 0.004;
-      [1, -1].forEach((s) => {
-        const m = new THREE.Mesh(featherGeo(L, row.W, depth, lowPower, s), row.mat);
-        m.position.set(s * f.rx, f.ry, zz);
-        m.rotation.z = -s * f.th;
-        g.add(m);
-      });
-      // pave on the upper feathers of rows 1 and 2
-      if (!lowPower && ((ri === 1 && i >= 4) || ri === 2) && L > 0.7) {
-        const step = 0.17;
-        const zTop = zz + depth + 0.02 + 0.025;
-        for (let d = 0.3; d < L - 0.15; d += step) {
-          const t = d / L;
-          const hw = row.W * 0.6 * Math.sin(PI * Math.pow(t, 0.7));
-          const offs = hw > 0.2 ? [-0.075, 0.075] : hw > 0.1 ? [0] : [];
-          if (hw > 0.28) offs.push(-0.15, 0.15);
-          for (const o of offs) {
-            const xl = -FEATHER_BEND * d * t + o;
-            const px = f.rx + xl * Math.cos(f.th) + d * Math.sin(f.th);
-            const py = f.ry - xl * Math.sin(f.th) + d * Math.cos(f.th);
-            pave.push([px, py, zTop]);
-          }
+  const pave = [], barbs = [];
+  const mats = [M.goldLight, M.gold, M.goldDeep, M.gold];
+  [1, -1].forEach((sx) => {
+    WING_FEATHERS.forEach((f, i) => {
+      const m = new THREE.Mesh(featherGeo(f, sx, lowPower), f.pave ? M.goldLight : i === 2 ? M.gold : M.goldDeep);
+      m.position.z = f.z;
+      g.add(m);
+      const { c, nrm, w } = featherCurve(f, sx);
+      const zTop = f.z + F_DEPTH + F_BEVEL;
+      // midrib
+      const rib = [];
+      for (let k = 0; k <= 10; k++) { const t = 0.08 + (0.84 * k) / 10, p = c(t); rib.push(new THREE.Vector3(p[0], p[1], zTop + 0.004)); }
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rib), lowPower ? 8 : 16, 0.012, 4, false), M.goldDeep));
+      // engraved barbs on the plain lower feathers
+      if (f.barbs && !lowPower) {
+        for (let t = 0.16; t < 0.86; t += 0.07) {
+          const p = c(t), [nx, ny, tx, ty] = nrm(t), ww = w(t);
+          [1, -1].forEach((side) => {
+            const th = 0.62, dxv = tx * Math.cos(th) + side * nx * Math.sin(th), dyv = ty * Math.cos(th) + side * ny * Math.sin(th);
+            const len = ww * 0.9;
+            barbs.push([p[0] + side * nx * ww * 0.45 + dxv * 0.0, p[1] + side * ny * ww * 0.45, zTop + 0.003, Math.atan2(dyv, dxv), len]);
+          });
+        }
+      }
+      // pave rows: top feather fully, second feather partly
+      if (f.pave && !lowPower) {
+        const [t0, t1, rows] = f.pave;
+        const step = 0.235 / f.L;
+        for (let t = t0; t <= t1; t += step) {
+          const p = c(t), [nx, ny] = nrm(t), ww = w(t);
+          if (ww < 0.09) continue;
+          const offs = rows === 3 && ww > 0.26 ? [-0.62, 0, 0.62] : [-0.5, 0.5];
+          offs.forEach((o) => pave.push([p[0] + nx * ww * o, p[1] + ny * ww * o, zTop + 0.028]));
         }
       }
     });
   });
   if (pave.length) {
-    const im = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.042, 1), M.pave, pave.length * 2);
+    const im = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.045, 1), M.pave, pave.length);
     const m4 = new THREE.Matrix4();
-    let n = 0;
-    pave.forEach(([x, y, z]) => {
-      im.setMatrixAt(n++, m4.makeTranslation(x, y, z));
-      im.setMatrixAt(n++, m4.makeTranslation(-x, y, z));
+    pave.forEach(([x, y, z], k) => im.setMatrixAt(k, m4.makeTranslation(x, y, z)));
+    im.instanceMatrix.needsUpdate = true;
+    g.add(im);
+  }
+  if (barbs.length) {
+    const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.012, 0.01), M.goldDeep, barbs.length);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), ax = new THREE.Vector3(0, 0, 1), sc = new THREE.Vector3(), pp = new THREE.Vector3();
+    barbs.forEach(([x, y, z, a, len], k) => {
+      q.setFromAxisAngle(ax, a); sc.set(len, 1, 1); pp.set(x, y, z);
+      im.setMatrixAt(k, m4.compose(pp, q, sc));
     });
     im.instanceMatrix.needsUpdate = true;
     g.add(im);
   }
+  // small gold hub where the wings meet, below the centre stone
+  const hub = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), M.gold);
+  hub.scale.set(1.5, 1, 0.55); hub.position.set(0, -0.02, 0.14);
+  g.add(hub);
   return g;
 }
 
 function buildCenterStone(M) {
   const g = new THREE.Group();
-  const prof = [[0, 0.13], [0.15, 0.13], [0.3, 0.02], [0.3, -0.02], [0.14, -0.14], [0, -0.3]].map(([r, y]) => new THREE.Vector2(r, y));
-  const stone = new THREE.Mesh(new THREE.LatheGeometry(prof, 16), M.centerStone);
+  // round brilliant: table, crown, girdle, pavilion (8 flat-shaded facet columns)
+  const prof = [[0, 0.1], [0.15, 0.1], [0.28, 0.01], [0.28, -0.01], [0.14, -0.14], [0, -0.22]].map(([r, y]) => new THREE.Vector2(r, y));
+  const stone = new THREE.Mesh(new THREE.LatheGeometry(prof, 8), M.centerStone);
   stone.rotation.x = PI / 2; // table faces +Z
+  stone.position.z = 0.06;
   g.add(stone);
-  const bez = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.04, 8, 32), M.gold);
-  g.add(bez);
+  // four prongs at 45 degrees + a collar cup
+  for (let k = 0; k < 4; k++) {
+    const a = PI / 4 + (k * PI) / 2, x = Math.cos(a) * 0.29, y = Math.sin(a) * 0.29;
+    const pr = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.2, 8), M.gold);
+    pr.rotation.x = PI / 2; pr.position.set(x, y, 0.0);
+    g.add(pr);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), M.gold);
+    tip.position.set(x * 0.97, y * 0.97, 0.1);
+    g.add(tip);
+  }
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.12, 0.14, 16), M.gold);
+  cup.rotation.x = PI / 2; cup.position.z = -0.08;
+  g.add(cup);
   return g;
+}
+
+// Pear point at loop parameter s in [0,1): tip -> down the right side -> bottom -> up the left side
+function pearPt(hw, h, s) {
+  const side = s < 0.5 ? 1 : -1, u = s < 0.5 ? 2 * s : 2 * (1 - s);
+  return [side * hw * Math.pow(Math.sin(PI * Math.pow(u, 1.45)), 0.7), h / 2 - u * h];
+}
+
+// Cut-stone geometry: table + star/crown facets (zig-zag rings) above the girdle, culet fan below.
+function pearGemGeo(M_, low) {
+  const m = low ? 8 : 14; // facets per half
+  const N = m * 2;
+  const ring = (hw, h, z, phase) => Array.from({ length: N }, (_, i) => { const [x, y] = pearPt(hw, h, (i + phase) / N); return new THREE.Vector3(x, y, z); });
+  const G = ring(0.74, 2.2, 0, 0), C = ring(0.6, 1.75, 0.17, 0.5), T = ring(0.4, 1.3, 0.27, 0);
+  const tri = [];
+  const add = (a, b, c) => tri.push(a, b, c);
+  const tc = new THREE.Vector3(0, -0.02, 0.27), cul = new THREE.Vector3(0, -0.05, -0.55);
+  for (let i = 0; i < N; i++) {
+    const j = (i + 1) % N;
+    add(G[j], G[i], C[i]); add(C[i], C[j], G[j]); // kite between girdle and crown ring
+    add(C[i], T[j], T[i]); add(C[i], C[j], T[j]); // crown to table
+    add(T[j], T[i], tc); // table
+    add(G[i], G[j], cul); // pavilion
+  }
+  const pos = [];
+  tri.forEach((v) => pos.push(v.x, v.y, v.z));
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.computeVertexNormals();
+  return geo;
 }
 
 function buildPear(M, lowPower) {
   const g = new THREE.Group();
-  const P = [[0, 1.45], [0.1, 1.2], [0.25, 0.8], [0.45, 0.3], [0.68, -0.2], [0.8, -0.65], [0.78, -1.05], [0.6, -1.35], [0.3, -1.52], [0, -1.58]];
-  const gem = new THREE.Mesh(new THREE.LatheGeometry(P.map(([r, y]) => new THREE.Vector2(r, y)), 16), M.gem);
-  gem.scale.set(1, 1, 0.5);
+  const gem = new THREE.Mesh(pearGemGeo(M, lowPower), M.gem);
   g.add(gem);
-  // bezel hugging the silhouette
-  const side = P.slice(1, -1);
-  const loop = [new THREE.Vector3(0, 1.47, 0), ...side.map(([r, y]) => new THREE.Vector3(r * 1.03, y, 0)), new THREE.Vector3(0, -1.6, 0),
-    ...side.slice().reverse().map(([r, y]) => new THREE.Vector3(-r * 1.03, y, 0))];
-  const curve = new THREE.CatmullRomCurve3(loop, true, 'centripetal');
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, lowPower ? 40 : 80, 0.045, 6, true), M.gold));
-  // collar at the tip
-  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.15, 0.3, 12), M.gold);
-  collar.position.y = 1.5; g.add(collar);
-  g.scale.setScalar(0.92);
+  // thin smooth bezel hugging the girdle
+  const o = Array.from({ length: lowPower ? 40 : 72 }, (_, i) => { const [x, y] = pearPt(0.78, 2.3, i / (lowPower ? 40 : 72)); return new THREE.Vector3(x, y, 0); });
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(o, true, 'centripetal'), lowPower ? 40 : 80, 0.045, 6, true), M.gold));
+  // collar at the tip, threaded by the bail
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.13, 0.22, 12), M.gold);
+  collar.position.y = 1.2; g.add(collar);
   return g;
 }
 
 function buildChain(M, lowPower) {
-  const pts = [
-    [0, 3.07, 0], [-1.1, 4.5, -0.1], [-2.6, 6.3, -0.9], [-3.6, 8.2, -2.4], [-3.0, 9.3, -4.6], [0, 9.6, -5.6],
-    [3.0, 9.3, -4.6], [3.6, 8.2, -2.4], [2.6, 6.3, -0.9], [1.1, 4.5, -0.1],
-  ].map((p) => new THREE.Vector3(...p));
-  const curve = new THREE.CatmullRomCurve3(pts, true, 'centripetal');
-  const N = lowPower ? 54 : 90;
+  // open chain hanging from the outer top tips of the two wings, looping up and behind the neck
+  const half = [[2.55, 2.12, 0.15], [3.0, 3.6, -0.1], [3.45, 5.4, -0.8], [3.7, 7.5, -2.3], [3.05, 9.2, -4.5], [0, 9.6, -5.6]];
+  // build symmetric list: right tip ... top ... left tip
+  const right = half.map((p) => new THREE.Vector3(...p));
+  const left = half.slice(0, -1).reverse().map(([x, y, z]) => new THREE.Vector3(-x, y, z));
+  const curve = new THREE.CatmullRomCurve3([...right, ...left], false, 'centripetal');
+  const N = lowPower ? 54 : 100;
   const len = curve.getLength();
-  const spacing = len / N;
+  const spacing = len / (N - 1);
   const geo = new THREE.TorusGeometry(0.1, 0.03, lowPower ? 4 : 6, lowPower ? 10 : 14);
   geo.scale(1.7, 1, 1);
   const s = Math.min(1.5, (spacing * 1.5) / 0.46);
@@ -448,7 +538,7 @@ function buildChain(M, lowPower) {
   const T = new THREE.Vector3(), n = new THREE.Vector3(), b = new THREE.Vector3(), ref = new THREE.Vector3(0, 0, 1);
   const m4 = new THREE.Matrix4(), p = new THREE.Vector3(), nb = new THREE.Vector3();
   for (let i = 0; i < N; i++) {
-    const u = i / N;
+    const u = i / (N - 1);
     curve.getPointAt(u, p);
     curve.getTangentAt(u, T).normalize();
     ref.set(0, 0, 1);
@@ -464,10 +554,12 @@ function buildChain(M, lowPower) {
   im.frustumCulled = false;
   const g = new THREE.Group();
   g.add(im);
-  const bail = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.04, 8, 24), M.gold);
-  bail.rotation.y = PI / 2;
-  bail.position.set(0, 2.95, 0);
-  g.add(bail);
+  // small jump rings at the wing tips
+  [1, -1].forEach((sx) => {
+    const r = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 8, 20), M.gold);
+    r.position.set(sx * 2.55, 2.12, 0.2);
+    g.add(r);
+  });
   return g;
 }
 
@@ -492,18 +584,17 @@ export function buildNecklace({ lowPower = false } = {}) {
   const pcb = buildPcb(M, lowPower);
   root.add(pcb.group);
 
-  // gold base silhouette on the plate front
-  const baseShape = new THREE.Shape(pcb.outline.map((p) => new THREE.Vector2(p.x * 0.985, p.y * 0.985)));
-  const base = new THREE.Mesh(new THREE.ExtrudeGeometry(baseShape, { depth: 0.06, bevelEnabled: false, curveSegments: 1 }), M.goldBase);
-  base.position.z = -0.25;
-  root.add(base);
   root.add(buildWings(M, lowPower));
   const cs = buildCenterStone(M);
-  cs.position.set(0, 2.15, 0.2);
+  cs.position.set(0, 0.68, 0.22);
   root.add(cs);
   const pear = buildPear(M, lowPower);
-  pear.position.set(0, -2.33, 0.3);
+  pear.position.set(0, -1.45, 0.2);
   root.add(pear);
+  // bail ring threading the hub and the pear collar
+  const bail = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.028, 8, 20), M.gold);
+  bail.rotation.y = PI / 2; bail.position.set(0, -0.2, 0.2);
+  root.add(bail);
 
   // ---- hardware components (-Z) ----
   const builders = { touch: () => buildTouch(M), buzzer: () => buildBuzzer(M), baro: () => buildBaro(M), brain: () => buildBrain(M, lowPower) };
