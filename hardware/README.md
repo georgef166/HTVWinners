@@ -10,6 +10,7 @@ A clip-on Switch built on an **Arduino Uno R4 WiFi**. Maya can check in, cancel 
 | Barometer (DPS310, or a BMP280/BME280) | Temperature and pressure every 10 s. At 5°C or below the server adds a "likely outside in the cold" signal |
 | Built-in LED matrix | A fuse that burns down to the next check-in, `?` on a nudge, `!` on alarm, an arrow once the contact is on the way, a check when cancelled |
 | Joystick (optional, `USE_JOYSTICK 1`) | Gesture PIN: up = 1, right = 2, down = 3, left = 4, then press. 1234 cancels the demo alarm |
+| Grove NFC Tag (M24LR64E), any I2C port | Holds the current night's link (Maya's page), rewritten whenever a new night starts, so tapping a phone on the Switch opens it. Needs the module's coil antenna plugged in; without it phones can't read the tag. iPhones may need an NFC reader app for this tag type, while Android reads it natively |
 | NFC reader (optional) | Tap the home tag to end the night. Needs a reader: a Grove NFC (PN532) or an RC522 (`NFC_RC522 1`). A Grove **NFC Tag** (M24LR64E) is a tag, not a reader, so it can't do this |
 
 ## Wiring: Grove Base Shield (what we built with)

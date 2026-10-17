@@ -3,6 +3,7 @@
 //   Touch sensor  check in ("I'm OK") without unlocking the phone
 //   Joystick      optional gesture PIN to cancel an alarm: up=1 right=2 down=3 left=4, press to send
 //   NFC reader    tap the home tag by the front door to end the night (Grove NFC / PN532, or an RC522)
+//   NFC tag       Grove NFC Tag (M24LR64E): holds the night's link, so tapping a phone on the Switch opens it
 //   LED + buzzer  armed / nudge / alarm, even if the phone is dead or in a bag
 //   BMP280        temperature + pressure readings for the prediction engine (cold exposure)
 //   LED matrix    icons: fuse bar while armed, ? on nudge, ! on alarm, check when OK
@@ -59,6 +60,9 @@ DPS310 dps;
 enum Climate { CLIMATE_NONE, CLIMATE_BMP, CLIMATE_DPS } climate = CLIMATE_NONE;
 ArduinoLEDMatrix matrix;
 bool haveNfc = false;
+const uint8_t TAG_ADDR = 0x53;  // Grove NFC Tag user memory
+bool haveTag = false;
+String tagLink = "";        // link currently on the tag
 
 struct State {
   String level = "NONE";
@@ -176,8 +180,9 @@ int sendEvent(const String& json) {
 
 String field(const String& body, const char* key) {
   String k = String(key) + "=";
-  int i = body.indexOf(k);
+  int i = body.startsWith(k) ? 0 : body.indexOf(";" + k);  // match whole keys only (the link contains '=')
   if (i < 0) return "";
+  if (i > 0) i++;
   int end = body.indexOf(';', i);
   if (end < 0) end = body.indexOf('\n', i);
   if (end < 0) end = body.length();
@@ -194,9 +199,68 @@ void pollState() {
   st.window = max(1L, field(out, "W").toInt());
   st.acked = field(out, "A") == "1";
   st.outlook = field(out, "O");
+  String link = field(out, "U");
+  link.trim();
+  if (haveTag && link.length() && link != tagLink && writeTagLink(link)) tagLink = link;
   bool wasAlarming = prev == "ALARM" || prev == "CONTACT" || prev == "WIDER";
   if (wasAlarming && st.level == "ARMED") celebrate();  // stood down
   if (prev != st.level) { Serial.print("level "); Serial.println(st.level); }
+}
+
+// ---------- NFC tag (M24LR64E on I2C) ----------
+// The tag is ISO 15693 (NFC Forum Type 5). Its user memory answers on I2C at 0x53 with 16-bit addresses and
+// takes writes 4 bytes at a time. A phone reads an NDEF message: capability container, then an NDEF TLV
+// holding one URI record.
+
+bool tagWrite4(uint16_t addr, const uint8_t* b) {
+  Wire.beginTransmission(TAG_ADDR);
+  Wire.write(addr >> 8); Wire.write(addr & 0xFF);
+  Wire.write(b, 4);
+  if (Wire.endTransmission() != 0) return false;
+  for (int i = 0; i < 20; i++) {  // wait out the EEPROM write (about 5 ms): the chip NAKs until it's done
+    delay(2);
+    Wire.beginTransmission(TAG_ADDR);
+    if (Wire.endTransmission() == 0) return true;
+  }
+  return false;
+}
+
+bool tagRead(uint16_t addr, uint8_t* b, uint8_t n) {
+  Wire.beginTransmission(TAG_ADDR);
+  Wire.write(addr >> 8); Wire.write(addr & 0xFF);
+  if (Wire.endTransmission(false) != 0 || Wire.requestFrom(TAG_ADDR, n) != n) return false;
+  for (uint8_t i = 0; i < n; i++) b[i] = Wire.read();
+  return true;
+}
+
+bool writeTagLink(const String& url) {
+  // URI record payload: an abbreviation code, then the rest of the link.
+  uint8_t code = 0;
+  String rest = url;
+  if (url.startsWith("https://")) { code = 0x04; rest = url.substring(8); }
+  else if (url.startsWith("http://")) { code = 0x03; rest = url.substring(7); }
+  int payload = 1 + rest.length();
+  int record = 4 + payload;  // header, type length, payload length, type 'U'
+  if (record > 250) { Serial.println("NFC tag: link too long"); return false; }
+
+  uint8_t buf[264];
+  int n = 0;
+  buf[n++] = 0xE1; buf[n++] = 0x40; buf[n++] = 0xFF; buf[n++] = 0x01;  // CC: NDEF, v1.0 read/write, 2040 bytes, multi-block read
+  buf[n++] = 0x03; buf[n++] = record;                                   // NDEF message TLV
+  buf[n++] = 0xD1; buf[n++] = 0x01; buf[n++] = payload; buf[n++] = 'U'; // well-known short record, type U
+  buf[n++] = code;
+  for (unsigned i = 0; i < rest.length(); i++) buf[n++] = rest[i];
+  buf[n++] = 0xFE;                                                      // terminator TLV
+  while (n % 4) buf[n++] = 0x00;
+
+  for (int i = 0; i < n; i += 4) {
+    if (!tagWrite4(i, buf + i)) { Serial.println("NFC tag: write failed"); return false; }
+  }
+  uint8_t check[264];  // read it back to be sure
+  for (int i = 0; i < n; i += 32) if (!tagRead(i, check + i, min(32, n - i))) return false;
+  if (memcmp(buf, check, n) != 0) { Serial.println("NFC tag: verify failed"); return false; }
+  Serial.print("NFC tag: wrote "); Serial.println(url);
+  return true;
 }
 
 // ---------- Feedback ----------
@@ -412,6 +476,9 @@ void setup() {
   if (readClimate(t, p)) { Serial.print(climate == CLIMATE_DPS ? "DPS310" : "BMP280"); Serial.print(" ready: "); Serial.print(t, 1); Serial.print(" C, "); Serial.print(p, 1); Serial.println(" hPa"); }
   else Serial.println("No temperature sensor found (readings off)");
   setupNfc();
+  Wire.beginTransmission(TAG_ADDR);
+  haveTag = Wire.endTransmission() == 0;
+  Serial.println(haveTag ? "NFC tag found: it will hold the night's link" : "No NFC tag");
 
   usbLink = !wifiConfigured();
   if (usbLink) Serial.println("No WiFi set in arduino_secrets.h: using the USB link (run npm run switch-bridge)");
