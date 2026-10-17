@@ -119,7 +119,7 @@
       <!-- NUDGE -->
       <section data-view="NUDGE" class="view hidden flex-1 flex-col items-center justify-center pt-10 text-center">
         <h1 class="display text-5xl font-extrabold">Still good?</h1>
-        <p class="mt-4 text-lg text-mist">Tap within <b class="tnum text-paper" data-secs>10</b> seconds or your phone sounds an alarm.</p>
+        <p class="mt-4 text-lg text-mist">Tap within <b class="tnum text-paper" data-secs>10</b> <span data-secs-word>seconds</span> or your phone sounds an alarm.</p>
         <div class="relative mt-10 aspect-square w-full max-w-[300px]">
           <svg viewBox="0 0 320 320" class="absolute inset-0 -rotate-90" aria-hidden="true">
             <circle cx="160" cy="160" r="152" fill="none" stroke-width="6" class="ring-track" />
@@ -400,6 +400,7 @@
       const left = Math.ceil(leftMs / 1000);
       $$('[data-clock]').forEach((el) => { el.textContent = fmt(left); });
       $$('[data-secs]').forEach((el) => { el.textContent = left; });
+      $$('[data-secs-word]').forEach((el) => { el.textContent = left === 1 ? 'second' : 'seconds'; });
       const frac = state.window_s ? Math.min(1, leftMs / 1000 / state.window_s) : 0;
       $$('[data-bar]').forEach((el) => { el.style.width = `${frac * 100}%`; });
       $$('[data-ring]').forEach((el) => {
