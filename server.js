@@ -387,7 +387,7 @@ app.post('/api/contact/:token/resolve', wrap(async (req, res) => {
 // One Switch per server, authenticated with SWITCH_KEY. It controls the night it was linked to.
 const SWITCH_KEY = process.env.SWITCH_KEY || (DEMO ? 'demo-switch' : null);
 const HOME_TAGS = (process.env.SWITCH_HOME_TAG || '').split(',').map((t) => t.trim().toUpperCase()).filter(Boolean);
-const sw = { sessionId: null, lastSeen: 0, tempC: null, pressureHpa: null, coldDemo: false };
+const sw = { sessionId: null, owner: null, linkedAt: 0, lastSeen: 0, tempC: null, pressureHpa: null, coldDemo: false };
 const switchConnected = () => Date.now() - sw.lastSeen < 10_000;
 const switchInfo = (s) => (sw.sessionId === s.id
   ? { linked: true, connected: switchConnected(), temp_c: sw.tempC }
@@ -478,9 +478,15 @@ app.post('/api/switch/event', wrap(async (req, res) => {
 }));
 
 // Link the Switch to one night explicitly, so other people's sessions on other phones can't take it over.
+// The screen that linked it keeps it for 30 minutes, so someone else opening the public stage can't grab it
+// mid-demo; the links page's "Use the Switch for this night" button forces it.
+const SWITCH_HOLD_MS = 30 * 60_000;
 app.post('/api/sessions/:id/link-switch', wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
-  sw.sessionId = s.id;
+  const owner = String(req.body?.owner || '').slice(0, 64) || null;
+  const heldElsewhere = sw.sessionId && sw.owner && owner !== sw.owner && Date.now() - sw.linkedAt < SWITCH_HOLD_MS;
+  if (heldElsewhere && req.body?.force !== true) return res.status(409).json({ linked: false, error: 'The Switch is in use on another screen' });
+  Object.assign(sw, { sessionId: s.id, owner, linkedAt: Date.now() });
   res.json({ linked: true });
 }));
 

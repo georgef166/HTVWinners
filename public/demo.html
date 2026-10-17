@@ -91,7 +91,7 @@
     const id = new URLSearchParams(location.search).get('id');
     document.getElementById('stageLink').href = `/stage.html?id=${encodeURIComponent(id)}`;
     document.getElementById('linkSwitch').addEventListener('click', async (e) => {
-      const r = await fetch(`/api/sessions/${encodeURIComponent(id)}/link-switch`, { method: 'POST' });
+      const r = await fetch(`/api/sessions/${encodeURIComponent(id)}/link-switch`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ force: true }) });
       e.currentTarget.textContent = r.ok ? 'Switch linked to this night' : 'Couldn’t link the Switch';
     });
     document.getElementById('cold').addEventListener('click', async (e) => {

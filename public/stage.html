@@ -296,7 +296,10 @@
         history.replaceState(null, '', `?id=${id}`);
       }
       links = await fetch(`/api/demo/${id}`).then((r) => r.json());
-      fetch(`/api/sessions/${id}/link-switch`, { method: 'POST' }).catch(() => {});
+      // This screen keeps the Switch; another visitor's stage can't take it over mid-demo.
+      let owner = null;
+      try { owner = localStorage.getItem('nos_switch_owner') || crypto.randomUUID(); localStorage.setItem('nos_switch_owner', owner); } catch { owner = crypto.randomUUID(); }
+      fetch(`/api/sessions/${id}/link-switch`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ owner }) }).catch(() => {});
       $('#qr').src = links.qr;
       $('#qrMaya').src = links.qr_me;
       $('#nightLink').href = `/night.html?id=${id}`;
