@@ -7,7 +7,7 @@
   <title>tenshi · Your night</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="/theme.js"></script>
   <script src="/motion.js"></script>
   <link rel="stylesheet" href="/styles.css" />
@@ -22,10 +22,10 @@
   </style>
   <link rel="stylesheet" href="/tw.css" />
 </head>
-<body class="app streetlight min-h-screen">
-  <nav class="glass sticky top-0 z-40 !rounded-none !border-x-0 !border-t-0 border-line/60">
+<body class="app min-h-screen">
+  <nav class="glass sticky top-0 z-40 border-b border-line/60">
     <div class="mx-auto flex h-12 max-w-[1100px] items-center justify-between px-5">
-      <a href="/" class="flex items-center gap-2 text-paper"><span id="logo"></span><span class="text-[22px] font-light tracking-[0.08em] text-gold">tenshi</span></a>
+      <a href="/" class="flex items-center gap-2"><span id="logo"></span><span class="wordmark text-[17px]">tenshi</span></a>
       <div class="flex items-center gap-4">
         <span class="flex items-center gap-2 text-[13px] font-medium text-mist"><span class="breathe h-2 w-2 rounded-full bg-mint"></span>Live</span>
         <a id="grafana" target="_blank" rel="noopener" class="btn btn-ghost hidden min-h-[30px] px-3.5 text-[13px]">Open in Grafana</a>
@@ -41,10 +41,10 @@
     </header>
 
     <section class="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4" data-reveal style="--i:1">
-      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Out for</p><p class="mono tnum mt-1 text-[28px] font-bold tracking-tight" id="kOut">–</p></div>
-      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Check-ins answered</p><p class="mono tnum mt-1 text-[28px] font-bold tracking-tight" id="kChecks">–</p></div>
-      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Average reply</p><p class="mono tnum mt-1 text-[28px] font-bold tracking-tight" id="kReply">–</p></div>
-      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Battery</p><p class="mono tnum mt-1 text-[28px] font-bold tracking-tight" id="kBattery">–</p></div>
+      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Out for</p><p class="display tnum mt-1 text-[30px] font-semibold" id="kOut">–</p></div>
+      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Check-ins answered</p><p class="display tnum mt-1 text-[30px] font-semibold" id="kChecks">–</p></div>
+      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Average reply</p><p class="display tnum mt-1 text-[30px] font-semibold" id="kReply">–</p></div>
+      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Battery</p><p class="display tnum mt-1 text-[30px] font-semibold" id="kBattery">–</p></div>
     </section>
 
     <section class="mt-4 grid gap-4 md:grid-cols-2" id="charts" data-reveal style="--i:2"></section>
@@ -126,7 +126,7 @@
         stand_down: () => ['You cancelled the alarm with your PIN', 'text-mint'],
         contact_ack: () => ['Your contact said they’re on it', 'text-mint'],
         distress_check: (e) => [e.detail?.score >= 0.5 ? `Heard ${(e.detail.cues || []).join(' and ')}` : '30-second check: nothing worrying', e.detail?.score >= 0.5 ? 'text-signal' : 'text-mist'],
-        level_change: (e) => ({ ALARM: ['No answer, so your phone sounded the alarm', 'text-signal'], CONTACT: ['Your contact was alerted', 'text-signal'], WIDER: ['Your backup contact was alerted', 'text-signal'], RESOLVED: ['Night ended', 'text-mist'] })[e.detail?.to] || (e.detail?.from == null && e.detail?.to === 'ARMED' ? ['You armed tenshi', 'text-sodium'] : null),
+        level_change: (e) => ({ ALARM: ['No answer, so your phone sounded the alarm', 'text-signal'], CONTACT: ['Your contact was alerted', 'text-signal'], WIDER: ['Your backup contact was alerted', 'text-signal'], RESOLVED: ['Night ended', 'text-mist'] })[e.detail?.to] || (e.detail?.from == null && e.detail?.to === 'ARMED' ? ['You turned on tenshi', 'text-sodium'] : null),
       };
       const rows = events.slice().reverse().map((e) => { const l = LABEL[e.kind]?.(e); return l ? `<li class="flex gap-4"><span class="tnum w-24 shrink-0 text-[13px] text-mist">${clock(e.t)}</span><span class="font-medium ${l[1]}">${l[0]}</span></li>` : ''; }).filter(Boolean).slice(0, 12);
       $('#timeline').innerHTML = rows.join('') || '<li class="text-mist">Nothing yet tonight.</li>';
