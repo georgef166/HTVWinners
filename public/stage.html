@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0E1430" />
+  <title>Night Out Switch · Live</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Unbounded:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/theme.js"></script>
+  <script src="/trace.js"></script>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    html, body { height: 100%; }
+    body { overflow: hidden; transition: background-color .5s ease; }
+    body.silent { background: radial-gradient(70% 60% at 50% 40%, rgba(229, 48, 58, .22), transparent 70%), #160E26; }
+
+    .stage { display: grid; grid-template-columns: auto minmax(40px, 90px) minmax(0, 1fr) minmax(40px, 90px) auto; align-items: center; height: calc(100vh - 76px); padding: 0 28px 20px; }
+    .device { position: relative; width: calc(375px * var(--s)); height: calc(780px * var(--s)); border-radius: calc(52px * var(--s)); padding: calc(10px * var(--s)); background: #060A1F; box-shadow: 0 0 0 1.5px #2C3670, 0 40px 100px -30px rgba(0, 0, 0, .9); }
+    .device iframe { width: 375px; height: 760px; border: 0; border-radius: 42px; transform: scale(var(--s)); transform-origin: top left; background: var(--ink); }
+    .device .who { position: absolute; top: calc(100% + 12px); left: 0; right: 0; text-align: center; font-size: 14px; font-weight: 700; color: var(--mist); }
+    :root { --s: .72; }
+    @media (max-height: 760px) { :root { --s: .62; } }
+    @media (min-height: 900px) { :root { --s: .82; } }
+
+    /* Wires carry real events between the phones and the server */
+    .wire { position: relative; height: 4px; border-radius: 4px; background: repeating-linear-gradient(90deg, rgba(174,181,218,.35) 0 8px, transparent 8px 16px); background-size: 32px 4px; animation: flow 1.2s linear infinite; }
+    .silent .wire.out { background: repeating-linear-gradient(90deg, rgba(229,48,58,.6) 0 8px, transparent 8px 16px); background-size: 32px 4px; }
+    @keyframes flow { to { background-position: 32px 0; } }
+    .packet { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; }
+    .packet.big { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
+
+    .feed li { animation: feed-in .45s cubic-bezier(.2,.7,.2,1) both; }
+    @keyframes feed-in { from { opacity: 0; transform: translateY(-10px); } }
+    .flash { animation: stage-flash .9s ease-out; }
+    @keyframes stage-flash { 0% { box-shadow: 0 0 0 0 rgba(229,48,58,.9), 0 0 0 1.5px #E5303A; } 100% { box-shadow: 0 0 0 40px rgba(229,48,58,0), 0 0 0 1.5px #2C3670; } }
+
+    #start { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    @media (prefers-reduced-motion: reduce) { .wire { animation: none; } }
+  </style>
+</head>
+<body class="streetlight">
+  <!-- One click unlocks sound for both phones and starts a fresh night -->
+  <div id="start" class="streetlight">
+    <span class="breathe text-sodium" id="startLogo"></span>
+    <h1 class="display mt-8 max-w-3xl px-6 text-5xl font-extrabold leading-[1.05]">Two phones. One night. No one presses a button.</h1>
+    <p class="mt-5 max-w-xl px-6 text-xl text-mist">Maya's phone on the left, her friend Jordan's on the right. Watch what happens when Maya goes quiet.</p>
+    <button id="startBtn" class="btn btn-sodium mt-10 px-12 text-xl">Start the night</button>
+  </div>
+
+  <header class="flex h-[76px] items-center gap-4 px-7">
+    <a href="/" class="flex items-center gap-3 text-sodium"><span id="logo"></span><span class="display text-[15px] font-semibold text-paper">Night Out Switch</span></a>
+    <span class="flex items-center gap-2 rounded-full bg-signal/15 px-3 py-1 text-[13px] font-bold text-signal"><span class="breathe h-2 w-2 rounded-full bg-signal"></span>Live</span>
+    <div class="ml-auto flex items-center gap-2">
+      <button id="restart" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Restart night</button>
+      <button id="drain" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Drain battery</button>
+      <button id="cold" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Switch reads −2°C</button>
+      <div class="ml-2 flex items-center gap-3 rounded-2xl bg-paper p-1.5 pr-3 text-ink">
+        <img id="qr" alt="QR code to open Jordan's view on your phone" class="h-14 w-14 rounded-lg" />
+        <span class="text-[13px] font-bold leading-tight">Scan to be<br />Jordan too</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="device" id="mayaDevice"><iframe id="maya" title="Maya's phone" allow="autoplay; geolocation"></iframe><p class="who">Maya's phone</p></div>
+    <div class="wire" id="wireIn"></div>
+
+    <section class="flex min-w-0 flex-col justify-center gap-5 px-2">
+      <div>
+        <p id="statusKicker" class="text-[15px] font-bold text-sodium">Out tonight</p>
+        <h2 id="status" class="display mt-1 text-[clamp(26px,2.6vw,40px)] font-bold leading-[1.1]">Waiting to start</h2>
+      </div>
+      <div class="rounded-[24px] border border-line bg-dusk/60 p-4">
+        <div class="flex items-center justify-between text-[13px] font-semibold text-mist">
+          <span>Maya's signal, last 2 minutes</span>
+          <span class="flex items-center gap-4"><span class="flex items-center gap-1.5"><span class="h-0.5 w-4 rounded bg-sodium"></span>Maya</span><span class="flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-mint"></span>Her phone</span></span>
+        </div>
+        <canvas id="trace" class="mt-3 h-[150px] w-full"></canvas>
+      </div>
+      <div id="route"></div>
+      <ol id="feed" class="feed space-y-2 text-[15px]"></ol>
+    </section>
+
+    <div class="wire out" id="wireOut"></div>
+    <div class="device" id="jordanDevice"><iframe id="jordan" title="Jordan's phone" allow="autoplay"></iframe><p class="who">Jordan's phone</p></div>
+  </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    $('#logo').innerHTML = NOS.logo();
+    $('#startLogo').innerHTML = NOS.logo().replace('width="38"', 'width="96"').replace(/height="[\d.]+"/, 'height="56"');
+    const trace = new SignalTrace($('#trace'));
+
+    let id = new URLSearchParams(location.search).get('id');
+    let links = null;
+    let seen = new Set();
+    let lastLevel = null;
+    let state = null;
+    let deadline = null;
+    let silentSince = null;
+
+    const FEED = {
+      checkin_sent: ['Check-in sent to Maya’s phone', 'text-sodium'],
+      checkin_ack: ['Maya: “I’m OK”', 'text-mint'],
+      stand_down: ['Maya entered her PIN. Alarm cancelled', 'text-mint'],
+      contact_ack: ['Jordan: “I’m on it”', 'text-mint'],
+      resolved: ['Night ended', 'text-mist'],
+    };
+    const LEVEL_FEED = {
+      ALARM: ['No answer. Alarm sounding on Maya’s phone', 'text-signal'],
+      CONTACT: ['Jordan alerted with Maya’s last location', 'text-signal'],
+      WIDER: ['Jordan hasn’t confirmed. Backup contact alerted', 'text-signal'],
+    };
+    const DEVICE_FEED = { touch: 'Switch: touch check-in', code: 'Switch: joystick code entered', nfc: 'Switch: home tag tapped' };
+
+    function packet(wire, { color, reverse = false, big = false, ms = 900 }) {
+      const p = document.createElement('span');
+      p.className = `packet${big ? ' big' : ''}`;
+      p.style.background = color;
+      p.style.boxShadow = `0 0 ${big ? 30 : 14}px ${big ? 8 : 3}px ${color}`;
+      wire.appendChild(p);
+      const w = wire.getBoundingClientRect().width;
+      p.animate([{ left: reverse ? `${w}px` : '0px' }, { left: reverse ? '0px' : `${w}px` }], { duration: ms, easing: 'cubic-bezier(.5,0,.5,1)' })
+        .finished.then(() => p.remove());
+    }
+
+    function feed(text, cls, t) {
+      const li = document.createElement('li');
+      li.className = 'flex items-baseline gap-3';
+      li.innerHTML = `<span class="tnum text-[13px] text-mist">${new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</span><span class="font-semibold ${cls}"></span>`;
+      li.lastChild.textContent = text;
+      $('#feed').prepend(li);
+      while ($('#feed').children.length > 5) $('#feed').lastChild.remove();
+    }
+
+    // React to new events: feed lines and packets on the wires.
+    function onEvent(e, animate) {
+      const wIn = $('#wireIn'), wOut = $('#wireOut');
+      if (e.kind === 'heartbeat') { if (animate) packet(wIn, { color: '#5BE3B0', ms: 700 }); return; }
+      if (e.kind === 'device' && DEVICE_FEED[e.detail?.type]) { feed(DEVICE_FEED[e.detail.type], 'text-sodium', e.t); if (animate) packet(wIn, { color: '#FFB547' }); return; }
+      if (e.kind === 'level_change') {
+        const lf = LEVEL_FEED[e.detail?.to];
+        if (lf) feed(lf[0], lf[1], e.t);
+        if (animate && e.detail?.to === 'CONTACT') {
+          packet(wOut, { color: '#E5303A', big: true, ms: 1100 });
+          setTimeout(() => { $('#jordanDevice').classList.remove('flash'); void $('#jordanDevice').offsetWidth; $('#jordanDevice').classList.add('flash'); }, 1050);
+        }
+        if (animate && e.detail?.to === 'ALARM') { $('#mayaDevice').classList.remove('flash'); void $('#mayaDevice').offsetWidth; $('#mayaDevice').classList.add('flash'); }
+        if (e.detail?.from === null && e.detail?.to === 'ARMED') feed('Maya armed Night Out Switch', 'text-sodium', e.t);
+        return;
+      }
+      const f = FEED[e.kind];
+      if (!f) return;
+      feed(f[0], f[1], e.t);
+      if (!animate) return;
+      if (e.kind === 'checkin_sent') packet(wIn, { color: '#FFB547', reverse: true });
+      if (e.kind === 'checkin_ack' || e.kind === 'stand_down') packet(wIn, { color: '#5BE3B0' });
+      if (e.kind === 'contact_ack') { packet(wOut, { color: '#5BE3B0', reverse: true }); setTimeout(() => packet(wIn, { color: '#5BE3B0', reverse: true }), 800); }
+      if (e.kind === 'stand_down') setTimeout(() => packet(wOut, { color: '#5BE3B0' }), 800);
+    }
+
+    const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s) % 60).padStart(2, '0')}`;
+    function renderStatus() {
+      if (!state) return;
+      const left = deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : 0;
+      const quiet = silentSince ? Math.floor((Date.now() - silentSince) / 1000) : 0;
+      const S = {
+        ARMED: ['Out tonight', 'text-sodium', `Maya is out. Next check-in in ${fmt(left)}`],
+        NUDGE: ['Check-in', 'text-sodium', `“Still good?” Waiting for Maya… ${left}s`],
+        ALARM: ['No answer', 'text-signal', `Maya’s phone is sounding the alarm. Jordan in ${left}s`],
+        CONTACT: ['Help is moving', 'text-signal', state.contact_acked ? 'Jordan is on the way.' : `Jordan alerted. Maya silent for ${fmt(quiet)}`],
+        WIDER: ['Help is moving', 'text-signal', state.contact_acked ? 'Jordan is on the way.' : 'Backup contact alerted too.'],
+        RESOLVED: ['Home', 'text-mint', 'Night over. Everyone’s home.'],
+      }[state.level];
+      $('#statusKicker').textContent = S[0];
+      $('#statusKicker').className = `text-[15px] font-bold ${S[1]}`;
+      $('#status').textContent = S[2];
+    }
+    setInterval(renderStatus, 250);
+
+    async function poll() {
+      if (!id) return;
+      try {
+        const [t, s] = await Promise.all([
+          fetch(`/api/sessions/${id}/trace`).then((r) => r.json()),
+          fetch(`/api/sessions/${id}`).then((r) => r.json()),
+        ]);
+        trace.update(t);
+        state = s;
+        deadline = s.seconds_left == null ? null : Date.now() + s.seconds_left * 1000;
+        const first = seen.size === 0;
+        for (const e of t.events) {
+          const key = `${e.t}|${e.kind}|${e.detail?.to || e.detail?.type || ''}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          onEvent(e, !first);
+        }
+        const silentLevels = ['NUDGE', 'ALARM', 'CONTACT', 'WIDER'];
+        if (silentLevels.includes(s.level) && !silentLevels.includes(lastLevel)) {
+          // Same definition as Jordan's page: time since her last response.
+          const resp = [...t.events].reverse().find((e) => e.kind === 'checkin_ack' || e.kind === 'stand_down' || (e.kind === 'level_change' && e.detail?.to === 'ARMED'));
+          silentSince = resp ? new Date(resp.t).getTime() : Date.now();
+        }
+        if (!silentLevels.includes(s.level)) silentSince = null;
+        document.body.classList.toggle('silent', ['ALARM', 'CONTACT', 'WIDER'].includes(s.level) && !s.contact_acked);
+        document.body.classList.toggle('streetlight', !document.body.classList.contains('silent'));
+        if (s.level !== lastLevel) NOS.route($('#route'), { level: s.level, variant: 'mini' });
+        lastLevel = s.level;
+        renderStatus();
+      } catch {}
+    }
+
+    async function startNight() {
+      if (!id) {
+        const r = await fetch('/api/demo', { method: 'POST' }).then((r) => r.json());
+        id = r.id;
+        history.replaceState(null, '', `?id=${id}`);
+      }
+      links = await fetch(`/api/demo/${id}`).then((r) => r.json());
+      $('#qr').src = links.qr;
+      $('#maya').src = `/me.html?id=${id}&stage=1`;
+      $('#jordan').src = `/contact.html?t=${links.contactToken}&stage=1`;
+      seen = new Set(); lastLevel = null; $('#feed').innerHTML = '';
+      poll();
+    }
+    setInterval(poll, 1000);
+
+    $('#startBtn').addEventListener('click', async () => {
+      // This click is the user gesture that lets both embedded phones make sound.
+      try { window.NOS_AUDIO = new (window.AudioContext || window.webkitAudioContext)(); window.NOS_AUDIO.resume(); } catch {}
+      $('#start').remove();
+      await startNight();
+    });
+    $('#restart').addEventListener('click', async () => { id = null; await startNight(); });
+    $('#drain').addEventListener('click', () => id && fetch(`/api/demo/${id}/drain-battery`, { method: 'POST' }));
+    $('#cold').addEventListener('click', async (e) => {
+      if (!id) return;
+      const { cold } = await fetch(`/api/demo/${id}/cold`, { method: 'POST' }).then((r) => r.json());
+      e.currentTarget.textContent = cold ? 'Normal temperature' : 'Switch reads −2°C';
+    });
+  </script>
+</body>
+</html>

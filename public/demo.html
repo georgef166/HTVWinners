@@ -44,6 +44,7 @@
             </span>
           </a>
         </div>
+        <a id="stageLink" class="btn btn-sodium mt-6">Open the live stage</a>
         <p class="mt-6 text-[15px] text-mist">Sound needs a tap on each page first. The demo PIN is <b class="text-paper">1234</b>.</p>
 
         <div class="mt-8 rounded-[24px] border border-line bg-dusk/60 p-5">
@@ -87,6 +88,7 @@
     document.getElementById('logo').innerHTML = NOS.logo();
     document.getElementById('meIcon').innerHTML = NOS.logo('sm');
     const id = new URLSearchParams(location.search).get('id');
+    document.getElementById('stageLink').href = `/stage.html?id=${encodeURIComponent(id)}`;
     document.getElementById('cold').addEventListener('click', async (e) => {
       const r = await fetch(`/api/demo/${encodeURIComponent(id)}/cold`, { method: 'POST' });
       if (!r.ok) return;

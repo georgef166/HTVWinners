@@ -210,6 +210,9 @@
     const vibrate = (p) => navigator.vibrate && navigator.vibrate(p);
 
     $('#unlock').addEventListener('click', () => { unlockAudio(); $('#unlock').remove(); });
+    // Stage mode: embedded in the demo stage, which already unlocked sound with its Start click.
+    const STAGE = new URLSearchParams(location.search).has('stage');
+    if (STAGE) { try { audio = window.parent.NOS_AUDIO || null; } catch {} $('#unlock').remove(); }
 
     // ---- Keypad ----
     function keypad(container, onSubmit) {
