@@ -33,7 +33,7 @@
           "type": "grafana-postgresql-datasource",
           "uid": "tiger"
         },
-        "query": "SELECT DISTINCT user_name FROM sessions ORDER BY 1",
+        "query": "SELECT DISTINCT user_name FROM sessions WHERE checkin_every_s >= 300 ORDER BY 1",
         "refresh": 1,
         "current": {
           "text": "Maya",
@@ -83,7 +83,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(*) AS value FROM sessions s WHERE s.user_name = '$person' AND $__timeFilter(s.armed_at)"
+          "rawSql": "SELECT count(*) AS value FROM sessions s WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND $__timeFilter(s.armed_at)"
         }
       ],
       "options": {
@@ -133,7 +133,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT sum(EXTRACT(EPOCH FROM coalesce(resolved_at, now()) - armed_at)) / 3600 AS value FROM sessions s WHERE s.user_name = '$person' AND $__timeFilter(s.armed_at)"
+          "rawSql": "SELECT sum(EXTRACT(EPOCH FROM coalesce(resolved_at, now()) - armed_at)) / 3600 AS value FROM sessions s WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND $__timeFilter(s.armed_at)"
         }
       ],
       "options": {
@@ -155,7 +155,7 @@
             "mode": "fixed",
             "fixedColor": "#2F45FF"
           },
-          "unit": "h",
+          "unit": "suffix: h",
           "decimals": 1
         },
         "overrides": []
@@ -185,7 +185,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT 100.0 * count(*) FILTER (WHERE e.kind = 'checkin_ack') / NULLIF(count(*) FILTER (WHERE e.kind = 'checkin_sent'), 0) AS value FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND $__timeFilter(e.time)"
+          "rawSql": "SELECT 100.0 * count(*) FILTER (WHERE e.kind = 'checkin_ack') / NULLIF(count(*) FILTER (WHERE e.kind = 'checkin_sent'), 0) AS value FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND $__timeFilter(e.time)"
         }
       ],
       "options": {
@@ -237,7 +237,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT avg(m.value) AS value FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'reply_s' AND $__timeFilter(m.time)"
+          "rawSql": "SELECT avg(m.value) AS value FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'reply_s' AND $__timeFilter(m.time)"
         }
       ],
       "options": {
@@ -289,7 +289,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(*) AS value FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND e.kind = 'level_change' AND e.detail->>'to' = 'ALARM' AND $__timeFilter(e.time)"
+          "rawSql": "SELECT count(*) AS value FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND e.kind = 'level_change' AND e.detail->>'to' = 'ALARM' AND $__timeFilter(e.time)"
         }
       ],
       "options": {
@@ -339,7 +339,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(*) AS value FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'distress_score' AND m.value >= 0.5 AND $__timeFilter(m.time)"
+          "rawSql": "SELECT count(*) AS value FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'distress_score' AND m.value >= 0.5 AND $__timeFilter(m.time)"
         }
       ],
       "options": {
@@ -389,7 +389,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT e.time, e.detail->>'to' AS \"level\" FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND e.kind = 'level_change' AND $__timeFilter(e.time) ORDER BY e.time"
+          "rawSql": "SELECT e.time, e.detail->>'to' AS \"level\" FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND e.kind = 'level_change' AND $__timeFilter(e.time) ORDER BY e.time"
         }
       ],
       "options": {
@@ -397,9 +397,7 @@
         "mergeValues": true,
         "rowHeight": 0.8,
         "legend": {
-          "showLegend": true,
-          "displayMode": "list",
-          "placement": "bottom"
+          "showLegend": false
         }
       },
       "fieldConfig": {
@@ -472,7 +470,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT time_bucket('10 minutes', m.bucket) AS time, avg(m.avg) AS \"average dB\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT time_bucket('10 minutes', m.bucket) AS time, avg(m.avg) AS \"average dB\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY 1 ORDER BY 1"
         },
         {
           "refId": "B",
@@ -483,7 +481,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT time_bucket('10 minutes', m.bucket) AS time, max(m.max) AS \"peak dB\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'sound_peak_db' AND $__timeFilter(m.bucket) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT time_bucket('10 minutes', m.bucket) AS time, max(m.max) AS \"peak dB\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'sound_peak_db' AND $__timeFilter(m.bucket) GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -494,8 +492,8 @@
             "fillOpacity": 14,
             "showPoints": "never",
             "barAlignment": 0,
-            "spanNulls": 3600000,
-            "insertNulls": false
+            "spanNulls": false,
+            "insertNulls": 1800000
           },
           "color": {
             "mode": "palette-classic"
@@ -538,7 +536,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT to_char(make_time(h::int, 0, 0), 'HH24:MI') AS \"hour\", round(avg_db::numeric, 1) AS \"average dB\" FROM (SELECT extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') AS h, avg(m.avg) AS avg_db FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY 1) x ORDER BY (h::int + 6) % 24"
+          "rawSql": "SELECT to_char(make_time(h::int, 0, 0), 'HH24:MI') AS \"hour\", round(avg_db::numeric, 1) AS \"average dB\" FROM (SELECT extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') AS h, avg(m.avg) AS avg_db FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY 1) x ORDER BY (h::int + 6) % 24"
         }
       ],
       "options": {
@@ -590,7 +588,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT time_bucket('10 minutes', m.bucket) AS time, avg(m.avg) AS \"movement\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'movement' AND $__timeFilter(m.bucket) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT time_bucket('10 minutes', m.bucket) AS time, avg(m.avg) AS \"movement\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'movement' AND $__timeFilter(m.bucket) GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -601,8 +599,8 @@
             "fillOpacity": 14,
             "showPoints": "never",
             "barAlignment": 0,
-            "spanNulls": 3600000,
-            "insertNulls": false
+            "spanNulls": false,
+            "insertNulls": 1800000
           },
           "color": {
             "mode": "fixed",
@@ -646,7 +644,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT s.armed_at AS time, avg(m.value) AS \"average reply\", max(m.value) AS \"slowest reply\" FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'reply_s' AND $__timeFilter(s.armed_at) GROUP BY s.armed_at ORDER BY 1"
+          "rawSql": "SELECT s.armed_at AS time, avg(m.value) AS \"average reply\", max(m.value) AS \"slowest reply\" FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'reply_s' AND $__timeFilter(s.armed_at) GROUP BY s.armed_at ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -657,8 +655,8 @@
             "fillOpacity": 80,
             "showPoints": "auto",
             "barAlignment": 0,
-            "spanNulls": 3600000,
-            "insertNulls": false
+            "spanNulls": false,
+            "insertNulls": 1800000
           },
           "color": {
             "mode": "palette-classic"
@@ -702,7 +700,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT s.armed_at AS time, (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS \"battery at home\" FROM sessions s WHERE s.user_name = '$person' AND $__timeFilter(s.armed_at) ORDER BY 1"
+          "rawSql": "SELECT s.armed_at AS time, (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS \"battery at home\" FROM sessions s WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND $__timeFilter(s.armed_at) ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -713,8 +711,8 @@
             "fillOpacity": 80,
             "showPoints": "auto",
             "barAlignment": 0,
-            "spanNulls": 3600000,
-            "insertNulls": false
+            "spanNulls": false,
+            "insertNulls": 1800000
           },
           "color": {
             "mode": "fixed",
@@ -761,7 +759,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT s.armed_at AS time, min(m.value) AS \"coldest\" FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'temp_c' AND $__timeFilter(s.armed_at) GROUP BY s.armed_at ORDER BY 1"
+          "rawSql": "SELECT s.armed_at AS time, min(m.value) AS \"coldest\" FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'temp_c' AND $__timeFilter(s.armed_at) GROUP BY s.armed_at ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -772,8 +770,8 @@
             "fillOpacity": 80,
             "showPoints": "auto",
             "barAlignment": 0,
-            "spanNulls": 3600000,
-            "insertNulls": false
+            "spanNulls": false,
+            "insertNulls": 1800000
           },
           "color": {
             "mode": "fixed",
@@ -818,7 +816,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT s.armed_at AS time, count(*) FILTER (WHERE e.kind = 'checkin_ack') AS \"answered\", count(*) FILTER (WHERE e.kind = 'level_change' AND e.detail->>'to' = 'ALARM') AS \"missed\" FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND $__timeFilter(s.armed_at) GROUP BY s.armed_at ORDER BY 1"
+          "rawSql": "SELECT s.armed_at AS time, count(*) FILTER (WHERE e.kind = 'checkin_ack') AS \"answered\", count(*) FILTER (WHERE e.kind = 'level_change' AND e.detail->>'to' = 'ALARM') AS \"missed\" FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND $__timeFilter(s.armed_at) GROUP BY s.armed_at ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -829,8 +827,8 @@
             "fillOpacity": 80,
             "showPoints": "auto",
             "barAlignment": 0,
-            "spanNulls": 3600000,
-            "insertNulls": false
+            "spanNulls": false,
+            "insertNulls": 1800000
           },
           "color": {
             "mode": "palette-classic"
@@ -872,7 +870,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT to_char(s.armed_at AT TIME ZONE 'America/Toronto', 'Dy Mon DD, HH24:MI') AS \"night\",\n       round((EXTRACT(EPOCH FROM coalesce(s.resolved_at, now()) - s.armed_at) / 3600)::numeric, 1) AS \"hours\",\n       (SELECT count(*) FROM events WHERE session_id = s.id AND kind = 'checkin_ack') AS \"check-ins answered\",\n       (SELECT count(*) FROM events WHERE session_id = s.id AND kind = 'level_change' AND detail->>'to' = 'ALARM') AS \"alarms\",\n       (SELECT count(*) FROM metrics WHERE session_id = s.id AND metric = 'distress_score' AND value >= 0.5) AS \"distress flags\",\n       (SELECT round(avg(value)::numeric, 1) FROM metrics WHERE session_id = s.id AND metric = 'reply_s') AS \"avg reply (s)\",\n       (SELECT round(max(value)::numeric, 1) FROM metrics WHERE session_id = s.id AND metric = 'sound_peak_db') AS \"loudest (dB)\",\n       (SELECT round(min(value)::numeric, 1) FROM metrics WHERE session_id = s.id AND metric = 'temp_c') AS \"coldest (\u00b0C)\",\n       (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS \"battery at home (%)\"\n     FROM sessions s WHERE s.user_name = '$person' AND $__timeFilter(s.armed_at) ORDER BY s.armed_at DESC"
+          "rawSql": "SELECT to_char(s.armed_at AT TIME ZONE 'America/Toronto', 'Dy Mon DD, HH24:MI') AS \"night\",\n       round((EXTRACT(EPOCH FROM coalesce(s.resolved_at, now()) - s.armed_at) / 3600)::numeric, 1) AS \"hours\",\n       (SELECT count(*) FROM events WHERE session_id = s.id AND kind = 'checkin_ack') AS \"check-ins answered\",\n       (SELECT count(*) FROM events WHERE session_id = s.id AND kind = 'level_change' AND detail->>'to' = 'ALARM') AS \"alarms\",\n       (SELECT count(*) FROM metrics WHERE session_id = s.id AND metric = 'distress_score' AND value >= 0.5) AS \"distress flags\",\n       (SELECT round(avg(value)::numeric, 1) FROM metrics WHERE session_id = s.id AND metric = 'reply_s') AS \"avg reply (s)\",\n       (SELECT round(max(value)::numeric, 1) FROM metrics WHERE session_id = s.id AND metric = 'sound_peak_db') AS \"loudest (dB)\",\n       (SELECT round(min(value)::numeric, 1) FROM metrics WHERE session_id = s.id AND metric = 'temp_c') AS \"coldest (\u00b0C)\",\n       (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS \"battery at home (%)\"\n     FROM sessions s WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND $__timeFilter(s.armed_at) ORDER BY s.armed_at DESC"
         }
       ],
       "options": {

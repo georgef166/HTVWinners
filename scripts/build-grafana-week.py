@@ -1,13 +1,14 @@
 # Generates deploy/grafana/dashboards/night-out-switch-week.json (the week view, across nights).
 import json
 DS = {"type": "grafana-postgresql-datasource", "uid": "tiger"}
-P = "s.user_name = '$person'"
+# Real nights only: demo runs check in every few seconds, real nights every 20 minutes.
+P = "s.user_name = '$person' AND s.checkin_every_s >= 300"
 def t(sql, fmt="time_series", ref="A"):
     return {"refId": ref, "datasource": DS, "rawQuery": True, "editorMode": "code", "format": fmt, "rawSql": sql}
 def ts(id, title, x, y, w, h, targets, unit=None, desc="", draw="line", fill=14, color=None, minv=None, maxv=None, stack=False):
     p = {"id": id, "type": "timeseries", "title": title, "description": desc, "datasource": DS, "gridPos": {"x": x, "y": y, "w": w, "h": h}, "targets": targets,
          "fieldConfig": {"defaults": {"custom": {"drawStyle": draw, "lineWidth": 2, "fillOpacity": fill, "showPoints": "never" if draw == "line" else "auto",
-                                                 "barAlignment": 0, "spanNulls": 3600000, "insertNulls": False},
+                                                 "barAlignment": 0, "spanNulls": False, "insertNulls": 1800000},
                                       "color": {"mode": "fixed", "fixedColor": color} if color else {"mode": "palette-classic"}}, "overrides": []},
          "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}}
     if unit: p["fieldConfig"]["defaults"]["unit"] = unit
@@ -28,14 +29,14 @@ panels = [
   {"id": 100, "type": "text", "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3}, "options": {"mode": "markdown", "content":
    "### A week of nights out, from Tiger Data\nEvery night is a session; every signal is a row in the `metrics` hypertable. The long-range panels read the `metrics_1m` **continuous aggregate**, so a week stays fast. Sample data for the demo. Audio is never stored."}},
   stat(1, "Nights out", 0, 4, f"SELECT count(*) AS value FROM sessions s WHERE {P} AND $__timeFilter(s.armed_at)"),
-  stat(2, "Hours out", 4, 4, f"SELECT sum(EXTRACT(EPOCH FROM coalesce(resolved_at, now()) - armed_at)) / 3600 AS value FROM sessions s WHERE {P} AND $__timeFilter(s.armed_at)", "h", decimals=1),
+  stat(2, "Hours out", 4, 4, f"SELECT sum(EXTRACT(EPOCH FROM coalesce(resolved_at, now()) - armed_at)) / 3600 AS value FROM sessions s WHERE {P} AND $__timeFilter(s.armed_at)", "suffix: h", decimals=1),
   stat(3, "Check-ins answered", 8, 4, f"SELECT 100.0 * count(*) FILTER (WHERE e.kind = 'checkin_ack') / NULLIF(count(*) FILTER (WHERE e.kind = 'checkin_sent'), 0) AS value {JE} WHERE {P} AND $__timeFilter(e.time)", "percent", "#10B981", 0),
   stat(4, "Average reply", 12, 4, f"SELECT avg(m.value) AS value {J} WHERE {P} AND m.metric = 'reply_s' AND $__timeFilter(m.time)", "s", decimals=1),
   stat(5, "Alarms (missed check-ins)", 16, 4, f"SELECT count(*) AS value {JE} WHERE {P} AND e.kind = 'level_change' AND e.detail->>'to' = 'ALARM' AND $__timeFilter(e.time)", None, "#FF4D3D"),
   stat(6, "30-second checks that flagged something", 20, 4, f"SELECT count(*) AS value {J} WHERE {P} AND m.metric = 'distress_score' AND m.value >= 0.5 AND $__timeFilter(m.time)", None, "#FF4D3D"),
   {"id": 7, "type": "state-timeline", "title": "The escalation ladder, every night", "datasource": DS, "gridPos": {"x": 0, "y": 7, "w": 24, "h": 5},
    "targets": [t(f"SELECT e.time, e.detail->>'to' AS \"level\" {JE} WHERE {P} AND e.kind = 'level_change' AND $__timeFilter(e.time) ORDER BY e.time")],
-   "options": {"showValue": "never", "mergeValues": True, "rowHeight": 0.8, "legend": {"showLegend": True, "displayMode": "list", "placement": "bottom"}},
+   "options": {"showValue": "never", "mergeValues": True, "rowHeight": 0.8, "legend": {"showLegend": False}},
    "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"type": "value", "options": {
      "ARMED": {"color": "#2F45FF", "index": 0, "text": "Armed"}, "NUDGE": {"color": "#FF9500", "index": 1, "text": "Check-in"}, "ALARM": {"color": "#FF4D3D", "index": 2, "text": "Alarm"},
      "CONTACT": {"color": "#C2121F", "index": 3, "text": "Contact alerted"}, "WIDER": {"color": "#7A0B14", "index": 4}, "RESOLVED": {"color": "#E4E6EF", "index": 5, "text": "Home"}}}]}, "overrides": []}},
@@ -70,7 +71,7 @@ dash = {
   "uid": "nos-week", "title": "Night Out Switch: the week", "tags": ["night-out-switch", "tiger-data"], "timezone": "browser",
   "schemaVersion": 39, "version": 1, "editable": False, "graphTooltip": 1, "refresh": "1m", "time": {"from": "now-7d", "to": "now"},
   "links": [{"title": "One night", "type": "link", "url": "/grafana/d/nos-night/night-out-switch", "icon": "dashboard"}],
-  "templating": {"list": [{"name": "person", "label": "Person", "type": "query", "datasource": DS, "query": "SELECT DISTINCT user_name FROM sessions ORDER BY 1",
+  "templating": {"list": [{"name": "person", "label": "Person", "type": "query", "datasource": DS, "query": "SELECT DISTINCT user_name FROM sessions WHERE checkin_every_s >= 300 ORDER BY 1",
                            "refresh": 1, "current": {"text": "Maya", "value": "Maya"}, "includeAll": False, "multi": False}]},
   "panels": panels,
 }
