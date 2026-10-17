@@ -36,6 +36,12 @@ The smoke test runs the whole ladder against the API (about 80 s) and prints `SM
 
 The app, our own AI model and the Tiger Data database all run on Vultr, so Maya's night never goes to a third-party AI company. Tiger Data stores events as a hypertable with compression, 7-day retention (location deletes itself) and a continuous aggregate behind the signal trace. Step-by-step: [docs/DEPLOY-VULTR.md](docs/DEPLOY-VULTR.md).
 
+## Her dashboard and Grafana
+
+Since the phone is checking in anyway, Maya gets her night back as data: **Your night so far** (`/night.html?id=…`, linked from her phone and the stage) shows movement, sound level, battery, reply times, Switch temperature and a timeline. Every signal lands in a Tiger Data `metrics` hypertable (compressed after a day, deleted after 7, rolled up per minute by the `metrics_1m` continuous aggregate). **Grafana** at `/grafana` reads Tiger Data directly: the escalation ladder as a state timeline, live signals, the per-minute rollup, and a time-stream anomaly panel (z-score of sound peaks against a rolling baseline).
+
+**30-second distress checks (opt-in):** the phone keeps the last 30 seconds of audio in memory and sends a clip only after a sudden loud spike. Our self-hosted Whisper (on Vultr) transcribes it in memory, looks for phrases like "help" or "get away from me", and the clip is wiped. Only a score and plain cues are stored. A positive check asks Maya "Still good?" right away; it never alerts her friend by itself.
+
 ## The demo stage
 
 **Start the demo** opens `stage.html`: both phones live side by side, with the server's view between them (a scrolling signal trace, a live event feed, and packets travelling the wires as events happen). It's built for the projector.

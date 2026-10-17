@@ -79,3 +79,12 @@
 - Rate limit raised to 240 POST/min per IP, with heartbeats and Switch routes exempt, because a whole venue shares one public IP.
 - The stage has QR codes to be Maya or Jordan on your own phone; every Start the demo is its own night.
 - Deploy target is Vultr, not Vercel: the escalation ticker must run continuously, and serverless doesn't. `docker compose up -d` brings up the app, TimescaleDB and Caddy (HTTPS via sslip.io); `--profile model` adds Ollama on a GPU. Compose config validates; the images haven't been built here (no Docker daemon locally).
+
+## Dashboard, Grafana, distress checks (MLH coach feedback)
+
+- "Biometrics" are honest signals: phone motion (DeviceMotion), ambient loudness (mic level only), battery, reply times, Switch temperature/pressure. No heart-rate sensor in the kit (a MAX30102 would add one).
+- `metrics` hypertable (long format: time, session_id, metric, value, source), compression segmented by session+metric, 7-day retention, `metrics_1m` continuous aggregate (30 s refresh).
+- Distress checks: rolling 30 s PCM ring buffer at 16 kHz on the phone; trigger = 18 dB over a slow-moving baseline for ~0.5 s; clip sent 3 s later; server transcribes with Speaches (faster-whisper base.en, CPU) and matches a narrow phrase list. Verified on Vultr: a calm clip scored 0.3 (no prompt), "stop, get away from me, somebody help me" scored 1.0 and prompted a check-in, ~1.5–2 s per clip. Verified the DB holds only score + cues, logs hold no words, and no audio files exist.
+- Bystander privacy: opt-in per night (on by default only in demo sessions), audio never stored, only phrases indicating distress are matched, nothing is sent to a third party.
+- Grafana 11.3 with anonymous Viewer access for the demo (the dashboard shows names and signals but no location). Lock it down (disable anonymous, or use public dashboard links) before any real use.
+- Listening stops when the phone locks (browser limitation); a native app would fix this.
