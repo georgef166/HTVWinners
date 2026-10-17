@@ -47,7 +47,7 @@ body { isolation: isolate; }
 #iris.open::after { transition: clip-path .55s var(--ease-out); clip-path: circle(0 at 50% 50%); }
 
 /* Letterbox bars for cinematic scenes */
-.letterbox::before, .letterbox::after { content: ''; position: absolute; left: 0; right: 0; height: 11vh; background: #04060F; z-index: 5; transition: transform 1s var(--ease-out); }
+.letterbox::before, .letterbox::after { content: ''; position: absolute; left: 0; right: 0; height: 11vh; background: #000; z-index: 5; transition: transform 1s var(--ease-out); }
 .letterbox::before { top: 0; }
 .letterbox::after { bottom: 0; }
 .letterbox.open::before { transform: translateY(-100%); }
@@ -58,19 +58,19 @@ body { isolation: isolate; }
 .boot.go [data-boot] { opacity: 1; transform: none; transition: opacity .7s var(--ease-out), transform .7s var(--ease-out); transition-delay: calc(var(--i, 0) * 90ms); }
 
 /* Physical slide-to-arm switch */
-.slide-switch { position: relative; width: min(320px, 82vw); height: 80px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,181,71,.35); touch-action: none; user-select: none; cursor: grab; }
-.slide-switch .fill { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, rgba(255,181,71,.0), rgba(255,181,71,.35)); clip-path: inset(0 calc(100% - var(--p, 0) * 100%) 0 0); }
-.slide-switch .label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-left: 64px; font-weight: 700; font-size: 17px; color: rgba(244,245,251,.75); opacity: calc(1 - var(--p, 0) * 1.6); }
-.slide-switch .label span { background: linear-gradient(90deg, rgba(244,245,251,.35) 0%, #fff 50%, rgba(244,245,251,.35) 100%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 2.4s linear infinite; }
+.slide-switch { position: relative; width: min(320px, 82vw); height: 80px; border-radius: 999px; background: rgb(var(--paper-rgb) / .05); border: 1px solid rgb(var(--sodium-rgb) / .35); touch-action: none; user-select: none; cursor: grab; }
+.slide-switch .fill { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, rgb(var(--sodium-rgb) / .0), rgb(var(--sodium-rgb) / .35)); clip-path: inset(0 calc(100% - var(--p, 0) * 100%) 0 0); }
+.slide-switch .label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-left: 64px; font-weight: 500; font-size: 17px; color: var(--mist); opacity: calc(1 - var(--p, 0) * 1.6); }
+.slide-switch .label span { background: linear-gradient(90deg, rgb(var(--mist-rgb) / .55) 0%, var(--paper) 50%, rgb(var(--mist-rgb) / .55) 100%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 2.4s linear infinite; }
 @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
-.slide-switch .knob { position: absolute; top: 7px; left: 7px; width: 66px; height: 66px; border-radius: 50%; background: var(--sodium); box-shadow: 0 8px 30px -6px rgba(255,181,71,.8), inset 0 -4px 0 rgba(0,0,0,.12); display: flex; align-items: center; justify-content: center; color: var(--ink); transform: translateX(var(--x, 0px)); }
+.slide-switch .knob { position: absolute; top: 7px; left: 7px; width: 66px; height: 66px; border-radius: 50%; background: var(--sodium); box-shadow: 0 6px 18px -6px rgb(var(--sodium-rgb) / .6); display: flex; align-items: center; justify-content: center; color: #fff; transform: translateX(var(--x, 0px)); }
 .slide-switch.snap .knob { transition: transform .5s var(--ease-spring); }
-.slide-switch.armed { border-color: var(--sodium); box-shadow: 0 0 0 10px rgba(255,181,71,.12), 0 0 60px rgba(255,181,71,.45); }
+.slide-switch.armed { border-color: var(--sodium); box-shadow: 0 0 0 10px rgb(var(--sodium-rgb) / .12), 0 0 60px rgb(var(--sodium-rgb) / .45); }
 .slide-switch:focus-visible { outline: 3px solid var(--sodium); outline-offset: 4px; }
 
 /* Expanding rings when something powers on */
 .power-rings { position: absolute; inset: 0; pointer-events: none; }
-.power-rings i { position: absolute; left: 50%; top: 50%; width: 200px; height: 200px; margin: -100px 0 0 -100px; border-radius: 50%; border: 2px solid rgba(255,181,71,.6); transform: scale(0); opacity: 0; }
+.power-rings i { position: absolute; left: 50%; top: 50%; width: 200px; height: 200px; margin: -100px 0 0 -100px; border-radius: 50%; border: 2px solid rgb(var(--sodium-rgb) / .6); transform: scale(0); opacity: 0; }
 .power-rings.go i { animation: ring-out 1.4s var(--ease-out) forwards; }
 .power-rings.go i:nth-child(2) { animation-delay: .15s; }
 .power-rings.go i:nth-child(3) { animation-delay: .3s; }

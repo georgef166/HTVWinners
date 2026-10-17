@@ -4,7 +4,8 @@
 //  - The line goes flat and red when she goes quiet
 //  - Dots underneath for her phone's heartbeats (the phone can be fine while she isn't)
 (function () {
-  const SILENT = { NUDGE: '#FFB547', ALARM: '#E5303A', CONTACT: '#E5303A', WIDER: '#E5303A' };
+  // Levels where she's silent: orange while a check-in waits, red once the alarm is up.
+  const SILENT = { NUDGE: 'orange', ALARM: 'signal', CONTACT: 'signal', WIDER: 'signal' };
   const LABELS = {
     NUDGE: 'Check-in', ALARM: 'No answer', CONTACT: 'Contact alerted', WIDER: 'Backup alerted', RESOLVED: 'Night ended',
   };
@@ -56,8 +57,21 @@
       return segs;
     }
 
+    // Canvas can't read CSS variables, so resolve the theme's tokens to real colors.
+    palette() {
+      const now = performance.now();
+      if (this._pal && now - this._palAt < 1000) return this._pal;
+      const cs = getComputedStyle(this.canvas);
+      const v = (n) => cs.getPropertyValue(`--${n}-rgb`).trim().split(/\s+/).join(',');
+      const tokens = { sodium: v('sodium'), signal: v('signal'), mint: v('mint'), mist: v('mist'), line: v('line'), orange: '255,149,0' };
+      this._pal = (name, a = 1) => `rgba(${tokens[name] || name},${a})`;
+      this._palAt = now;
+      return this._pal;
+    }
+
     draw() {
       const { ctx, w, h } = this;
+      const P = this.palette();
       ctx.clearRect(0, 0, w, h);
       if (!this.data) return;
       const alertTone = this.tone === 'alert';
@@ -72,7 +86,7 @@
       const spikeXs = responses.map((e) => x(e.ms));
 
       // Grid: one faint line per 15 s (demo) or 5 min (real)
-      ctx.strokeStyle = alertTone ? 'rgba(255,255,255,.12)' : 'rgba(174,181,218,.08)';
+      ctx.strokeStyle = alertTone ? 'rgba(255,255,255,.12)' : P('line', 0.55);
       ctx.lineWidth = 1;
       const step = this.data.window_s <= 300 ? 15000 : 300000;
       for (let t = Math.ceil(t0 / step) * step; t < now; t += step) {
@@ -81,7 +95,7 @@
 
       // Level change markers + labels
       if (this.showLabels) {
-        ctx.font = '600 11px "Hanken Grotesk", sans-serif';
+        ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif';
         const rowEnds = [-Infinity, -Infinity, -Infinity]; // stagger labels that would overlap
         for (const e of this.events) {
           if (e.kind !== 'level_change' || !LABELS[e.detail?.to] || e.ms < t0) continue;
@@ -92,11 +106,11 @@
           let row = rowEnds.findIndex((end) => tx > end + 6);
           if (row < 0) row = rowEnds.length - 1;
           rowEnds[row] = tx + tw;
-          ctx.strokeStyle = alertTone ? 'rgba(255,255,255,.45)' : (SILENT[e.detail.to] || '#AEB5DA') + '99';
+          ctx.strokeStyle = alertTone ? 'rgba(255,255,255,.45)' : P(SILENT[e.detail.to] || 'mist', 0.6);
           ctx.setLineDash([3, 4]);
           ctx.beginPath(); ctx.moveTo(lx, 14); ctx.lineTo(lx, h - 14); ctx.stroke();
           ctx.setLineDash([]);
-          ctx.fillStyle = alertTone ? '#fff' : SILENT[e.detail.to] || '#AEB5DA';
+          ctx.fillStyle = alertTone ? '#fff' : P(SILENT[e.detail.to] || 'mist');
           ctx.fillText(text, tx, 12 + row * 13);
         }
       }
@@ -124,7 +138,7 @@
             y += h * (0.06 * Math.exp(-(((d + 9) / 3) ** 2)) - 0.42 * Math.exp(-((d / 2.4) ** 2)) + 0.16 * Math.exp(-(((d - 5) / 3) ** 2)));
           }
         }
-        const color = alertTone ? (silent ? '#fff' : 'rgba(255,255,255,.7)') : silent ? SILENT[level] : ended ? '#5D6699' : '#FFB547';
+        const color = alertTone ? (silent ? '#fff' : 'rgba(255,255,255,.7)') : silent ? P(SILENT[level]) : ended ? P('mist', 0.6) : P('sodium');
         if (prev) {
           ctx.strokeStyle = color;
           ctx.lineWidth = silent ? 2.5 : 2;
@@ -135,7 +149,7 @@
 
       // Leading edge: a glowing dot where "now" is
       const nowLevel = levelAt(now);
-      const edge = alertTone ? '#fff' : SILENT[nowLevel] || (nowLevel === 'RESOLVED' ? '#5D6699' : '#FFB547');
+      const edge = alertTone ? '#fff' : SILENT[nowLevel] ? P(SILENT[nowLevel]) : nowLevel === 'RESOLVED' ? P('mist') : P('sodium');
       const pulse = this.reduced ? 1 : 0.6 + 0.4 * Math.sin(now / 180);
       ctx.fillStyle = edge;
       ctx.shadowColor = edge; ctx.shadowBlur = 14 * pulse;
@@ -143,7 +157,7 @@
       ctx.shadowBlur = 0;
 
       // Phone heartbeats lane
-      ctx.fillStyle = alertTone ? 'rgba(255,255,255,.75)' : 'rgba(91,227,176,.8)';
+      ctx.fillStyle = alertTone ? 'rgba(255,255,255,.75)' : P('mint', 0.85);
       for (const e of this.events) {
         if (e.kind !== 'heartbeat' || e.ms < t0) continue;
         ctx.beginPath(); ctx.arc(x(e.ms), h - 7, 2.2, 0, Math.PI * 2); ctx.fill();
