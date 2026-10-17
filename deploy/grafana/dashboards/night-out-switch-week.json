@@ -1,0 +1,884 @@
+{
+  "uid": "nos-week",
+  "title": "Night Out Switch: the week",
+  "tags": [
+    "night-out-switch",
+    "tiger-data"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "graphTooltip": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "One night",
+      "type": "link",
+      "url": "/grafana/d/nos-night/night-out-switch",
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "person",
+        "label": "Person",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "tiger"
+        },
+        "query": "SELECT DISTINCT user_name FROM sessions ORDER BY 1",
+        "refresh": 1,
+        "current": {
+          "text": "Maya",
+          "value": "Maya"
+        },
+        "includeAll": false,
+        "multi": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100,
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### A week of nights out, from Tiger Data\nEvery night is a session; every signal is a row in the `metrics` hypertable. The long-range panels read the `metrics_1m` **continuous aggregate**, so a week stays fast. Sample data for the demo. Audio is never stored."
+      }
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Nights out",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT count(*) AS value FROM sessions s WHERE s.user_name = '$person' AND $__timeFilter(s.armed_at)"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#2F45FF"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Hours out",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT sum(EXTRACT(EPOCH FROM coalesce(resolved_at, now()) - armed_at)) / 3600 AS value FROM sessions s WHERE s.user_name = '$person' AND $__timeFilter(s.armed_at)"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#2F45FF"
+          },
+          "unit": "h",
+          "decimals": 1
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Check-ins answered",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT 100.0 * count(*) FILTER (WHERE e.kind = 'checkin_ack') / NULLIF(count(*) FILTER (WHERE e.kind = 'checkin_sent'), 0) AS value FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND $__timeFilter(e.time)"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#10B981"
+          },
+          "unit": "percent",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Average reply",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT avg(m.value) AS value FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'reply_s' AND $__timeFilter(m.time)"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#2F45FF"
+          },
+          "unit": "s",
+          "decimals": 1
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Alarms (missed check-ins)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT count(*) AS value FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND e.kind = 'level_change' AND e.detail->>'to' = 'ALARM' AND $__timeFilter(e.time)"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FF4D3D"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "30-second checks that flagged something",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT count(*) AS value FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'distress_score' AND m.value >= 0.5 AND $__timeFilter(m.time)"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FF4D3D"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "state-timeline",
+      "title": "The escalation ladder, every night",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT e.time, e.detail->>'to' AS \"level\" FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND e.kind = 'level_change' AND $__timeFilter(e.time) ORDER BY e.time"
+        }
+      ],
+      "options": {
+        "showValue": "never",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "ARMED": {
+                  "color": "#2F45FF",
+                  "index": 0,
+                  "text": "Armed"
+                },
+                "NUDGE": {
+                  "color": "#FF9500",
+                  "index": 1,
+                  "text": "Check-in"
+                },
+                "ALARM": {
+                  "color": "#FF4D3D",
+                  "index": 2,
+                  "text": "Alarm"
+                },
+                "CONTACT": {
+                  "color": "#C2121F",
+                  "index": 3,
+                  "text": "Contact alerted"
+                },
+                "WIDER": {
+                  "color": "#7A0B14",
+                  "index": 4
+                },
+                "RESOLVED": {
+                  "color": "#E4E6EF",
+                  "index": 5,
+                  "text": "Home"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Sound across the week (10-minute buckets from metrics_1m)",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 16,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time_bucket('10 minutes', m.bucket) AS time, avg(m.avg) AS \"average dB\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY 1 ORDER BY 1"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time_bucket('10 minutes', m.bucket) AS time, max(m.max) AS \"peak dB\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'sound_peak_db' AND $__timeFilter(m.bucket) GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 14,
+            "showPoints": "never",
+            "barAlignment": 0,
+            "spanNulls": 3600000,
+            "insertNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "dB"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "barchart",
+      "title": "How loud each hour of the night gets",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 12,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT to_char(make_time(h::int, 0, 0), 'HH24:MI') AS \"hour\", round(avg_db::numeric, 1) AS \"average dB\" FROM (SELECT extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') AS h, avg(m.avg) AS avg_db FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY 1) x ORDER BY (h::int + 6) % 24"
+        }
+      ],
+      "options": {
+        "orientation": "vertical",
+        "xField": "hour",
+        "showValue": "never",
+        "barWidth": 0.8,
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#2F45FF"
+          },
+          "unit": "dB",
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Movement across the week (metrics_1m)",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time_bucket('10 minutes', m.bucket) AS time, avg(m.avg) AS \"movement\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'movement' AND $__timeFilter(m.bucket) GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 14,
+            "showPoints": "never",
+            "barAlignment": 0,
+            "spanNulls": 3600000,
+            "insertNulls": false
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#2F45FF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Reply time per night",
+      "description": "Replies get slower late at night, which is when check-ins tighten.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT s.armed_at AS time, avg(m.value) AS \"average reply\", max(m.value) AS \"slowest reply\" FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'reply_s' AND $__timeFilter(s.armed_at) GROUP BY s.armed_at ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 80,
+            "showPoints": "auto",
+            "barAlignment": 0,
+            "spanNulls": 3600000,
+            "insertNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Battery when she got home",
+      "description": "One night it got down to single digits.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT s.armed_at AS time, (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS \"battery at home\" FROM sessions s WHERE s.user_name = '$person' AND $__timeFilter(s.armed_at) ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 80,
+            "showPoints": "auto",
+            "barAlignment": 0,
+            "spanNulls": 3600000,
+            "insertNulls": false
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#10B981"
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Coldest reading on the walk home (Switch)",
+      "description": "At 5\u00b0C or below the prediction engine flags cold exposure.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 27,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT s.armed_at AS time, min(m.value) AS \"coldest\" FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND m.metric = 'temp_c' AND $__timeFilter(s.armed_at) GROUP BY s.armed_at ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 80,
+            "showPoints": "auto",
+            "barAlignment": 0,
+            "spanNulls": 3600000,
+            "insertNulls": false
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FF9500"
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Check-ins per night",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 27,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT s.armed_at AS time, count(*) FILTER (WHERE e.kind = 'checkin_ack') AS \"answered\", count(*) FILTER (WHERE e.kind = 'level_change' AND e.detail->>'to' = 'ALARM') AS \"missed\" FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND $__timeFilter(s.armed_at) GROUP BY s.armed_at ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 80,
+            "showPoints": "auto",
+            "barAlignment": 0,
+            "spanNulls": 3600000,
+            "insertNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "table",
+      "title": "Every night",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT to_char(s.armed_at AT TIME ZONE 'America/Toronto', 'Dy Mon DD, HH24:MI') AS \"night\",\n       round((EXTRACT(EPOCH FROM coalesce(s.resolved_at, now()) - s.armed_at) / 3600)::numeric, 1) AS \"hours\",\n       (SELECT count(*) FROM events WHERE session_id = s.id AND kind = 'checkin_ack') AS \"check-ins answered\",\n       (SELECT count(*) FROM events WHERE session_id = s.id AND kind = 'level_change' AND detail->>'to' = 'ALARM') AS \"alarms\",\n       (SELECT count(*) FROM metrics WHERE session_id = s.id AND metric = 'distress_score' AND value >= 0.5) AS \"distress flags\",\n       (SELECT round(avg(value)::numeric, 1) FROM metrics WHERE session_id = s.id AND metric = 'reply_s') AS \"avg reply (s)\",\n       (SELECT round(max(value)::numeric, 1) FROM metrics WHERE session_id = s.id AND metric = 'sound_peak_db') AS \"loudest (dB)\",\n       (SELECT round(min(value)::numeric, 1) FROM metrics WHERE session_id = s.id AND metric = 'temp_c') AS \"coldest (\u00b0C)\",\n       (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS \"battery at home (%)\"\n     FROM sessions s WHERE s.user_name = '$person' AND $__timeFilter(s.armed_at) ORDER BY s.armed_at DESC"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    }
+  ]
+}
