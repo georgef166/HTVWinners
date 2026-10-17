@@ -1,5 +1,5 @@
 // Tailwind is compiled ahead of time into public/tw.css (npm run build:css), so pages don't run a JIT compiler.
-// Colors are CSS-variable tokens (see public/styles.css): dark Midnight theme.
+// Colors are CSS-variable tokens (see public/styles.css): light landing page, dark Midnight theme for the demo.
 module.exports = {
   content: ['./public/**/*.{html,js}'],
   theme: {
@@ -19,7 +19,6 @@ module.exports = {
       fontFamily: {
         display: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
         sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'Menlo', 'monospace'],
       },
     },
   },
