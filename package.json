@@ -9,7 +9,8 @@
   },
   "scripts": {
     "start": "node server.js",
-    "smoke": "node scripts/smoke.js"
+    "smoke": "node scripts/smoke.js",
+    "switch-sim": "node scripts/switch-sim.js"
   },
   "dependencies": {
     "@google/genai": "^2.30.0",
