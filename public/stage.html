@@ -16,28 +16,57 @@
   <script src="/motion.js"></script>
   <style>
     html, body { height: 100%; }
-    body { overflow: hidden; transition: background-color .5s ease; }
-    body.silent { background: radial-gradient(70% 60% at 50% 40%, rgb(var(--signal-rgb) / .22), transparent 70%), #000; }
+    body { overflow: hidden; }
+    /* Red glow while Maya is silent; an overlay so it can fade (gradients can't transition) */
+    body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(70% 60% at 50% 42%, rgb(var(--signal-rgb) / .2), transparent 70%); opacity: 0; transition: opacity .9s ease; }
+    body.silent::before { opacity: 1; }
 
-    .stage { display: grid; grid-template-columns: auto minmax(40px, 90px) minmax(0, 1fr) minmax(40px, 90px) auto; align-items: center; height: calc(100vh - 76px); padding: 0 28px 20px; }
-    .device { position: relative; width: calc(375px * var(--s)); height: calc(780px * var(--s)); border-radius: calc(52px * var(--s)); padding: calc(10px * var(--s)); background: #060A1F; box-shadow: 0 0 0 1.5px #2C3670, 0 40px 100px -30px rgba(0, 0, 0, .9); }
-    .device iframe { width: 375px; height: 760px; border: 0; border-radius: 42px; transform: scale(var(--s)); transform-origin: top left; background: var(--ink); }
-    .device .who { position: absolute; top: calc(100% + 12px); left: 0; right: 0; text-align: center; font-size: 14px; font-weight: 700; color: var(--mist); }
+    /* Header controls: one quiet group, so the phones stay the loudest thing on screen */
+    .tools { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: rgb(var(--paper-rgb) / .05); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .09); }
+    .tool { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13.5px; font-weight: 500; white-space: nowrap; color: rgb(var(--paper-rgb) / .82); transition: background-color .15s ease, color .15s ease, transform .1s ease; }
+    .tool svg { opacity: .7; }
+    .tool:hover { background: rgb(var(--paper-rgb) / .09); color: var(--paper); }
+    .tool:active { transform: scale(.97); }
+    .tool.solo { box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .12); }
+    .tool.fired { background: rgb(var(--sodium-rgb) / .22); color: var(--paper); }
+    .tool[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
+    .tool[aria-pressed="true"] svg { opacity: 1; }
+    .tool.primary { background: rgb(47 69 255); color: #fff; } /* the deeper brand blue keeps white text readable */
+    .tool.primary:hover { background: rgb(66 87 255); }
+    #qrPop { position: absolute; right: 0; top: calc(100% + 10px); z-index: 60; display: flex; gap: 12px; padding: 12px; border-radius: 22px; background: rgb(var(--dusk-rgb)); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .1), 0 30px 60px -20px #000; opacity: 0; transform: translateY(-6px) scale(.98); transform-origin: top right; pointer-events: none; transition: opacity .18s ease, transform .22s var(--ease-out); }
+    #qrPop.open { opacity: 1; transform: none; pointer-events: auto; }
+    #qrPop figure { flex: none; margin: 0; text-align: center; }
+    #qrPop img { display: block; width: 148px; height: 148px; max-width: none; border-radius: 12px; background: #fff; padding: 6px; }
+    #qrPop figcaption { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--paper); }
+
+    .stage { display: grid; grid-template-columns: auto minmax(48px, 110px) minmax(0, 1fr) minmax(48px, 110px) auto; align-items: center; height: calc(100vh - 72px); padding: 0 32px 28px; }
+    .device { position: relative; width: calc(375px * var(--s)); height: calc(780px * var(--s)); border-radius: calc(52px * var(--s)); padding: calc(10px * var(--s)); background: #0C0D14; box-shadow: 0 0 0 1px rgb(255 255 255 / .14), inset 0 0 0 1px rgb(255 255 255 / .05), 0 40px 100px -30px #000; }
+    /* Phones fade in once their page has painted, instead of flashing white */
+    .device iframe { width: 375px; height: 760px; border: 0; border-radius: 42px; transform: scale(var(--s)); transform-origin: top left; background: transparent; opacity: 0; transition: opacity .45s ease; }
+    .device iframe.ready { opacity: 1; }
+    .device .who { position: absolute; top: calc(100% + 12px); left: 0; right: 0; text-align: center; font-size: 13px; font-weight: 600; color: var(--mist); }
     :root { --s: .72; }
     @media (max-height: 760px) { :root { --s: .62; } }
     @media (min-height: 900px) { :root { --s: .82; } }
 
     /* Wires carry real events between the phones and the server */
-    .wire { position: relative; height: 4px; border-radius: 4px; background: repeating-linear-gradient(90deg, rgba(174,181,218,.35) 0 8px, transparent 8px 16px); background-size: 32px 4px; animation: flow 1.2s linear infinite; }
+    .wire { position: relative; margin: 0 16px; height: 4px; border-radius: 4px; background: repeating-linear-gradient(90deg, rgba(174,181,218,.35) 0 8px, transparent 8px 16px); background-size: 32px 4px; animation: flow 1.2s linear infinite; }
     .silent .wire.out { background: repeating-linear-gradient(90deg, rgb(var(--signal-rgb) / .6) 0 8px, transparent 8px 16px); background-size: 32px 4px; }
     @keyframes flow { to { background-position: 32px 0; } }
-    .packet { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; }
+    .packet { position: absolute; top: 50%; left: 0; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; will-change: transform; }
     .packet.big { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
 
-    .feed li { animation: feed-in .45s cubic-bezier(.2,.7,.2,1) both; }
-    @keyframes feed-in { from { opacity: 0; transform: translateY(-10px); } }
-    .flash { animation: stage-flash .9s ease-out; }
-    @keyframes stage-flash { 0% { box-shadow: 0 0 0 0 rgb(var(--signal-rgb) / .9), 0 0 0 1.5px #E5303A; } 100% { box-shadow: 0 0 0 40px rgb(var(--signal-rgb) / 0), 0 0 0 1.5px #2C3670; } }
+    /* Feed: neutral text, the colour lives in the dot */
+    .feed { height: 152px; overflow: hidden; }
+    .feed li { display: grid; grid-template-columns: 84px 8px 1fr; align-items: center; column-gap: 12px; height: 24px; margin-bottom: 8px; animation: feed-in .4s var(--ease-out) both; }
+    .feed .t { font-size: 13px; color: var(--mist); font-variant-numeric: tabular-nums; }
+    .feed .d { width: 8px; height: 8px; border-radius: 50%; }
+    .feed .x { font-size: 15px; font-weight: 500; color: rgb(var(--paper-rgb) / .92); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feed li:nth-child(n+2) .x { color: rgb(var(--paper-rgb) / .62); }
+    @keyframes feed-in { from { opacity: 0; transform: translateY(-8px); } }
+    #status { min-height: 2.2em; text-wrap: balance; font-variant-numeric: tabular-nums; }
+    .ping { animation: stage-ping .9s ease-out; }
+    @keyframes stage-ping { 0% { box-shadow: 0 0 0 0 rgb(var(--signal-rgb) / .9), 0 0 0 1.5px rgb(var(--signal-rgb)); } 100% { box-shadow: 0 0 0 40px rgb(var(--signal-rgb) / 0), 0 0 0 1px rgb(255 255 255 / .14); } }
 
     #start { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow: hidden; transition: opacity .6s ease, transform .9s cubic-bezier(.7,0,.84,0); }
     #start.leave { opacity: 0; transform: scale(1.06); pointer-events: none; }
@@ -69,22 +98,23 @@
     </div>
   </div>
 
-  <header class="flex h-[76px] items-center gap-4 px-7">
+  <header class="relative z-20 flex h-[72px] items-center gap-3 px-8">
     <a href="/" class="flex items-center gap-3 text-sodium"><span id="logo"></span><span class="display text-[15px] font-semibold text-paper">Night Out Switch</span></a>
-    <span class="flex items-center gap-2 rounded-full bg-signal/15 px-3 py-1 text-[13px] font-bold text-signal"><span class="breathe h-2 w-2 rounded-full bg-signal"></span>Live</span>
-    <div class="ml-auto flex items-center gap-2">
-      <button id="restart" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Restart night</button>
-      <button id="drain" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Drain battery</button>
-      <button id="cold" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Switch reads −2°C</button>
-      <button id="distress" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Phone hears “help”</button>
-      <a id="nightLink" target="_blank" rel="noopener" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Her dashboard</a>
-      <div class="ml-2 flex items-center gap-3 rounded-2xl bg-white p-1.5 pr-3 text-black">
-        <img id="qrMaya" alt="QR code to open Maya's phone on your phone" class="h-14 w-14 rounded-lg" />
-        <span class="text-[13px] font-bold leading-tight">Scan to<br />be Maya</span>
+    <span class="ml-1 flex items-center gap-2 rounded-full px-2.5 py-1 text-[12.5px] font-semibold text-paper/80 shadow-[inset_0_0_0_1px_rgb(var(--paper-rgb)/.12)]"><span class="breathe h-1.5 w-1.5 rounded-full bg-signal"></span>Live</span>
+    <div class="ml-auto flex items-center gap-2.5">
+      <div class="tools" role="group" aria-label="Make something happen">
+        <button id="drain" class="tool"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2.5"/><path d="M22 11v2M6 11v2"/></svg>Drain battery</button>
+        <button id="cold" class="tool" aria-pressed="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0Z"/></svg><span>Switch reads −2°C</span></button>
+        <button id="distress" class="tool"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Phone hears “help”</button>
       </div>
-      <div class="flex items-center gap-3 rounded-2xl bg-white p-1.5 pr-3 text-black">
-        <img id="qr" alt="QR code to open Jordan's view on your phone" class="h-14 w-14 rounded-lg" />
-        <span class="text-[13px] font-bold leading-tight">Scan to<br />be Jordan</span>
+      <a id="nightLink" target="_blank" rel="noopener" class="tool solo">Her dashboard</a>
+      <button id="restart" class="tool solo">Restart</button>
+      <div class="relative">
+        <button id="phoneBtn" class="tool primary" aria-expanded="false" aria-controls="qrPop">Try it on your phone</button>
+        <div id="qrPop">
+          <figure><img id="qrMaya" alt="QR code to open Maya's phone on your phone" /><figcaption>Be Maya</figcaption></figure>
+          <figure><img id="qr" alt="QR code to open Jordan's view on your phone" /><figcaption>Be Jordan</figcaption></figure>
+        </div>
       </div>
     </div>
   </header>
@@ -106,7 +136,7 @@
         <canvas id="trace" class="mt-3 h-[150px] w-full"></canvas>
       </div>
       <div id="route"></div>
-      <ol id="feed" class="feed space-y-2 text-[15px]"></ol>
+      <ol id="feed" class="feed" aria-live="polite"></ol>
     </section>
 
     <div class="wire out" id="wireOut"></div>
@@ -126,18 +156,23 @@
     let deadline = null;
     let silentSince = null;
 
+    // Feed tones map to the dot colour; the text itself stays neutral and readable.
+    const TONE = { info: 'bg-sodium', ok: 'bg-mint', alert: 'bg-signal', muted: 'bg-mist' };
     const FEED = {
-      checkin_sent: ['Check-in sent to Maya’s phone', 'text-sodium'],
-      checkin_ack: ['Maya: “I’m OK”', 'text-mint'],
-      stand_down: ['Maya entered her PIN. Alarm cancelled', 'text-mint'],
-      contact_ack: ['Jordan: “I’m on it”', 'text-mint'],
-      resolved: ['Night ended', 'text-mist'],
+      checkin_sent: ['Check-in sent to Maya’s phone', 'info'],
+      checkin_ack: ['Maya: “I’m OK”', 'ok'],
+      stand_down: ['Maya entered her PIN. Alarm cancelled', 'ok'],
+      contact_ack: ['Jordan: “I’m on it”', 'ok'],
+      resolved: ['Night ended', 'muted'],
     };
     const LEVEL_FEED = {
-      ALARM: ['No answer. Alarm sounding on Maya’s phone', 'text-signal'],
-      CONTACT: ['Jordan alerted with Maya’s last location', 'text-signal'],
-      WIDER: ['Jordan hasn’t confirmed. Backup contact alerted', 'text-signal'],
+      ALARM: ['No answer. Alarm sounding on Maya’s phone', 'alert'],
+      CONTACT: ['Jordan alerted with Maya’s last location', 'alert'],
+      WIDER: ['Jordan hasn’t confirmed. Backup contact alerted', 'alert'],
     };
+    // Packet colours come from the theme tokens so the wires match everything else.
+    const css = getComputedStyle(document.body);
+    const C = Object.fromEntries(['sodium', 'mint', 'signal', 'paper'].map((k) => [k, `rgb(${css.getPropertyValue(`--${k}-rgb`).trim()})`]));
     const DEVICE_FEED = { touch: 'Switch: touch check-in', code: 'Switch: joystick code entered', nfc: 'Switch: home tag tapped' };
 
     function packet(wire, { color, reverse = false, big = false, ms = 900 }) {
@@ -147,14 +182,14 @@
       p.style.boxShadow = `0 0 ${big ? 30 : 14}px ${big ? 8 : 3}px ${color}`;
       wire.appendChild(p);
       const w = wire.getBoundingClientRect().width;
-      p.animate([{ left: reverse ? `${w}px` : '0px' }, { left: reverse ? '0px' : `${w}px` }], { duration: ms, easing: 'cubic-bezier(.5,0,.5,1)' })
+      const at = (x) => ({ transform: `translateX(${x}px)` });
+      p.animate([at(reverse ? w : 0), at(reverse ? 0 : w)], { duration: ms, easing: 'cubic-bezier(.5,0,.5,1)', fill: 'forwards' })
         .finished.then(() => p.remove());
     }
 
-    function feed(text, cls, t) {
+    function feed(text, tone, t) {
       const li = document.createElement('li');
-      li.className = 'flex items-baseline gap-3';
-      li.innerHTML = `<span class="tnum text-[13px] text-mist">${new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</span><span class="font-semibold ${cls}"></span>`;
+      li.innerHTML = `<span class="t">${new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</span><span class="d ${TONE[tone]}"></span><span class="x"></span>`;
       li.lastChild.textContent = text;
       $('#feed').prepend(li);
       while ($('#feed').children.length > 5) $('#feed').lastChild.remove();
@@ -163,34 +198,35 @@
     // React to new events: feed lines and packets on the wires.
     function onEvent(e, animate) {
       const wIn = $('#wireIn'), wOut = $('#wireOut');
-      if (e.kind === 'heartbeat') { if (animate) packet(wIn, { color: '#5BE3B0', ms: 700 }); return; }
+      if (e.kind === 'heartbeat') { if (animate) packet(wIn, { color: C.mint, ms: 700 }); return; }
       if (e.kind === 'distress_check') {
         const heard = (e.detail?.cues || []).join(' and ') || 'nothing worrying';
-        feed(e.detail?.score >= 0.5 ? `Phone heard ${heard}. Asking Maya if she’s OK` : `30-second check: ${heard}`, e.detail?.score >= 0.5 ? 'text-signal' : 'text-mist', e.t);
-        if (animate) packet(wIn, { color: '#FF4D3D' });
+        feed(e.detail?.score >= 0.5 ? `Phone heard ${heard}. Asking Maya if she’s OK` : `30-second check: ${heard}`, e.detail?.score >= 0.5 ? 'alert' : 'muted', e.t);
+        if (animate) packet(wIn, { color: C.signal });
         return;
       }
-      if (e.kind === 'device' && DEVICE_FEED[e.detail?.type]) { feed(DEVICE_FEED[e.detail.type], 'text-sodium', e.t); if (animate) packet(wIn, { color: '#FFB547' }); return; }
+      if (e.kind === 'device' && DEVICE_FEED[e.detail?.type]) { feed(DEVICE_FEED[e.detail.type], 'info', e.t); if (animate) packet(wIn, { color: C.paper }); return; }
       if (e.kind === 'level_change') {
         const lf = LEVEL_FEED[e.detail?.to];
         if (lf) feed(lf[0], lf[1], e.t);
         if (animate && e.detail?.to === 'CONTACT') {
-          packet(wOut, { color: '#E5303A', big: true, ms: 1100 });
-          setTimeout(() => { $('#jordanDevice').classList.remove('flash'); void $('#jordanDevice').offsetWidth; $('#jordanDevice').classList.add('flash'); }, 1050);
+          packet(wOut, { color: C.signal, big: true, ms: 1100 });
+          setTimeout(() => ping($('#jordanDevice')), 1050);
         }
-        if (animate && e.detail?.to === 'ALARM') { $('#mayaDevice').classList.remove('flash'); void $('#mayaDevice').offsetWidth; $('#mayaDevice').classList.add('flash'); }
-        if (e.detail?.from === null && e.detail?.to === 'ARMED') feed('Maya armed Night Out Switch', 'text-sodium', e.t);
+        if (animate && e.detail?.to === 'ALARM') ping($('#mayaDevice'));
+        if (e.detail?.from === null && e.detail?.to === 'ARMED') feed('Maya turned on Night Out Switch', 'info', e.t);
         return;
       }
       const f = FEED[e.kind];
       if (!f) return;
       feed(f[0], f[1], e.t);
       if (!animate) return;
-      if (e.kind === 'checkin_sent') packet(wIn, { color: '#FFB547', reverse: true });
-      if (e.kind === 'checkin_ack' || e.kind === 'stand_down') packet(wIn, { color: '#5BE3B0' });
-      if (e.kind === 'contact_ack') { packet(wOut, { color: '#5BE3B0', reverse: true }); setTimeout(() => packet(wIn, { color: '#5BE3B0', reverse: true }), 800); }
-      if (e.kind === 'stand_down') setTimeout(() => packet(wOut, { color: '#5BE3B0' }), 800);
+      if (e.kind === 'checkin_sent') packet(wIn, { color: C.sodium, reverse: true });
+      if (e.kind === 'checkin_ack' || e.kind === 'stand_down') packet(wIn, { color: C.mint });
+      if (e.kind === 'contact_ack') { packet(wOut, { color: C.mint, reverse: true }); setTimeout(() => packet(wIn, { color: C.mint, reverse: true }), 800); }
+      if (e.kind === 'stand_down') setTimeout(() => packet(wOut, { color: C.mint }), 800);
     }
+    function ping(el) { el.classList.remove('ping'); void el.offsetWidth; el.classList.add('ping'); }
 
     const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s) % 60).padStart(2, '0')}`;
     function renderStatus() {
@@ -205,9 +241,9 @@
         WIDER: ['Help is moving', 'text-signal', state.contact_acked ? 'Jordan is on the way.' : 'Backup contact alerted too.'],
         RESOLVED: ['Home', 'text-mint', 'Night over. Everyone’s home.'],
       }[state.level];
-      $('#statusKicker').textContent = S[0];
-      $('#statusKicker').className = `text-[15px] font-bold ${S[1]}`;
-      $('#status').textContent = S[2];
+      // Only touch the DOM when something changed (this runs four times a second).
+      if ($('#statusKicker').textContent !== S[0]) { $('#statusKicker').textContent = S[0]; $('#statusKicker').className = `text-[15px] font-semibold ${S[1]}`; }
+      if ($('#status').textContent !== S[2]) $('#status').textContent = S[2];
     }
     setInterval(renderStatus, 250);
 
@@ -236,7 +272,6 @@
         }
         if (!silentLevels.includes(s.level)) silentSince = null;
         document.body.classList.toggle('silent', ['ALARM', 'CONTACT', 'WIDER'].includes(s.level) && !s.contact_acked);
-        document.body.classList.toggle('streetlight', !document.body.classList.contains('silent'));
         if (s.level !== lastLevel) NOS.route($('#route'), { level: s.level, variant: 'mini' });
         lastLevel = s.level;
         renderStatus();
@@ -254,15 +289,20 @@
       $('#qr').src = links.qr;
       $('#qrMaya').src = links.qr_me;
       $('#nightLink').href = `/night.html?id=${id}`;
-      $('#maya').src = `/me.html?id=${id}&stage=1`;
-      $('#jordan').src = `/contact.html?t=${links.contactToken}&stage=1`;
-      seen = new Set(); lastLevel = null; $('#feed').innerHTML = '';
+      loadPhone($('#maya'), `/me.html?id=${id}&stage=1`);
+      loadPhone($('#jordan'), `/contact.html?t=${links.contactToken}&stage=1`);
+      seen = new Set(); lastLevel = null; $('#feed').innerHTML = ''; $('#cold').setAttribute('aria-pressed', 'false');
       poll();
     }
     setInterval(poll, 1000);
+    function loadPhone(frame, src) {
+      frame.classList.remove('ready');
+      frame.onload = () => requestAnimationFrame(() => frame.classList.add('ready'));
+      frame.src = src;
+    }
 
     // Opening scene: city lights, the letterbox opens, then flip the switch to start.
-    requestAnimationFrame(() => setTimeout(() => $('#start').classList.add('open'), 200));
+    requestAnimationFrame(() => $('#start').classList.add('open'));
     NOS_MOTION.reveal($('#start'));
     NOS_MOTION.slideSwitch($('#startSwitch'), async () => {
       // This gesture lets both embedded phones make sound.
@@ -274,13 +314,21 @@
       await night;
     });
     $('#restart').addEventListener('click', async () => { id = null; await startNight(); });
-    $('#drain').addEventListener('click', () => id && fetch(`/api/demo/${id}/drain-battery`, { method: 'POST' }));
-    $('#distress').addEventListener('click', () => id && fetch(`/api/demo/${id}/distress`, { method: 'POST' }));
+    // Brief highlight so the presenter sees the click landed.
+    function fired(btn) { btn.classList.add('fired'); clearTimeout(btn._t); btn._t = setTimeout(() => btn.classList.remove('fired'), 1200); }
+    $('#drain').addEventListener('click', (e) => { if (!id) return; fired(e.currentTarget); fetch(`/api/demo/${id}/drain-battery`, { method: 'POST' }); });
+    $('#distress').addEventListener('click', (e) => { if (!id) return; fired(e.currentTarget); fetch(`/api/demo/${id}/distress`, { method: 'POST' }); });
     $('#cold').addEventListener('click', async (e) => {
       if (!id) return;
+      const btn = e.currentTarget;
       const { cold } = await fetch(`/api/demo/${id}/cold`, { method: 'POST' }).then((r) => r.json());
-      e.currentTarget.textContent = cold ? 'Normal temperature' : 'Switch reads −2°C';
+      btn.setAttribute('aria-pressed', String(!!cold));
     });
+    const pop = $('#qrPop'), phoneBtn = $('#phoneBtn');
+    const showQr = (open) => { pop.classList.toggle('open', open); phoneBtn.setAttribute('aria-expanded', String(open)); };
+    phoneBtn.addEventListener('click', (e) => { e.stopPropagation(); showQr(!pop.classList.contains('open')); });
+    document.addEventListener('click', (e) => { if (!pop.contains(e.target)) showQr(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') showQr(false); });
   </script>
 </body>
 </html>
