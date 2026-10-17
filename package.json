@@ -11,7 +11,8 @@
     "start": "node server.js",
     "smoke": "node scripts/smoke.js",
     "switch-sim": "node scripts/switch-sim.js",
-    "build:css": "tailwindcss -c tailwind.config.cjs -i src/css/tw.css -o public/tw.css --minify"
+    "build:css": "tailwindcss -c tailwind.config.cjs -i src/css/tw.css -o public/tw.css --minify",
+    "switch-bridge": "node scripts/switch-bridge.js"
   },
   "dependencies": {
     "@google/genai": "^2.30.0",
