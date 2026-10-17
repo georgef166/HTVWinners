@@ -5,8 +5,8 @@
 const DEMO = process.env.DEMO !== '0';
 
 const T = DEMO
-  ? { readingFreshMs: 60e3, batteryHorizonMs: 3 * 60e3, minBatterySpanMs: 15e3, slowReplyMs: 3.5e3, quickReplyMs: 2e3, offlineMs: 25e3, minIntervalS: 5 }
-  : { readingFreshMs: 5 * 60e3, batteryHorizonMs: 60 * 60e3, minBatterySpanMs: 10 * 60e3, slowReplyMs: 60e3, quickReplyMs: 15e3, offlineMs: 3 * 60e3, minIntervalS: 5 * 60 };
+  ? { distressFreshMs: 2 * 60e3, readingFreshMs: 60e3, batteryHorizonMs: 3 * 60e3, minBatterySpanMs: 15e3, slowReplyMs: 3.5e3, quickReplyMs: 2e3, offlineMs: 25e3, minIntervalS: 5 }
+  : { distressFreshMs: 15 * 60e3, readingFreshMs: 5 * 60e3, batteryHorizonMs: 60 * 60e3, minBatterySpanMs: 10 * 60e3, slowReplyMs: 60e3, quickReplyMs: 15e3, offlineMs: 3 * 60e3, minIntervalS: 5 * 60 };
 
 const COLD_C = 5; // at or below this, being outside for long is a real risk
 
@@ -98,6 +98,17 @@ export function assess(session, events, now = new Date()) {
       key: 'cold', weight: 1,
       you: `Your Switch reads ${t}°C. If you're outside, get somewhere warm.`,
       them: `${name}'s Switch read ${t}°C at ${clock(reading.time)}, so ${name} is likely outside in the cold.`,
+    });
+  }
+
+  // Distress sounds: the phone's 30-second check heard something (never stored, just the cues).
+  const distress = [...events].reverse().find((e) => e.kind === 'distress_check' && e.detail?.score >= 0.5);
+  if (distress && now - ms(distress.time) < T.distressFreshMs) {
+    const heard = (distress.detail.cues || []).join(' and ') || 'possible signs of distress';
+    signals.push({
+      key: 'distress', weight: 2,
+      you: `Your phone heard ${heard} at ${clock(distress.time)}.`,
+      them: `${name}'s phone heard ${heard} at ${clock(distress.time)}.`,
     });
   }
 

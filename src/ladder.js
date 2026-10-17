@@ -134,6 +134,14 @@ async function nextIntervalS(store, s, now) {
   return assess(s, await store.listEvents(s.id), now).nextIntervalS;
 }
 
+// Something sounded wrong: send a check-in now instead of waiting for the timer.
+// It doesn't alert anyone by itself; if she doesn't answer, the normal ladder takes over.
+export async function promptCheckin(store, s, reason, now = new Date()) {
+  if (s.level !== 'ARMED') return s;
+  await store.addEvent({ session_id: s.id, kind: 'checkin_sent', detail: { reason } });
+  return setLevel(store, s, 'NUDGE', now);
+}
+
 export async function checkinAck(store, s, now = new Date()) {
   requireActive(s);
   if (ALERTING.includes(s.level)) throw new LadderError(409, 'PIN required to stand down');

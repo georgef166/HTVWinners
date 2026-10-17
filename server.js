@@ -3,9 +3,10 @@ import express from 'express';
 import QRCode from 'qrcode';
 import { createStore, newId, newToken, hashPin } from './src/store.js';
 import { assess } from './src/predict.js';
+import { analyzeClip } from './src/distress.js';
 import {
   DEMO, TIMINGS, LadderError, startTicker, contactLink, lastResponseAt, secondsLeft,
-  checkinAck, standDown, disarm, contactAck, resolve,
+  checkinAck, standDown, disarm, contactAck, resolve, promptCheckin,
 } from './src/ladder.js';
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -117,6 +118,8 @@ const links = (s) => ({
 app.get('/api/health', (req, res) => res.json({
   app: 'night-out-switch', demo: DEMO, store: store.kind, timescale: !!store.timescale,
   model: process.env.LLM_BASE_URL ? 'self-hosted' : process.env.GEMINI_API_KEY ? 'gemini' : 'template',
+  audio: process.env.WHISPER_URL ? 'self-hosted whisper' : 'loudness only',
+  grafana: !!process.env.GRAFANA_URL,
 }));
 
 app.post('/api/demo', wrap(async (req, res) => {
@@ -198,7 +201,7 @@ app.get('/api/sessions/:id', wrap(async (req, res) => {
 // The signal trace: her night as a time series (responses, phone heartbeats, level changes).
 // No location in here, just timing.
 const TRACE_WINDOW_S = DEMO ? 60 : 45 * 60;
-const TRACE_KINDS = ['heartbeat', 'checkin_sent', 'checkin_ack', 'level_change', 'contact_ack', 'stand_down', 'resolved', 'device'];
+const TRACE_KINDS = ['heartbeat', 'checkin_sent', 'checkin_ack', 'level_change', 'contact_ack', 'stand_down', 'resolved', 'device', 'distress_check'];
 async function traceFor(s) {
   const now = new Date();
   const since = now.getTime() - TRACE_WINDOW_S * 1000;
@@ -212,7 +215,8 @@ async function traceFor(s) {
       continue;
     }
     if (!TRACE_KINDS.includes(e.kind) || (e.kind === 'device' && e.detail?.type === 'reading')) continue;
-    events.push({ t: new Date(t).toISOString(), kind: e.kind, detail: e.detail?.from || e.detail?.to || e.detail?.type ? { from: e.detail.from, to: e.detail.to, type: e.detail.type } : null });
+    const d = e.detail || {};
+    events.push({ t: new Date(t).toISOString(), kind: e.kind, detail: d.from || d.to || d.type || d.score != null || d.reason ? { from: d.from, to: d.to, type: d.type, score: d.score, cues: d.cues, reason: d.reason } : null });
   }
   // Over a real night (45 min), phone heartbeats come from the per-minute continuous aggregate
   // instead of every raw row. The demo's 2-minute window keeps raw heartbeats.
@@ -232,6 +236,57 @@ app.get('/api/sessions/:id/trace', wrap(async (req, res) => {
   res.json(await traceFor(await loadSession(req.params.id)));
 }));
 
+// ---- 30-second distress check ----
+// The phone keeps a rolling 30 s of audio in memory and sends it only after a sudden loud spike.
+// The clip is analyzed in memory on our server and wiped; only the score and cues are kept.
+const lastAudioCheck = new Map();
+async function recordDistress(s, result, extra = {}) {
+  await store.addEvent({ session_id: s.id, kind: 'distress_check', detail: { score: result.score, cues: result.cues, transcribed: result.transcribed, ...extra } });
+  await store.addMetrics(s.id, [{ metric: 'distress_score', value: result.score, source: extra.simulated ? 'demo' : 'phone' }]);
+  let prompted = false;
+  if (result.score >= 0.5) {
+    const fresh = await store.getSession(s.id);
+    prompted = fresh.level === 'ARMED';
+    await promptCheckin(store, fresh, 'distress');
+  }
+  return prompted;
+}
+app.post('/api/sessions/:id/audio-check', express.raw({ type: ['audio/wav', 'application/octet-stream'], limit: '2mb' }), wrap(async (req, res) => {
+  const s = await loadSession(req.params.id);
+  if (s.level === 'RESOLVED') return res.json({ score: 0, cues: [] });
+  const cooldown = DEMO ? 10_000 : 60_000;
+  if (Date.now() - (lastAudioCheck.get(s.id) || 0) < cooldown) return res.status(429).json({ error: 'Checked recently' });
+  lastAudioCheck.set(s.id, Date.now());
+  const wav = Buffer.isBuffer(req.body) ? req.body : null;
+  const result = await analyzeClip(wav, { peakDb: num(req.query.peak_db, -120, 0), baselineDb: num(req.query.baseline_db, -120, 0) });
+  const prompted = await recordDistress(s, result);
+  console.log(`[distress] session ${s.id.slice(0, 8)} score=${result.score} cues=${result.cues.length} transcribed=${result.transcribed}`);
+  res.json({ ...result, prompted });
+}));
+
+// Demo only: pretend the phone just heard someone asking for help.
+app.post('/api/demo/:id/distress', wrap(async (req, res) => {
+  if (!DEMO) throw new LadderError(404, 'Not found');
+  const s = await loadSession(req.params.id);
+  const result = { score: 0.8, cues: ['a sudden loud noise or shouting', 'someone asking for help'], transcribed: false };
+  const prompted = await recordDistress(s, result, { simulated: true });
+  res.json({ ...result, prompted });
+}));
+
+// Her own dashboard: signals over the last stretch of the night.
+app.get('/api/sessions/:id/metrics', wrap(async (req, res) => {
+  const s = await loadSession(req.params.id);
+  const minutes = num(req.query.minutes, 1, 24 * 60) || (DEMO ? 10 : 6 * 60);
+  const since = new Date(Date.now() - minutes * 60_000);
+  const rows = await store.metricsSince(s.id, since);
+  const series = {};
+  for (const r of rows) (series[r.metric] ||= []).push([new Date(r.time).getTime(), Number(r.value)]);
+  const events = (await store.listEvents(s.id))
+    .filter((e) => new Date(e.time) >= since && ['checkin_sent', 'checkin_ack', 'stand_down', 'level_change', 'distress_check', 'contact_ack'].includes(e.kind))
+    .map((e) => ({ t: new Date(e.time).getTime(), kind: e.kind, detail: e.detail || null }));
+  res.json({ now: Date.now(), minutes, user_name: s.user_name, level: s.level, armed_at: s.armed_at, series, events });
+}));
+
 app.post('/api/sessions/:id/heartbeat', wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
   if (s.level === 'RESOLVED') return res.json({ ok: true });
@@ -244,11 +299,23 @@ app.post('/api/sessions/:id/heartbeat', wrap(async (req, res) => {
   const drain = DEMO && batteryDrains.get(s.id);
   if (drain) battery = Math.max(0.02, drain.start - ((Date.now() - drain.at) / 60000) * drain.perMin);
   await store.addEvent({ session_id: s.id, kind: 'heartbeat', lat, lng, battery });
+  // Signals for her dashboard (and Grafana). Audio is never sent here: only a loudness number.
+  const rows = [];
+  if (battery != null) rows.push({ metric: 'battery_pct', value: Math.round(battery * 100), source: 'phone' });
+  const movement = num(b.movement, 0, 100);
+  if (movement != null) rows.push({ metric: 'movement', value: movement, source: 'phone' });
+  const soundDb = num(b.sound_db, -120, 0);
+  if (soundDb != null) rows.push({ metric: 'sound_db', value: soundDb, source: 'phone' });
+  const peakDb = num(b.sound_peak_db, -120, 0);
+  if (peakDb != null) rows.push({ metric: 'sound_peak_db', value: peakDb, source: 'phone' });
+  await store.addMetrics(s.id, rows);
   res.json({ ok: true });
 }));
 
 app.post('/api/sessions/:id/checkin-ack', wrap(async (req, res) => {
   const s = await checkinAck(store, await loadSession(req.params.id));
+  const reply = assess(s, await store.listEvents(s.id)).lastReplyS;
+  if (reply != null) await store.addMetrics(s.id, [{ metric: 'reply_s', value: reply, source: 'phone' }]);
   res.json({ level: s.level });
 }));
 
@@ -397,6 +464,10 @@ app.post('/api/switch/event', wrap(async (req, res) => {
       sw.tempC = tempC;
       sw.pressureHpa = pressureHpa;
       await log({ type: 'reading', temp_c: tempC, pressure_hpa: pressureHpa });
+      await store.addMetrics(s.id, [
+        ...(tempC != null ? [{ metric: 'temp_c', value: tempC, source: 'switch' }] : []),
+        ...(pressureHpa != null ? [{ metric: 'pressure_hpa', value: pressureHpa, source: 'switch' }] : []),
+      ]);
       return res.send('OK\n');
     }
     default:
