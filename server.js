@@ -432,6 +432,8 @@ app.post('/api/switch/event', wrap(async (req, res) => {
       if (['ALARM', 'CONTACT', 'WIDER'].includes(s.level)) return res.status(409).send('ERR;NEEDCODE\n');
       await log({ type: 'touch' });
       const out = await checkinAck(store, s);
+      const reply = assess(out, await store.listEvents(out.id)).lastReplyS;
+      if (reply != null && s.level === 'NUDGE') await store.addMetrics(out.id, [{ metric: 'reply_s', value: reply, source: 'switch' }]);
       return res.send(`OK;L=${out.level}\n`);
     }
     case 'code': {
