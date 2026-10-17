@@ -10,7 +10,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Unbounded:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/theme.js"></script>
+  <script src="/motion.js"></script>
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/motion.css" />
   <style>
     .phone {
       position: absolute; width: 238px; height: 488px; padding: 9px; border-radius: 46px;
@@ -42,6 +44,16 @@
     #intro .shock { position: absolute; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: var(--signal); transform: scale(0); transition: transform .65s cubic-bezier(.6,0,.4,1); }
     #intro .skip { position: absolute; right: 20px; bottom: 20px; font-size: 14px; font-weight: 700; color: var(--mist); padding: 10px 14px; }
     #intro.out { opacity: 0; transition: opacity .45s ease; pointer-events: none; }
+    #intro canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.2s ease; }
+    #intro canvas.on { opacity: 1; }
+    #intro .timecode { position: absolute; left: 6vw; top: calc(11vh + 22px); z-index: 6; font-family: 'Unbounded', sans-serif; font-weight: 500; font-size: 13px; letter-spacing: .02em; color: var(--mist); }
+    #intro .timecode b { color: var(--sodium); font-weight: 600; }
+    #intro .rec { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--signal); margin-right: 8px; animation: breathe 1.2s ease-in-out infinite; }
+    #intro svg, #intro .lbl, #intro .node, #intro .shock, #intro .caption { z-index: 2; }
+    #intro .shock { z-index: 7; }
+    #heroBokeh { position: fixed; inset: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none; transition: opacity .2s linear; }
+    .phones { transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transform-style: preserve-3d; transition: transform .35s var(--ease-out); }
+    .phone-front { filter: drop-shadow(0 40px 60px rgba(229,48,58,.25)); }
     @media (prefers-reduced-motion: reduce) { #intro { display: none; } .hero-rise { opacity: 1; transform: none; } }
     @keyframes turn-red { from { background: var(--ink); color: transparent; } }
     @keyframes lift { from { transform: translateY(24px) rotate(4deg); opacity: 0; } }
@@ -56,8 +68,11 @@
     }
   </style>
 </head>
-<body class="streetlight min-h-screen">
-  <div id="intro" aria-hidden="true">
+<body class="streetlight grain min-h-screen">
+  <canvas id="heroBokeh" aria-hidden="true"></canvas>
+  <div id="intro" class="letterbox" aria-hidden="true">
+    <canvas id="introBokeh"></canvas>
+    <p class="timecode" id="timecode"></p>
     <svg id="introSvg"></svg>
     <p class="caption" id="cap1">Maya checks in all night.</p>
     <p class="caption" id="cap2" style="color: var(--signal)">Then she stops answering.</p>
@@ -78,7 +93,7 @@
     <main>
       <section class="grid items-center gap-14 pb-20 pt-12 sm:pt-20 lg:grid-cols-[1.1fr_1fr] lg:gap-8">
         <div>
-          <h1 class="hero-rise display text-[2.6rem] font-extrabold leading-[1.02] sm:text-7xl lg:text-[4.6rem]">
+          <h1 id="heroTitle" class="display text-[2.6rem] font-extrabold leading-[1.02] sm:text-7xl lg:text-[4.6rem]">
             Help starts when you stop answering.
           </h1>
           <p class="hero-rise mt-7 max-w-xl text-xl leading-relaxed text-mist sm:text-2xl">
@@ -143,26 +158,26 @@
       </section>
 
       <section aria-labelledby="route-h" class="border-t border-line py-16">
-        <h2 id="route-h" class="display text-2xl font-semibold sm:text-3xl">If you go quiet, here's the route.</h2>
+        <h2 id="route-h" data-reveal class="display text-2xl font-semibold sm:text-3xl">If you go quiet, here's the route.</h2>
         <p class="mt-3 max-w-xl text-lg text-mist">Every stop has a timer, and the timers run on our server. A dead phone can't stop the climb. Your PIN can.</p>
         <div id="route" class="mt-12"></div>
       </section>
 
       <section aria-labelledby="predict-h" class="border-t border-line py-16">
-        <h2 id="predict-h" class="display text-2xl font-semibold sm:text-3xl">It sees trouble coming.</h2>
+        <h2 id="predict-h" data-reveal class="display text-2xl font-semibold sm:text-3xl">It sees trouble coming.</h2>
         <p class="mt-3 max-w-xl text-lg text-mist">The best alert is the one you never need. Your phone watches for signs you're about to go quiet, and never guesses why.</p>
         <div class="mt-10 grid gap-8 sm:grid-cols-3">
-          <div>
+          <div data-reveal style="--i:0">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--sodium)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M6 10v4"/></svg>
             <h3 class="display mt-4 text-lg font-semibold">Battery forecast</h3>
             <p class="mt-2 text-[15px] leading-relaxed text-mist">It tracks how fast your battery is falling and warns you before it dies. A dead phone looks like silence.</p>
           </div>
-          <div>
+          <div data-reveal style="--i:1">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--sodium)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
             <h3 class="display mt-4 text-lg font-semibold">Check-ins that adapt</h3>
             <p class="mt-2 text-[15px] leading-relaxed text-mist">Answer quickly and it asks less often. Slow replies or a missed check-in, and it asks more.</p>
           </div>
-          <div>
+          <div data-reveal style="--i:2">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--sodium)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0"/><circle cx="12" cy="19.5" r="1"/></svg>
             <h3 class="display mt-4 text-lg font-semibold">Phone status for your friend</h3>
             <p class="mt-2 text-[15px] leading-relaxed text-mist">If you go quiet, your contact learns whether your phone is still on, or went dark with a low battery.</p>
@@ -175,7 +190,7 @@
           <h2 id="arm-h" class="display text-2xl font-semibold sm:text-3xl">Arm a real night</h2>
           <p class="mt-3 max-w-md text-lg text-mist">Pick who gets alerted, how often you'll check in, and a PIN only you know. You'll get a link to send your contact.</p>
         </div>
-        <form id="armForm" class="grid gap-5 rounded-[28px] border border-line bg-dusk/70 p-6 sm:grid-cols-2 sm:p-8">
+        <form id="armForm" data-reveal style="--i:1" class="grid gap-5 rounded-[28px] border border-line bg-dusk/70 p-6 sm:grid-cols-2 sm:p-8">
           <label class="field">Your name
             <input name="user_name" required maxlength="40" autocomplete="given-name" />
           </label>
@@ -209,7 +224,10 @@
     </main>
 
     <footer class="border-t border-line py-8 text-sm text-mist">
-      Night Out Switch doesn't replace 911. If someone is in danger, call for help.
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <span>Night Out Switch doesn't replace 911. If someone is in danger, call for help.</span>
+        <button id="replayIntro" class="font-semibold text-mist underline-offset-4 hover:text-paper hover:underline">Replay the intro</button>
+      </div>
     </footer>
   </div>
 
@@ -220,11 +238,25 @@
       const done = () => {
         if (el.dataset.done) return;
         el.dataset.done = '1';
+        el.classList.add('open'); // letterbox bars slide away
         document.body.classList.add('intro-done');
-        el.classList.add('out');
-        setTimeout(() => el.remove(), 500);
+        heroIn();
+        setTimeout(() => el.classList.add('out'), 120);
+        setTimeout(() => { introBokeh && introBokeh.stop(); el.remove(); }, 650);
       };
-      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { el.remove(); document.body.classList.add('intro-done'); return; }
+      let seen = false;
+      try { seen = sessionStorage.getItem('nos_intro') === '1'; sessionStorage.setItem('nos_intro', '1'); } catch {}
+      let introBokeh = null;
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches || seen) { el.remove(); document.body.classList.add('intro-done'); heroIn(); return; }
+
+      // Act 1: the city at night, a timecode typing itself
+      const bk = document.getElementById('introBokeh');
+      introBokeh = NOS_MOTION.bokeh(bk, { count: 40 });
+      requestAnimationFrame(() => bk.classList.add('on'));
+      const tc = document.getElementById('timecode');
+      const tcText = 'Friday, 10:14 PM';
+      tc.innerHTML = '<span class="rec"></span><b></b>';
+      [...tcText].forEach((ch, i) => setTimeout(() => { tc.querySelector('b').textContent += ch; }, 120 + i * 38));
       el.addEventListener('click', done);
       addEventListener('keydown', done, { once: true });
 
@@ -256,7 +288,7 @@
       };
 
       // One clock drives everything, so lines, labels and captions never drift apart.
-      const T_OK = [200, 1500], T_QUIET = [1500, 2400], T_NODE = 2400, T_SHOCK = 3000, T_END = 3700;
+      const T_OK = [900, 2200], T_QUIET = [2200, 3100], T_NODE = 3100, T_SHOCK = 3700, T_END = 4400;
       const cues = [];
       const cue = (at, fn) => cues.push({ at, fn });
       ['10:14 PM', '10:34 PM', '10:54 PM'].forEach((time, i) => {
@@ -270,7 +302,8 @@
       node.style.left = `${nodeX}px`; node.style.top = `${y0}px`;
       cue(T_NODE, () => { node.classList.add('on'); jordan.classList.add('on'); });
       const cap = (id) => document.getElementById(id).classList;
-      cue(100, () => cap('cap1').add('on'));
+      cue(800, () => cap('cap1').add('on'));
+      cue(T_QUIET[0] + 200, () => { tc.querySelector('b').textContent = '11:14 PM'; tc.querySelector('b').style.color = 'var(--signal)'; });
       cue(T_QUIET[0], () => { cap('cap1').remove('on'); cap('cap2').add('on'); });
       cue(T_NODE + 150, () => { cap('cap2').remove('on'); cap('cap3').add('on'); });
       const shock = document.getElementById('introShock');
@@ -293,12 +326,31 @@
       requestAnimationFrame(tick);
     })();
 
+    // ---- Hero: living bokeh, word-by-word title, tilting phones, magnetic button ----
+    function heroIn() {
+      const t = document.getElementById('heroTitle');
+      if (!t.classList.contains('words')) NOS_MOTION.splitWords(t, 120);
+      requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('in')));
+    }
+    const heroBk = document.getElementById('heroBokeh');
+    NOS_MOTION.bokeh(heroBk, { count: 26 });
+    addEventListener('scroll', () => { heroBk.style.opacity = Math.max(0, 1 - scrollY / (innerHeight * 0.9)); }, { passive: true });
+    NOS_MOTION.tilt(document.querySelector('.phones').parentElement);
+    NOS_MOTION.magnetic(document.getElementById('demo'));
+    NOS_MOTION.reveal();
+    document.getElementById('replayIntro').addEventListener('click', () => {
+      try { sessionStorage.removeItem('nos_intro'); } catch {}
+      scrollTo(0, 0); location.reload();
+    });
+
     document.getElementById('logo').innerHTML = NOS.logo();
     document.querySelectorAll('.mini-logo').forEach((el) => { el.innerHTML = NOS.logo('sm').replace('width="30"', 'width="16"').replace(/height="[\d.]+"/, 'height="9.3"'); });
     NOS.route(document.querySelector('.mini-route'), { level: 'ARMED', variant: 'mini' });
     const routeEl = document.getElementById('route');
     NOS.route(routeEl, { variant: 'full', level: null });
     routeEl.classList.add('route-draw');
+    routeEl.setAttribute('data-reveal', '');
+    NOS_MOTION.reveal(routeEl.parentElement);
 
     const post = (url, body) => fetch(url, {
       method: 'POST',
@@ -316,7 +368,7 @@
       btn.disabled = true; btn.textContent = 'Starting…';
       try {
         const { id } = await post('/api/demo');
-        location.href = `/stage.html?id=${id}`;
+        NOS_MOTION.go(`/stage.html?id=${id}`, btn);
       } catch (err) {
         btn.disabled = false; btn.textContent = 'Start the demo';
         showErr('demoErr', err.message);
