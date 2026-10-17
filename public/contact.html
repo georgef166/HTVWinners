@@ -3,72 +3,105 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0E1430" />
   <title>Night Out Switch · Trusted contact</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Unbounded:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>body { transition: background-color .3s; }</style>
+  <style>
+    body { transition: background-color .35s ease; }
+    body.alerting { background: var(--signal); }
+    body.ok { background: var(--mint); color: var(--ink); }
+    .pin {
+      width: 26px; height: 26px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+      background: var(--signal); border: 4px solid #fff; box-shadow: 0 6px 18px rgba(0,0,0,.35);
+    }
+    .pin-pulse { position: absolute; left: -12px; top: -12px; width: 50px; height: 50px; border-radius: 50%; background: rgba(229,48,58,.35); animation: pulse 1.8s ease-out infinite; }
+    @keyframes pulse { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+    .leaflet-container { font-family: 'Hanken Grotesk', sans-serif; }
+    .alerting .btn-sodium { box-shadow: none; }
+  </style>
 </head>
-<body class="min-h-[100dvh] bg-slate-950 text-slate-100 antialiased">
+<body class="streetlight min-h-[100dvh]">
 
-  <button id="unlock" class="fixed inset-0 z-[1000] flex flex-col items-center justify-center gap-4 bg-slate-950/95 px-8 text-center">
-    <span class="flex h-24 w-24 items-center justify-center rounded-full bg-violet-500 text-4xl">🔔</span>
-    <span class="text-3xl font-bold">Tap to enable alerts</span>
-    <span class="text-slate-400">So this page can make a sound if your friend needs you.</span>
+  <button id="unlock" class="streetlight fixed inset-0 z-[1000] flex flex-col items-center justify-center px-8 text-center">
+    <span class="breathe flex h-28 w-28 items-center justify-center rounded-full bg-sodium/15 text-sodium">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    </span>
+    <span class="display mt-8 text-3xl font-bold">Tap to enable alerts</span>
+    <span class="mt-3 max-w-xs text-lg text-mist">So this page can make a sound if <span class="name">your friend</span> needs you.</span>
   </button>
 
-  <main class="mx-auto max-w-md px-5 py-8">
-    <p class="text-sm font-semibold uppercase tracking-widest text-violet-400" id="brand">Night Out Switch</p>
+  <div class="mx-auto max-w-md px-5 pb-10 pt-5">
+    <header class="flex items-center gap-2.5 text-sodium" id="brand">
+      <span id="logo"></span>
+      <span class="display text-[13px] font-semibold text-paper" id="brandName">Night Out Switch</span>
+    </header>
 
     <!-- Waiting: before CONTACT -->
-    <section data-view="waiting" class="view mt-10 hidden">
-      <div class="rounded-3xl border border-slate-800 bg-slate-900 p-7">
-        <span class="text-4xl">🌙</span>
-        <h1 class="mt-4 text-3xl font-bold leading-tight">You're <span class="name">their</span>'s trusted contact tonight.</h1>
-        <p class="mt-3 text-lg text-slate-300">You'll only see <span class="name">their</span>'s location if <span class="name">they</span> stops responding.</p>
-        <p class="mt-6 flex items-center gap-2 text-sm text-slate-400"><span class="h-2 w-2 rounded-full bg-emerald-400"></span>Responding normally. Keep this page open.</p>
+    <section data-view="waiting" class="view hidden pt-14">
+      <h1 class="display text-[2.4rem] font-bold leading-[1.08]">You're <span class="name"></span>'s trusted contact tonight.</h1>
+      <p class="mt-5 text-xl leading-relaxed text-mist">You'll only see <span class="name"></span>'s location if <span class="name"></span> stops responding.</p>
+      <div class="mt-10 flex items-center gap-4 rounded-[24px] border border-line bg-dusk/70 p-5">
+        <span class="relative flex h-3.5 w-3.5 shrink-0"><span class="breathe absolute inset-0 rounded-full bg-mint/60"></span><span class="relative h-3.5 w-3.5 rounded-full bg-mint"></span></span>
+        <p class="text-[17px]"><b class="name"></b> is responding normally. Keep this page open.</p>
       </div>
+      <h2 class="display mt-14 text-lg font-semibold">If <span class="name"></span> goes quiet</h2>
+      <div id="route" class="mt-6"></div>
     </section>
 
     <!-- Alert: CONTACT / WIDER -->
-    <section data-view="alert" class="view mt-4 hidden flex-col gap-4">
-      <div class="rounded-3xl bg-white p-5 text-red-700">
-        <p class="text-sm font-bold uppercase tracking-widest">Alert</p>
-        <h1 class="mt-1 text-3xl font-black leading-tight"><span class="name"></span> hasn't responded for <span id="since"></span></h1>
-        <p id="ackNote" class="mt-2 hidden font-semibold text-red-900">You said you're on it. Thank you.</p>
+    <section data-view="alert" class="view hidden flex-col pt-8 text-white">
+      <h1 class="display text-[2.15rem] font-extrabold leading-[1.08]">
+        <span class="name"></span> hasn't responded for <span id="since" class="tnum"></span>
+      </h1>
+      <p id="ackNote" class="mt-4 hidden rounded-full bg-white/15 px-4 py-2 text-[15px] font-bold">You said you're on it. <span class="name"></span>'s phone shows that you're coming.</p>
+
+      <div class="relative mt-7 overflow-hidden rounded-[28px] border-4 border-white/90 bg-[#b81f28]">
+        <div id="map" class="h-72 w-full"></div>
+        <p id="noLoc" class="hidden p-6 text-lg font-semibold">No location has been shared.</p>
       </div>
-      <div id="map" class="h-64 w-full overflow-hidden rounded-3xl bg-red-900"></div>
-      <p id="noLoc" class="hidden rounded-2xl bg-red-800/70 p-4">No location has been shared.</p>
-      <dl class="grid grid-cols-2 gap-3">
-        <div class="rounded-2xl bg-red-800/70 p-4"><dt class="text-sm text-red-200">Last seen</dt><dd id="lastSeen" class="text-2xl font-bold">–</dd></div>
-        <div class="rounded-2xl bg-red-800/70 p-4"><dt class="text-sm text-red-200">Battery</dt><dd id="battery" class="text-2xl font-bold">–</dd></div>
+
+      <dl class="mt-6 grid grid-cols-2 divide-x divide-white/25 border-y border-white/25 py-4">
+        <div class="pr-4"><dt class="text-[15px] text-white/80">Last seen</dt><dd id="lastSeen" class="display tnum mt-1 text-2xl font-semibold">–</dd></div>
+        <div class="pl-5"><dt class="text-[15px] text-white/80">Battery</dt><dd id="battery" class="display tnum mt-1 text-2xl font-semibold">–</dd></div>
       </dl>
-      <p id="summary" class="whitespace-pre-line rounded-2xl bg-red-800/70 p-4 text-lg leading-relaxed"></p>
-      <a id="call" class="block rounded-2xl bg-white px-6 py-5 text-center text-xl font-bold text-red-700">📞 Call <span class="name"></span></a>
-      <button id="ack" class="rounded-2xl border-2 border-white px-6 py-5 text-xl font-bold">I'm on it</button>
-      <button id="resolve" class="rounded-2xl px-6 py-4 text-lg font-semibold text-red-100 underline underline-offset-4">False alarm / resolved</button>
+
+      <p id="summary" class="mt-6 whitespace-pre-line rounded-[24px] bg-white p-5 text-[17px] leading-relaxed text-ink"></p>
+
+      <div class="mt-6 grid gap-3">
+        <a id="call" class="btn w-full bg-white text-lg text-signal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>
+          <span>Call <span class="name"></span></span>
+        </a>
+        <button id="ack" class="btn w-full bg-ink text-lg text-white">I'm on it</button>
+        <button id="resolve" class="min-h-[3rem] text-[15px] font-bold text-white/90 underline underline-offset-4">It's a false alarm, or it's resolved</button>
+      </div>
+      <p class="mt-6 text-center text-[15px] text-white/85">If you believe <span class="name"></span> is in danger, call 911.</p>
     </section>
 
     <!-- OK: stood down after an alert -->
-    <section data-view="ok" class="view mt-10 hidden">
-      <div class="rounded-3xl bg-emerald-500 p-7 text-emerald-950">
-        <span class="text-5xl">✅</span>
-        <h1 class="mt-4 text-4xl font-black leading-tight"><span class="name"></span> says: "I'm OK."</h1>
-        <p class="mt-3 text-lg">They entered their PIN and the alert is cancelled. Their location is hidden again.</p>
-      </div>
+    <section data-view="ok" class="view hidden pt-16">
+      <span class="flex h-20 w-20 items-center justify-center rounded-full bg-ink text-mint">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+      </span>
+      <h1 class="display mt-8 text-[2.6rem] font-extrabold leading-[1.05]"><span class="name"></span> says: "I'm OK."</h1>
+      <p class="mt-5 text-xl leading-relaxed">The PIN was entered and the alert is cancelled. The location is hidden again, and this page will turn red if it happens again.</p>
     </section>
 
     <!-- Resolved -->
-    <section data-view="resolved" class="view mt-10 hidden">
-      <div class="rounded-3xl border border-slate-800 bg-slate-900 p-7">
-        <span class="text-4xl">🏠</span>
-        <h1 class="mt-4 text-3xl font-bold">All done for tonight</h1>
-        <p class="mt-3 text-lg text-slate-300">This night has been marked resolved. Thanks for looking out.</p>
-      </div>
+    <section data-view="resolved" class="view hidden pt-16">
+      <h1 class="display text-[2.4rem] font-bold leading-[1.08]">That's the night wrapped up.</h1>
+      <p class="mt-5 text-xl leading-relaxed text-mist">This switch is off, so you won't get any more alerts. Thanks for looking out for <span class="name"></span>.</p>
     </section>
 
-    <p id="err" class="mt-4 hidden text-center text-sm text-red-300"></p>
-  </main>
+    <p id="err" class="mt-6 hidden text-center text-[15px] font-semibold" role="alert"></p>
+  </div>
 
   <script>
     const token = new URLSearchParams(location.search).get('t');
@@ -80,6 +113,8 @@
       });
     const $ = (s) => document.querySelector(s);
     const showErr = (msg) => { $('#err').textContent = msg || ''; $('#err').classList.toggle('hidden', !msg); };
+    $('#logo').innerHTML = NOS.logo('sm');
+    let routeDrawn = false;
 
     // ---- Sound ----
     let audio = null;
@@ -104,13 +139,14 @@
 
     // ---- Map ----
     let map = null; let marker = null;
+    const pinIcon = L.divIcon({ className: '', html: '<div class="relative"><span class="pin-pulse"></span><div class="pin"></div></div>', iconSize: [26, 26], iconAnchor: [13, 26] });
     function showMap(lat, lng) {
       if (!map) {
-        map = L.map('map', { zoomControl: false, attributionControl: true }).setView([lat, lng], 16);
+        map = L.map('map', { zoomControl: false, attributionControl: true, scrollWheelZoom: false }).setView([lat, lng], 16);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19, attribution: '&copy; OpenStreetMap contributors',
         }).addTo(map);
-        marker = L.marker([lat, lng]).addTo(map);
+        marker = L.marker([lat, lng], { icon: pinIcon }).addTo(map);
       } else {
         marker.setLatLng([lat, lng]);
       }
@@ -123,6 +159,7 @@
     let prevView = null;
     function render(s) {
       document.querySelectorAll('.name').forEach((el) => { el.textContent = s.user_name; });
+      if (!routeDrawn) { NOS.route($('#route'), { variant: 'full', level: null, who: s.user_name }); routeDrawn = true; }
       const alerting = s.level === 'CONTACT' || s.level === 'WIDER';
       const view = s.level === 'RESOLVED' ? 'resolved' : alerting ? 'alert' : s.stood_down ? 'ok' : 'waiting';
 
@@ -131,10 +168,12 @@
         el.classList.toggle('hidden', !on);
         el.classList.toggle('flex', on && view === 'alert');
       });
-      document.body.classList.toggle('bg-red-600', alerting);
-      document.body.classList.toggle('bg-slate-950', !alerting);
-      $('#brand').classList.toggle('text-red-100', alerting);
-      $('#brand').classList.toggle('text-violet-400', !alerting);
+      document.body.classList.toggle('alerting', alerting);
+      document.body.classList.toggle('ok', view === 'ok');
+      document.body.classList.toggle('streetlight', view === 'waiting' || view === 'resolved');
+      $('#brand').classList.toggle('text-sodium', view === 'waiting' || view === 'resolved');
+      $('#brandName').classList.toggle('text-paper', view !== 'ok');
+      $('#err').classList.toggle('text-signal', !alerting);
 
       if (alerting) {
         $('#since').textContent = ago(s.seconds_since_response);
@@ -160,11 +199,11 @@
 
     async function poll() {
       try { render(await api()); showErr(''); }
-      catch (err) { showErr(err.status === 404 ? 'This link isn\'t valid.' : 'Connection lost, retrying…'); }
+      catch (err) { showErr(err.status === 404 ? 'This link isn’t valid. Ask your friend to send it again.' : 'Lost the connection. Retrying…'); }
     }
     $('#ack').addEventListener('click', async () => { try { await api('/ack', true); poll(); } catch (e) { showErr(e.message); } });
     $('#resolve').addEventListener('click', async () => {
-      if (!confirm('Mark this as a false alarm / resolved? This ends the night for both of you.')) return;
+      if (!confirm('Mark this as resolved? The switch turns off and neither of you gets more alerts.')) return;
       try { await api('/resolve', true); poll(); } catch (e) { showErr(e.message); }
     });
 

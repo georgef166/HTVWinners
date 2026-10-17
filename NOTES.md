@@ -29,3 +29,10 @@
 - Let the contact see the WIDER escalation status and who else was alerted.
 - An events-retention policy on the hypertable (drop location data after 24 h).
 - Distinguish "phone offline" (heartbeats stopped) from "phone online but no response" in the summary and on the contact page.
+
+## Design
+
+- Visual language comes from the street at night: indigo night sky (`#0E1430`), sodium streetlight amber (`#FFB547`) for "armed" and primary actions, signal red for alarm, mint for "OK".
+- Type: Unbounded (wide, flyer-style display and numbers) + Hanken Grotesk (body), from Google Fonts.
+- The escalation ladder is drawn as a night-bus route (`NOS.route` in `public/theme.js`) on the landing page, Jordan's waiting screen, and as a "you are here" line on Maya's phone.
+- Shared tokens live in `public/theme.js` (Tailwind config) and `public/styles.css`. Reduced motion turns off the alarm flash (solid red instead) and the breathing/route animations.
