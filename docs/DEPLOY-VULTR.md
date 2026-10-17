@@ -17,6 +17,22 @@ The pitch line: **Maya's night never leaves our servers.** The app, the AI model
 
 Vercel runs code as short-lived serverless functions. Night Out Switch's promise is that **the timer lives on the server**: every 2 seconds it checks every night and escalates, even if her phone is dead. On serverless nothing runs between requests, so a silent phone would never trigger an alert, which is exactly the case the app exists for. That needs an always-on server, and Vultr gives you one (and has its own prize).
 
+## Fully automated (recommended)
+
+1. Create a Vultr account (MLH's link gives free credits) and an API key: **Account → API → Enable API**, and under Access Control allow your current IP.
+2. Put the key in `.env` (gitignored): `VULTR_API_KEY=...`
+3. Run:
+
+```bash
+node deploy/vultr.mjs plans     # see prices in Toronto
+node deploy/vultr.mjs up        # 4 vCPU / 8 GB server, about $40/month (~$0.06/hour)
+node deploy/vultr.mjs status    # setup takes 5–10 minutes; this shows when it's live
+```
+
+`up` creates an SSH key, a server in Toronto, and a first-boot script. That script installs Docker, clones this repo, generates the database password and Switch key, and starts the app, Tiger Data, HTTPS (sslip.io) and our own model (`llama3.2:3b` on CPU). The alert never waits for the model: Jordan gets the factual summary instantly and the model's version swaps in seconds later.
+
+`update` redeploys after you push; `destroy --yes` deletes the server and stops billing.
+
 ## Quick deploy (Docker Compose, about 10 minutes)
 
 On a fresh Vultr Ubuntu server (Cloud Compute is fine; Cloud GPU if you want our own model):
