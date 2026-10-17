@@ -44,3 +44,12 @@
   - Maya gets a confirmation toast after checking in or cancelling the alarm, and the alarm screen has a draining bar showing time until the contact is alerted.
   - The landing hero shows the product: Maya's armed phone and Jordan's alert phone (static HTML mockup; Jordan's screen turns red once on load).
 - Spec deviations kept on purpose: demo.html says "Open Jordan's link" rather than "Contact link"; the alarm heading reads "Tap your PIN if you're OK".
+
+## Prediction (`src/predict.js`)
+
+- Predicts *going quiet*, never *why*: no guesses about substances, intoxication or intent.
+- Signals and weights: battery on track to die within the horizon (2; least-squares trend over the last 12 readings), battery ≤ 15% (1), last check-in answered slowly (1.5), a check-in missed and recovered earlier tonight (1.5, counted from PIN stand-downs out of an alarm), after 1am (0.5), phone stopped reporting (1).
+- Level: calm under 1, watch from 1, elevated from 2.5. Pacing: elevated halves the gap, calm with a quick last reply stretches it 1.5×, never below 8 s (demo) / 5 min (real).
+- Demo thresholds are compressed (3 min battery horizon, 5 s "slow" reply, 25 s offline). `POST /api/demo/:id/drain-battery` (demo only) fakes a 10-points-a-minute drain from 32%.
+- The contact sees phone status only once alerting: "still on and has signal" vs "gone dark", which tells "not answering" apart from "dead phone".
+- Ideas not built: personal baselines (reply speed vs this person's usual), learning from past nights, movement signals (stationary for long, heading away from home), a weather/temperature signal from hardware.

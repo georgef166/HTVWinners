@@ -49,6 +49,7 @@ Copy `.env.example` to `.env`. Every variable is optional.
 - `server.js`: Express app, JSON API, rate limiting, and the ticker that starts the ladder
 - `src/ladder.js`: the state machine and `tick()` (every 2 s in demo mode, 5 s otherwise)
 - `src/store.js`: Postgres via `pg`, with an in-memory store that has the same interface
+- `src/predict.js`: predicts trouble before the silence (battery forecast, slow or missed replies, phone gone dark) and sets the pace of the next check-in
 - `src/summary.js`: Gemini summary with a 3 s timeout and a factual template fallback. It's told never to guess at causes.
 - `src/notify.js`: Twilio REST call, or a console log
 - `public/`: plain HTML, Tailwind (CDN), vanilla JS, Leaflet + OpenStreetMap

@@ -45,6 +45,13 @@
           </a>
         </div>
         <p class="mt-6 text-[15px] text-mist">Sound needs a tap on each page first. The demo PIN is <b class="text-paper">1234</b>.</p>
+
+        <div class="mt-8 rounded-[24px] border border-line bg-dusk/60 p-5">
+          <h2 class="display text-lg font-semibold">See it predict trouble</h2>
+          <p class="mt-2 text-[15px] leading-relaxed text-mist">Drain the battery and <span class="who">Maya</span>'s phone warns her before it dies. Or wait a few seconds before tapping “I'm OK” and the check-ins tighten.</p>
+          <button id="drain" class="btn btn-ghost mt-4 min-h-[3rem] text-[15px]">Drain <span class="who">Maya</span>'s battery fast</button>
+          <p id="drainNote" class="mt-2 hidden text-[15px] font-semibold text-sodium" role="status">Draining. The warning shows on Maya's phone in about 20 seconds.</p>
+        </div>
       </section>
 
       <figure class="mx-auto w-full max-w-sm">
@@ -64,6 +71,13 @@
     document.getElementById('logo').innerHTML = NOS.logo();
     document.getElementById('meIcon').innerHTML = NOS.logo('sm');
     const id = new URLSearchParams(location.search).get('id');
+    document.getElementById('drain').addEventListener('click', async (e) => {
+      e.currentTarget.disabled = true;
+      const r = await fetch(`/api/demo/${encodeURIComponent(id)}/drain-battery`, { method: 'POST' });
+      const note = document.getElementById('drainNote');
+      note.textContent = r.ok ? 'Draining. The warning shows on Maya’s phone in about 20 seconds.' : 'Battery drain only works in demo mode.';
+      note.classList.remove('hidden');
+    });
     Promise.all([
       fetch(`/api/demo/${encodeURIComponent(id)}`).then((r) => r.ok ? r.json() : Promise.reject(new Error('This session doesn’t exist. Start a new demo from the home page.'))),
       fetch(`/api/sessions/${encodeURIComponent(id)}`).then((r) => r.json()),
