@@ -55,6 +55,11 @@
         <span class="knob"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
       <p class="mt-4 text-[13px] text-mist">Or tap it. You can disarm with your PIN when you're home.</p>
+      <label class="mt-6 flex max-w-[320px] cursor-pointer items-start gap-3 text-left">
+        <input type="checkbox" id="listenOpt" class="peer sr-only" />
+        <span class="relative mt-0.5 h-[26px] w-[44px] shrink-0 rounded-full bg-line transition-colors peer-checked:bg-mint peer-focus-visible:ring-2 peer-focus-visible:ring-sodium after:absolute after:left-[3px] after:top-[3px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-[18px]"></span>
+        <span class="text-[13px] leading-snug text-mist"><b class="font-semibold text-paper">Listen for signs of trouble.</b> Your phone keeps the last 30 seconds in memory and only checks a clip after a sudden loud sound. Audio is never saved.</span>
+      </label>
     </div>
   </div>
 
@@ -96,6 +101,10 @@
             </div>
             <p id="outlookReason" class="mt-1 text-[14px] leading-snug text-mist"></p>
             <ul id="outlookSignals" class="mt-2 hidden space-y-1.5 text-[14px] font-semibold leading-snug text-sodium"></ul>
+            <p id="listenRow" class="mt-2.5 hidden items-center gap-2 border-t border-line pt-2.5 text-[13px] font-medium text-mist">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+              <span>Listening for trouble. Audio is never saved.</span>
+            </p>
             <p id="switchRow" class="mt-2.5 hidden items-center gap-2 border-t border-line pt-2.5 text-[13px] font-semibold text-mist">
               <span class="breathe h-2 w-2 rounded-full bg-mint"></span><span id="switchText"></span>
             </p>
@@ -103,7 +112,8 @@
         </div>
         <div class="route-slot mb-8"></div>
         <button id="disarmBtn" class="btn btn-ghost w-full">Disarm, I'm home</button>
-        <button id="earlyOk" class="mt-2 min-h-[3rem] w-full text-[15px] font-semibold text-mist hover:text-paper">I'm fine, reset the timer</button>
+        <a id="nightLink" class="mt-2 block min-h-[2.5rem] w-full text-center text-[15px] font-medium text-sodium" target="_blank" rel="noopener">Your night so far ›</a>
+        <button id="earlyOk" class="mt-1 min-h-[3rem] w-full text-[15px] font-semibold text-mist hover:text-paper">I'm fine, reset the timer</button>
       </section>
 
       <!-- NUDGE -->
@@ -218,6 +228,9 @@
     NOS_MOTION.slideSwitch($('#armSwitch'), () => {
       unlockAudio();
       NOS_SOUND.arm();
+      if (window.DeviceMotionEvent?.requestPermission) DeviceMotionEvent.requestPermission().then((p) => p === 'granted' && startMotion()).catch(() => {});
+      else startMotion();
+      if ($('#listenOpt').checked) startListening();
       // Arming starts the clock: the first check-in is a full interval from this moment.
       api('/checkin-ack', {}).then(() => api('')).then(applyState).catch(() => {});
       $('#armRings').classList.add('go');
@@ -226,6 +239,7 @@
     });
     // Stage mode: embedded in the demo stage, which already unlocked sound with its Start click.
     const STAGE = new URLSearchParams(location.search).has('stage');
+    $('#nightLink').href = `/night.html?id=${encodeURIComponent(id)}`;
     if (STAGE) { try { NOS_SOUND.attach(window.parent.NOS_AUDIO); } catch {} $('#unlock').remove(); setTimeout(boot, 300); }
 
     // ---- Keypad ----
@@ -397,7 +411,9 @@
     setInterval(renderClock, 250);
 
     let lastOkAt = Date.now();
+    let listenDefaulted = false;
     async function poll() {
+      if (!listenDefaulted && state) { listenDefaulted = true; if (state.demo && $('#listenOpt')) $('#listenOpt').checked = true; }
       try { applyState(await api('')); lastOkAt = Date.now(); showErr(''); }
       catch (err) {
         if (err.status === 404) return sessionGone();
@@ -431,9 +447,84 @@
     if (navigator.getBattery) navigator.getBattery().then((b) => {
       battery = b.level; b.addEventListener('levelchange', () => { battery = b.level; });
     }).catch(() => {});
+    // ---- Signals for her dashboard: movement and sound level (numbers only) ----
+    const sig = { motion: 0, motionN: 0, db: 0, dbN: 0, peak: -120 };
+    function startMotion() {
+      addEventListener('devicemotion', (e) => {
+        const a = e.acceleration;
+        let mag;
+        if (a && a.x != null) mag = Math.hypot(a.x, a.y, a.z);
+        else {
+          const g = e.accelerationIncludingGravity;
+          if (!g || g.x == null) return;
+          mag = Math.abs(Math.hypot(g.x, g.y, g.z) - 9.81);
+        }
+        sig.motion += mag; sig.motionN++;
+      });
+    }
+
+    // ---- Listening: a rolling 30 s of audio in memory. Only a sudden loud spike sends a clip. ----
+    const RATE = 16000, SECONDS = 30;
+    const ring = new Float32Array(RATE * SECONDS);
+    let ringAt = 0, ringFull = false, baseline = null, loudFrames = 0, lastCheck = 0, listening = false;
+    async function startListening() {
+      if (listening || !navigator.mediaDevices?.getUserMedia) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+        const ac = NOS_SOUND.unlock();
+        const src = ac.createMediaStreamSource(stream);
+        const proc = ac.createScriptProcessor(4096, 1, 1);
+        const mute = ac.createGain(); mute.gain.value = 0;
+        src.connect(proc); proc.connect(mute); mute.connect(ac.destination);
+        const step = ac.sampleRate / RATE;
+        proc.onaudioprocess = (ev) => {
+          const x = ev.inputBuffer.getChannelData(0);
+          let sum = 0;
+          for (let i = 0; i < x.length; i++) sum += x[i] * x[i];
+          const db = 20 * Math.log10(Math.sqrt(sum / x.length) + 1e-9);
+          sig.db += db; sig.dbN++; if (db > sig.peak) sig.peak = db;
+          for (let i = 0; i < x.length; i += step) { ring[ringAt] = x[Math.floor(i)]; ringAt = (ringAt + 1) % ring.length; if (ringAt === 0) ringFull = true; }
+          // A spike is 18 dB over the room's usual level, held for about half a second.
+          if (baseline == null) baseline = db;
+          if (db > baseline + 18 && db > -30) loudFrames++; else { loudFrames = 0; baseline = baseline * 0.995 + db * 0.005; }
+          const cooldown = state?.demo ? 12000 : 60000;
+          if (loudFrames >= 6 && Date.now() - lastCheck > cooldown) { lastCheck = Date.now(); loudFrames = 0; setTimeout(() => sendClip(db), 3000); }
+        };
+        listening = true;
+        $('#listenRow').classList.replace('hidden', 'flex');
+      } catch {
+        showErr('Microphone access was declined, so listening is off. Check-ins still work.');
+      }
+    }
+    function clipWav() {
+      const len = ringFull ? ring.length : ringAt;
+      const start = ringFull ? ringAt : 0;
+      const buf = new ArrayBuffer(44 + len * 2);
+      const v = new DataView(buf);
+      const str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+      str(0, 'RIFF'); v.setUint32(4, 36 + len * 2, true); str(8, 'WAVE'); str(12, 'fmt ');
+      v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, RATE, true);
+      v.setUint32(28, RATE * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, len * 2, true);
+      for (let i = 0; i < len; i++) { const s = Math.max(-1, Math.min(1, ring[(start + i) % ring.length])); v.setInt16(44 + i * 2, s * 0x7fff, true); }
+      return buf;
+    }
+    async function sendClip(peakDb) {
+      try {
+        const r = await fetch(`/api/sessions/${encodeURIComponent(id)}/audio-check?peak_db=${peakDb.toFixed(1)}&baseline_db=${(baseline ?? -60).toFixed(1)}`, {
+          method: 'POST', headers: { 'Content-Type': 'audio/wav' }, body: clipWav(),
+        });
+        const res = await r.json();
+        if (res.prompted) { toast('Something sounded wrong. Checking you’re OK.'); poll(); }
+      } catch {}
+    }
+
     function heartbeat() {
       const loc = position || (state?.demo ? DEMO_LOCATION : {});
-      api('/heartbeat', { ...loc, battery }).catch(() => {});
+      const body = { ...loc, battery };
+      if (sig.motionN) body.movement = +(sig.motion / sig.motionN).toFixed(2);
+      if (sig.dbN) { body.sound_db = +(sig.db / sig.dbN).toFixed(1); body.sound_peak_db = +sig.peak.toFixed(1); }
+      sig.motion = sig.motionN = sig.db = sig.dbN = 0; sig.peak = -120;
+      api('/heartbeat', body).catch(() => {});
     }
 
     poll().then(heartbeat);
