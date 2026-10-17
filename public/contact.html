@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/trace.js"></script>
   <style>
     body { transition: background-color .35s ease; }
     body.alerting { background: var(--signal); }
@@ -23,7 +24,18 @@
     }
     .pin-pulse { position: absolute; left: -12px; top: -12px; width: 50px; height: 50px; border-radius: 50%; background: rgba(229,48,58,.35); animation: pulse 1.8s ease-out infinite; }
     @keyframes pulse { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
-    .leaflet-container { font-family: 'Hanken Grotesk', sans-serif; }
+    .leaflet-container { font-family: 'Hanken Grotesk', sans-serif; background: #1a1d2b; }
+    .night-tiles { filter: invert(1) hue-rotate(195deg) brightness(.82) contrast(1.1) saturate(.55); }
+    .radar { position: relative; width: 26px; height: 26px; }
+    .radar .ring { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 2px solid rgba(229, 48, 58, .9); background: rgba(229, 48, 58, .12); transform: scale(0); opacity: 0; animation: radar 2.4s cubic-bezier(.2,.6,.3,1) infinite; }
+    .radar .ring:nth-child(2) { animation-delay: .8s; }
+    .radar .ring:nth-child(3) { animation-delay: 1.6s; }
+    @keyframes radar { 0% { transform: scale(.1); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+    .radar .dot { position: absolute; inset: 4px; border-radius: 50%; background: var(--signal); border: 3px solid #fff; box-shadow: 0 0 0 4px rgba(229,48,58,.35), 0 4px 14px rgba(0,0,0,.5); }
+    #shock { position: fixed; inset: 0; z-index: 960; pointer-events: none; overflow: hidden; }
+    #shock span { position: absolute; left: 50%; top: 38%; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; background: #fff; transform: scale(0); opacity: 0; }
+    @keyframes slam { 0% { transform: scale(1.14); opacity: 0; filter: blur(6px); } 60% { opacity: 1; filter: none; } 100% { transform: none; } }
+    .slam { animation: slam .55s cubic-bezier(.2,.8,.2,1) both; }
     .alerting .btn-sodium { box-shadow: none; }
   </style>
 </head>
@@ -37,6 +49,7 @@
     <span class="mt-3 max-w-xs text-lg text-mist">So this page can make a sound if <span class="name">your friend</span> needs you.</span>
   </button>
 
+  <div id="shock" aria-hidden="true"><span></span></div>
   <div class="mx-auto max-w-md px-5 pb-10 pt-5">
     <header class="flex items-center gap-2.5 text-sodium" id="brand">
       <span id="logo"></span>
@@ -57,7 +70,7 @@
 
     <!-- Alert: CONTACT / WIDER -->
     <section data-view="alert" class="view hidden flex-col pb-44 pt-8 text-white">
-      <h1 class="display text-[2.15rem] font-extrabold leading-[1.08]">
+      <h1 id="alertHeadline" class="display text-[2.15rem] font-extrabold leading-[1.08]">
         <span class="name"></span> hasn't responded for <span id="since" class="tnum"></span>
       </h1>
       <p id="widerNote" class="mt-4 hidden rounded-2xl bg-ink/25 px-4 py-3 text-[15px] font-bold leading-snug"></p>
@@ -84,6 +97,14 @@
         </div>
       </dl>
 
+      <div class="mt-5 rounded-[20px] bg-ink/20 px-4 pb-2 pt-3">
+        <div class="flex items-center justify-between text-[13px] font-semibold text-white/85">
+          <span><span class="name"></span>'s signal</span>
+          <span>line: <span class="name"></span> &nbsp;dots: her phone</span>
+        </div>
+        <canvas id="trace" class="mt-1 h-20 w-full"></canvas>
+      </div>
+
       <div class="mt-6 rounded-[24px] bg-white p-5 text-ink">
         <h2 class="display text-lg font-semibold">What to do now</h2>
         <ol id="nextStep" class="mt-3 space-y-2.5 text-[17px] font-semibold leading-snug"></ol>
@@ -97,6 +118,10 @@
 
       <h2 class="display mt-8 text-lg font-semibold">What we know</h2>
       <p id="facts" class="mt-2 text-[17px] leading-relaxed text-white/90"></p>
+      <p id="aiSource" class="mt-3 hidden items-start gap-2 text-[14px] font-semibold leading-snug text-white/80">
+        <svg class="mt-0.5 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span id="aiSourceText"></span>
+      </p>
 
       <button id="resolve" class="mt-8 min-h-[3rem] self-start text-[15px] font-bold text-white/90 underline underline-offset-4">False alarm / resolved</button>
       <p class="mt-2 text-[15px] text-white/85">If you believe <span class="name"></span> is in danger, call 911.</p>
@@ -154,6 +179,8 @@
       } catch {}
       $('#unlock').remove();
     });
+    const STAGE = new URLSearchParams(location.search).has('stage');
+    if (STAGE) { try { audio = window.parent.NOS_AUDIO || null; } catch {} $('#unlock').remove(); }
     function alertSound() {
       if (!audio) return;
       [0, 0.35, 0.7].forEach((t) => {
@@ -168,19 +195,34 @@
 
     // ---- Map ----
     let map = null; let marker = null;
-    const pinIcon = L.divIcon({ className: '', html: '<div class="relative"><span class="pin-pulse"></span><div class="pin"></div></div>', iconSize: [26, 26], iconAnchor: [13, 26] });
+    const pinIcon = L.divIcon({ className: '', html: '<div class="radar"><span class="ring"></span><span class="ring"></span><span class="ring"></span><span class="dot"></span></div>', iconSize: [26, 26], iconAnchor: [13, 13] });
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     function showMap(lat, lng) {
       if (!map) {
-        map = L.map('map', { zoomControl: false, attributionControl: true, scrollWheelZoom: false }).setView([lat, lng], 16);
+        // Start at city level and fly down to her street: you see where she is, fast.
+        map = L.map('map', { zoomControl: false, attributionControl: true, scrollWheelZoom: false }).setView([lat, lng], reduced ? 17 : 11);
+        // OpenStreetMap tiles, turned into a night map with a CSS filter (no API key needed).
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19, attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19, attribution: '&copy; OpenStreetMap contributors', className: 'night-tiles',
         }).addTo(map);
         marker = L.marker([lat, lng], { icon: pinIcon }).addTo(map);
+        setTimeout(() => { map.invalidateSize(); if (!reduced) map.flyTo([lat, lng], 17, { duration: 2.6, easeLinearity: 0.15 }); }, 350);
       } else {
         marker.setLatLng([lat, lng]);
+        setTimeout(() => map.invalidateSize(), 50);
       }
-      setTimeout(() => map.invalidateSize(), 50);
     }
+
+    // The moment Jordan's page turns red: a shockwave and the headline slamming in.
+    function takeover() {
+      if (reduced) return;
+      const ring = document.querySelector('#shock span');
+      const cover = (Math.hypot(innerWidth, innerHeight) * 2.2) / 60;
+      ring.animate([{ transform: 'scale(0)', opacity: 0.95 }, { transform: `scale(${cover})`, opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.2,.7,.3,1)' });
+      const h = document.getElementById('alertHeadline');
+      h.classList.remove('slam'); void h.offsetWidth; h.classList.add('slam');
+    }
+    let signal = null;
 
     const ago = (secs) => secs < 60 ? `${secs} second${secs === 1 ? '' : 's'}` : `${Math.floor(secs / 60)} minute${secs < 120 ? '' : 's'}`;
     const clock = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -235,6 +277,13 @@
         $('#since').textContent = ago(s.seconds_since_response);
         const { facts, step } = splitSummary(s.summary || '', s.user_name);
         $('#facts').textContent = facts;
+        const SOURCE = {
+          vultr: `Written by our own AI model, running on our servers. ${s.user_name}'s night is never sent to an AI company.`,
+          gemini: 'Summary written with Google Gemini from the facts above.',
+        };
+        $('#aiSource').classList.toggle('hidden', !SOURCE[s.summary_source]);
+        $('#aiSource').classList.toggle('flex', !!SOURCE[s.summary_source]);
+        $('#aiSourceText').textContent = SOURCE[s.summary_source] || '';
         // The step escalates (call, go there, 911), so show it as an ordered list.
         const steps = step.split(/;\s*|\.\s+(?=[A-Z])/).map((t) => t.trim().replace(/\.$/, '')).filter(Boolean);
         $('#nextStep').innerHTML = steps.map((t, i) => `<li class="flex gap-3"><span class="display flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-signal text-[13px] font-semibold text-white">${i + 1}</span><span class="pt-0.5">${esc(t.charAt(0).toUpperCase() + t.slice(1))}.</span></li>`).join('');
@@ -273,6 +322,11 @@
         const pct = hb && hb.battery != null ? Math.round(hb.battery * 100) : null;
         $('#battery').textContent = pct != null ? `${pct}%` : '–';
         $('#lowBattery').classList.toggle('hidden', pct == null || pct > 20);
+        if (prevView !== 'alert') takeover();
+        if (s.trace) {
+          if (!signal) signal = new SignalTrace(document.getElementById('trace'), { tone: 'alert', showLabels: false });
+          signal.update(s.trace);
+        }
         if (prevView !== 'alert' && prevView !== null) {
           alertSound();
           navigator.vibrate && navigator.vibrate([500, 200, 500]);
