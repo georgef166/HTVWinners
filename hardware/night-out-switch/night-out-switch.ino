@@ -14,7 +14,7 @@
 // ---------- Which parts are attached ----------
 #define USE_JOYSTICK 0   // 1 if a joystick is wired (KY-023 on A0/A1/D2, or Grove thumb joystick on A0)
 #define NFC_RC522 0      // 1 for an SPI RC522 reader instead of the Grove NFC (PN532)
-#define SILENT 1         // 1 mutes the buzzer (quiet rooms); the LED and matrix still show everything
+#define SILENT 0         // 1 mutes the buzzer (quiet rooms); the LED and matrix still show everything
 
 #include <WiFiS3.h>
 #include <SPI.h>
@@ -75,6 +75,16 @@ struct State {
 String code = "";
 unsigned long lastPoll = 0, lastReading = 0, lastCodeInput = 0, lastNfc = 0, okUntil = 0, hintUntil = 0;
 bool touchWas = false, swWas = false;
+bool touchPending = false;  // a tap seen while the board was busy, handled on the next loop
+
+// The touch sensor is only HIGH while a finger is on it, and server requests block for a few hundred ms,
+// so it's sampled inside every wait too. A quick tap can't fall between two checks.
+void sampleTouch() {
+  static unsigned long lastTouchAt = 0;
+  bool touched = digitalRead(PIN_TOUCH) == HIGH;
+  if (touched && !touchWas && millis() - lastTouchAt > 500) { touchPending = true; lastTouchAt = millis(); }  // ignore the flicker as a finger lifts
+  touchWas = touched;
+}
 int joyDir = 0;  // 0 neutral, 1 up, 2 right, 3 down, 4 left
 
 // ---------- Matrix icons (8 rows x 12 columns) ----------
@@ -127,7 +137,7 @@ int httpUsb(const char* method, const char* path, const String& body, String& ou
   Serial.print(">>"); Serial.print(method); Serial.print(' '); Serial.print(path); Serial.print(' '); Serial.println(body);
   String line = "";
   for (unsigned long t = millis(); millis() - t < 4000;) {
-    if (!Serial.available()) { delay(1); continue; }
+    if (!Serial.available()) { sampleTouch(); delay(1); continue; }
     char c = Serial.read();
     if (c == '\n') {
       if (line.startsWith("<<")) {
@@ -159,7 +169,7 @@ int http(const char* method, const char* path, const String& body, String& out) 
   if (body.length()) client.print(body);
 
   unsigned long t = millis();
-  while (!client.available() && client.connected() && millis() - t < 3000) delay(5);
+  while (!client.available() && client.connected() && millis() - t < 3000) { sampleTouch(); delay(5); }
   String status = client.readStringUntil('\n');  // HTTP/1.1 200 OK
   int codeNum = status.length() > 12 ? status.substring(9, 12).toInt() : -1;
   while (client.connected() || client.available()) {  // skip headers
@@ -204,6 +214,8 @@ void pollState() {
   if (haveTag && link.length() && link != tagLink && writeTagLink(link)) tagLink = link;
   bool wasAlarming = prev == "ALARM" || prev == "CONTACT" || prev == "WIDER";
   if (wasAlarming && st.level == "ARMED") celebrate();  // stood down
+  bool wasOut = prev != "NONE" && prev != "RESOLVED" && prev.length();
+  if (wasOut && (st.level == "NONE" || st.level == "RESOLVED")) celebrate();  // night over
   if (prev != st.level) { Serial.print("level "); Serial.println(st.level); }
 }
 
@@ -267,6 +279,7 @@ bool writeTagLink(const String& url) {
 void chirp(int f, int ms) { if (!SILENT) tone(PIN_BUZZER, f, ms); }
 void errorBuzz() { chirp(220, 400); }
 void celebrate() {
+  Serial.println("sound: all-good chime");
   okUntil = millis() + 2500;
   chirp(1318, 90); delay(110); chirp(1568, 90); delay(110); chirp(2093, 140);
 }
@@ -297,7 +310,13 @@ void driveOutputs() {
   // Buzzer patterns
   static unsigned long nextBeep = 0;
   if (t >= nextBeep) {
-    if (L == "NUDGE") { chirp(1760, 80); nextBeep = t + 2000; }
+    if (L == "NUDGE") {  // "still good?": a two-note chime, repeated every 2 s
+      static bool second = false;
+      if (!second) Serial.println("sound: check-in chime");
+      chirp(second ? 2093 : 1568, second ? 140 : 90);
+      nextBeep = t + (second ? 1800 : 130);
+      second = !second;
+    }
     else if (L == "ALARM") { static bool hi = false; chirp(hi ? 1046 : 784, 220); hi = !hi; nextBeep = t + 250; }
     else if ((L == "CONTACT" || L == "WIDER") && !st.acked) { chirp(988, 120); nextBeep = t + 6000; }
     else nextBeep = t + 200;
@@ -306,16 +325,16 @@ void driveOutputs() {
 
 // ---------- Inputs ----------
 void readTouch() {
-  bool touched = digitalRead(PIN_TOUCH) == HIGH;
-  if (touched && !touchWas) {
-    Serial.println("touch");
+  sampleTouch();
+  if (touchPending) {
+    touchPending = false;
+    Serial.print("touch"); Serial.print(" (level "); Serial.print(st.level); Serial.println(")");
     chirp(2093, 60);
     int status = sendEvent("{\"type\":\"touch\"}");
     if (status == 200) { analogWrite(PIN_STATUS_LED, 255); delay(80); }
     else if (status == 409) { hintUntil = millis() + 2000; chirp(440, 120); delay(160); chirp(440, 120); }  // alarm needs the code
     else errorBuzz();
   }
-  touchWas = touched;
 }
 
 void readJoystick() {
