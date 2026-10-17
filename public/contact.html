@@ -89,6 +89,12 @@
         <ol id="nextStep" class="mt-3 space-y-2.5 text-[17px] font-semibold leading-snug"></ol>
       </div>
 
+      <h2 class="display mt-8 text-lg font-semibold">What the phone tells us</h2>
+      <p id="phoneStatus" class="mt-3 flex items-start gap-3 text-[17px] font-semibold leading-snug">
+        <span id="phoneDot" class="mt-1.5 h-3 w-3 shrink-0 rounded-full bg-white"></span><span id="phoneText"></span>
+      </p>
+      <ul id="signals" class="mt-3 space-y-2 text-[17px] leading-snug text-white/90"></ul>
+
       <h2 class="display mt-8 text-lg font-semibold">What we know</h2>
       <p id="facts" class="mt-2 text-[17px] leading-relaxed text-white/90"></p>
 
@@ -234,6 +240,16 @@
         $('#nextStep').innerHTML = steps.map((t, i) => `<li class="flex gap-3"><span class="display flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-signal text-[13px] font-semibold text-white">${i + 1}</span><span class="pt-0.5">${esc(t.charAt(0).toUpperCase() + t.slice(1))}.</span></li>`).join('');
         $('#call').href = `tel:${s.user_phone}`;
         $('#ackNote').classList.toggle('hidden', !s.contact_acked);
+
+        const o = s.outlook || { signals: [], phone_reporting: null };
+        $('#phoneDot').className = `mt-1.5 h-3 w-3 shrink-0 rounded-full ${o.phone_reporting ? 'bg-white breathe' : 'bg-ink'}`;
+        $('#phoneText').textContent = o.phone_reporting == null
+          ? `${s.user_name}'s phone hasn't reported in yet.`
+          : o.phone_reporting
+            ? `${s.user_name}'s phone is still on and has signal, so ${s.user_name} isn't answering it.`
+            : `${s.user_name}'s phone has gone dark. Not answering may mean the phone is off or out of battery.`;
+        $('#signals').innerHTML = o.signals.filter((x) => x.key !== 'phone_offline' || !o.phone_reporting)
+          .map((x) => `<li class="flex gap-3"><span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-white/80"></span><span>${esc(x.text)}</span></li>`).join('');
 
         widerDeadline = s.seconds_to_wider == null ? null : Date.now() + s.seconds_to_wider * 1000;
         widerState = s.contact_acked ? null : s.level === 'WIDER' ? 'sent' : widerDeadline ? 'pending' : null;

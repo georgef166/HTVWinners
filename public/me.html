@@ -51,7 +51,7 @@
       <!-- ARMED -->
       <section data-view="ARMED" class="view hidden flex-1 flex-col">
         <div class="flex flex-1 flex-col items-center justify-center py-8">
-          <div class="relative aspect-square w-full max-w-[300px]">
+          <div class="relative aspect-square w-full max-w-[260px]">
             <svg viewBox="0 0 300 300" class="absolute inset-0 -rotate-90" aria-hidden="true">
               <circle cx="150" cy="150" r="136" fill="none" stroke-width="8" class="ring-track" />
               <circle cx="150" cy="150" r="136" fill="none" stroke-width="8" class="ring-fill" data-ring />
@@ -62,8 +62,18 @@
               <span class="mt-3 text-[15px] font-semibold text-mist">until your next check-in</span>
             </div>
           </div>
-          <h1 class="display mt-10 text-3xl font-bold">You're armed</h1>
+          <h1 class="display mt-7 text-3xl font-bold">You're armed</h1>
           <p class="mt-3 max-w-[30ch] text-center text-lg leading-snug text-mist">If you go quiet, <span class="contact-name text-paper">your contact</span> hears about it.</p>
+          <!-- Prediction: what the app sees coming, and how it's pacing check-ins -->
+          <div id="outlook" class="mt-6 w-full rounded-[20px] border border-line bg-dusk/60 px-4 py-3.5">
+            <div class="flex items-center gap-2.5">
+              <span id="outlookDot" class="h-2.5 w-2.5 shrink-0 rounded-full bg-mint"></span>
+              <span id="outlookLevel" class="font-bold">Calm</span>
+              <span id="outlookPace" class="tnum ml-auto whitespace-nowrap text-[13px] font-semibold text-mist"></span>
+            </div>
+            <p id="outlookReason" class="mt-1 text-[14px] leading-snug text-mist"></p>
+            <ul id="outlookSignals" class="mt-2 hidden space-y-1.5 text-[14px] font-semibold leading-snug text-sodium"></ul>
+          </div>
         </div>
         <div class="route-slot mb-8"></div>
         <button id="disarmBtn" class="btn btn-ghost w-full">Disarm, I'm home</button>
@@ -300,6 +310,7 @@
         lastRouteLevel = next.level;
       }
 
+      renderOutlook(next.outlook);
       if (view === 'CONTACT') {
         const onWay = next.contact_acked;
         $('#contactBadge').className = `flex h-16 w-16 items-center justify-center rounded-full ${onWay ? 'bg-mint/15 text-mint' : 'bg-signal/20 text-signal'}`;
@@ -315,6 +326,32 @@
       if (next.level === 'RESOLVED') { clearInterval(pollTimer); clearInterval(beatTimer); }
       renderClock();
     }
+
+    const OUTLOOK = {
+      calm: { label: 'Calm', dot: 'bg-mint' },
+      watch: { label: 'Keeping watch', dot: 'bg-sodium' },
+      elevated: { label: 'Checking often', dot: 'bg-signal' },
+    };
+    let lastOutlookLevel = null;
+    function renderOutlook(o) {
+      if (!o) return;
+      const meta = OUTLOOK[o.level];
+      $('#outlookDot').className = `h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`;
+      $('#outlookLevel').textContent = meta.label;
+      $('#outlookPace').textContent = `Every ${fmt(o.interval_s)}`;
+      $('#outlookReason').textContent = o.reason;
+      const list = $('#outlookSignals');
+      list.innerHTML = o.signals.map((sig) => `<li>${sig.text.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))}</li>`).join('');
+      list.classList.toggle('hidden', !o.signals.length);
+      // A new battery forecast is worth a buzz and a toast, once.
+      if (o.signals.some((sig) => sig.key === 'battery_forecast') && !batteryWarned) {
+        batteryWarned = true;
+        vibrate([200, 100, 200]);
+        toast('Battery running out. Charge soon.');
+      }
+      lastOutlookLevel = o.level;
+    }
+    let batteryWarned = false;
 
     function renderClock() {
       if (!state) return;
