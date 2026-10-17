@@ -1,0 +1,62 @@
+# One-command deploy on a Vultr server:  docker compose up -d
+# With our own model on a Vultr GPU:     docker compose --profile model up -d
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: "3000"
+      PUBLIC_URL: https://${SITE_HOST:?set SITE_HOST in .env}
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/postgres?sslmode=disable
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama:11434/v1}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Tiger Data (TimescaleDB): hypertable, compression, retention and continuous aggregates are set up by the app.
+  db:
+    image: timescale/timescaledb-ha:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - tiger-data:/home/postgres/pgdata/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 20
+
+  # Our own model, private to this server. Needs an NVIDIA GPU (Vultr Cloud GPU).
+  ollama:
+    image: ollama/ollama
+    restart: unless-stopped
+    profiles: ["model"]
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_HOST: ${SITE_HOST}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - app
+
+volumes:
+  tiger-data:
+  ollama:
+  caddy-data:

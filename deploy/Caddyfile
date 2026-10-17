@@ -1,0 +1,16 @@
+# HTTPS for phones (location and battery need a secure page). SITE_HOST comes from .env.
+{$SITE_HOST} {
+	encode gzip
+	reverse_proxy app:3000
+}
+
+# Plain HTTP only for the Arduino Switch (its firmware speaks HTTP); everything else redirects to HTTPS.
+http://{$SITE_HOST} {
+	@switch path /api/switch/*
+	handle @switch {
+		reverse_proxy app:3000
+	}
+	handle {
+		redir https://{host}{uri} permanent
+	}
+}
