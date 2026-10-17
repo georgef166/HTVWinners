@@ -114,7 +114,10 @@ const links = (s) => ({
 
 // ---- API ----
 
-app.get('/api/health', (req, res) => res.json({ app: 'night-out-switch', demo: DEMO, store: store.kind }));
+app.get('/api/health', (req, res) => res.json({
+  app: 'night-out-switch', demo: DEMO, store: store.kind, timescale: !!store.timescale,
+  model: process.env.LLM_BASE_URL ? 'self-hosted' : process.env.GEMINI_API_KEY ? 'gemini' : 'template',
+}));
 
 app.post('/api/demo', wrap(async (req, res) => {
   const s = await arm({
@@ -187,6 +190,43 @@ app.get('/api/sessions/:id', wrap(async (req, res) => {
   });
 }));
 
+// The signal trace: her night as a time series (responses, phone heartbeats, level changes).
+// No location in here, just timing.
+const TRACE_WINDOW_S = DEMO ? 120 : 45 * 60;
+const TRACE_KINDS = ['heartbeat', 'checkin_sent', 'checkin_ack', 'level_change', 'contact_ack', 'stand_down', 'resolved', 'device'];
+async function traceFor(s) {
+  const now = new Date();
+  const since = now.getTime() - TRACE_WINDOW_S * 1000;
+  const all = await store.listEvents(s.id);
+  let levelAtStart = null;
+  const events = [];
+  for (const e of all) {
+    const t = new Date(e.time).getTime();
+    if (t < since) {
+      if (e.kind === 'level_change') levelAtStart = e.detail?.to ?? levelAtStart;
+      continue;
+    }
+    if (!TRACE_KINDS.includes(e.kind) || (e.kind === 'device' && e.detail?.type === 'reading')) continue;
+    events.push({ t: new Date(t).toISOString(), kind: e.kind, detail: e.detail?.from || e.detail?.to || e.detail?.type ? { from: e.detail.from, to: e.detail.to, type: e.detail.type } : null });
+  }
+  // Over a real night (45 min), phone heartbeats come from the per-minute continuous aggregate
+  // instead of every raw row. The demo's 2-minute window keeps raw heartbeats.
+  if (!DEMO) {
+    const beats = await store.heartbeatBuckets(s.id, new Date(since));
+    for (let i = events.length - 1; i >= 0; i--) if (events[i].kind === 'heartbeat') events.splice(i, 1);
+    for (const b of beats) events.push({ t: new Date(b.time).toISOString(), kind: 'heartbeat', detail: { beats: Number(b.beats) } });
+    events.sort((a, b) => a.t.localeCompare(b.t));
+  }
+  return {
+    now: now.toISOString(), window_s: TRACE_WINDOW_S, level: s.level, level_at_start: levelAtStart,
+    user_name: s.user_name, contact_name: s.contact_name, events,
+  };
+}
+
+app.get('/api/sessions/:id/trace', wrap(async (req, res) => {
+  res.json(await traceFor(await loadSession(req.params.id)));
+}));
+
 app.post('/api/sessions/:id/heartbeat', wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
   if (s.level === 'RESOLVED') return res.json({ ok: true });
@@ -248,6 +288,9 @@ app.get('/api/contact/:token', wrap(async (req, res) => {
       phone_reporting: outlook.phone.lastSeenAt ? !outlook.phone.offline : null,
       phone_last_seen: outlook.phone.lastSeenAt,
     };
+    out.trace = await traceFor(s);
+    const summaryEvt = await store.lastEvent(s.id, ['summary']);
+    out.summary_source = summaryEvt?.detail?.source || 'template';
     const beat = await store.lastEvent(s.id, ['heartbeat']);
     if (beat) {
       out.last_heartbeat = {
