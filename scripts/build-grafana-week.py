@@ -8,7 +8,7 @@ def t(sql, fmt="time_series", ref="A"):
 def ts(id, title, x, y, w, h, targets, unit=None, desc="", draw="line", fill=14, color=None, minv=None, maxv=None, stack=False):
     p = {"id": id, "type": "timeseries", "title": title, "description": desc, "datasource": DS, "gridPos": {"x": x, "y": y, "w": w, "h": h}, "targets": targets,
          "fieldConfig": {"defaults": {"custom": {"drawStyle": draw, "lineWidth": 2, "fillOpacity": fill, "showPoints": "never" if draw == "line" else "auto",
-                                                 "barAlignment": 0, "spanNulls": False, "insertNulls": 1800000},
+                                                 "barAlignment": 0, "spanNulls": False, "insertNulls": False if draw == "bars" else 1800000, "barWidthFactor": 0.5},
                                       "color": {"mode": "fixed", "fixedColor": color} if color else {"mode": "palette-classic"}}, "overrides": []},
          "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}}
     if unit: p["fieldConfig"]["defaults"]["unit"] = unit

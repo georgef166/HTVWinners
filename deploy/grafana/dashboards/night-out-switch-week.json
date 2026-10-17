@@ -493,7 +493,8 @@
             "showPoints": "never",
             "barAlignment": 0,
             "spanNulls": false,
-            "insertNulls": 1800000
+            "insertNulls": 1800000,
+            "barWidthFactor": 0.5
           },
           "color": {
             "mode": "palette-classic"
@@ -600,7 +601,8 @@
             "showPoints": "never",
             "barAlignment": 0,
             "spanNulls": false,
-            "insertNulls": 1800000
+            "insertNulls": 1800000,
+            "barWidthFactor": 0.5
           },
           "color": {
             "mode": "fixed",
@@ -656,7 +658,8 @@
             "showPoints": "auto",
             "barAlignment": 0,
             "spanNulls": false,
-            "insertNulls": 1800000
+            "insertNulls": false,
+            "barWidthFactor": 0.5
           },
           "color": {
             "mode": "palette-classic"
@@ -712,7 +715,8 @@
             "showPoints": "auto",
             "barAlignment": 0,
             "spanNulls": false,
-            "insertNulls": 1800000
+            "insertNulls": false,
+            "barWidthFactor": 0.5
           },
           "color": {
             "mode": "fixed",
@@ -771,7 +775,8 @@
             "showPoints": "auto",
             "barAlignment": 0,
             "spanNulls": false,
-            "insertNulls": 1800000
+            "insertNulls": false,
+            "barWidthFactor": 0.5
           },
           "color": {
             "mode": "fixed",
@@ -828,7 +833,8 @@
             "showPoints": "auto",
             "barAlignment": 0,
             "spanNulls": false,
-            "insertNulls": 1800000
+            "insertNulls": false,
+            "barWidthFactor": 0.5
           },
           "color": {
             "mode": "palette-classic"
