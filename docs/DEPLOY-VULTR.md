@@ -13,6 +13,33 @@ The pitch line: **Maya's night never leaves our servers.** The app, the AI model
         Arduino Switch and phones talk to Caddy over HTTPS
 ```
 
+## Why Vultr and not Vercel
+
+Vercel runs code as short-lived serverless functions. Night Out Switch's promise is that **the timer lives on the server**: every 2 seconds it checks every night and escalates, even if her phone is dead. On serverless nothing runs between requests, so a silent phone would never trigger an alert, which is exactly the case the app exists for. That needs an always-on server, and Vultr gives you one (and has its own prize).
+
+## Quick deploy (Docker Compose, about 10 minutes)
+
+On a fresh Vultr Ubuntu server (Cloud Compute is fine; Cloud GPU if you want our own model):
+
+```bash
+ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw --force enable
+curl -fsSL https://get.docker.com | sh
+git clone <your-repo-url> night-out-switch && cd night-out-switch
+cp .env.example .env
+nano .env   # set SITE_HOST, DB_PASSWORD, SWITCH_KEY (and DEMO=1 for demo timings)
+docker compose up -d                      # app + Tiger Data + HTTPS
+# On a GPU server, also run our own model:
+docker compose --profile model up -d
+docker compose exec ollama ollama pull llama3.1:8b
+```
+
+- `SITE_HOST`: no domain needed. Use sslip.io: server IP `203.0.113.7` → `203-0-113-7.sslip.io`. Caddy gets a real HTTPS certificate for it automatically.
+- Open `https://<SITE_HOST>`. `https://<SITE_HOST>/api/health` should show `"store":"postgres","timescale":true`, and `"model":"self-hosted"` with the GPU profile.
+- Phones: anyone can open it. Each person who taps **Start the demo** gets their own night; the stage has QR codes to be Maya or Jordan on your own phone.
+- The Switch: point `SERVER_HOST` at `SITE_HOST`, `SERVER_PORT` 80. Caddy serves `/api/switch/*` over plain HTTP for it and redirects everything else to HTTPS. Link it to a night from the stage (automatic) or the links page.
+
+The manual steps below do the same thing without Docker.
+
 ## 1. Create the server
 
 - Vultr → **Cloud GPU**. An NVIDIA A16 or L40S slice is plenty for an 8B model. Ubuntu 24.04.

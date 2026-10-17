@@ -57,7 +57,7 @@
 ## Hardware Switch (`hardware/`)
 
 - Uno R4 WiFi talks straight to the server over WiFi. Assumed common kit parts: RC522 NFC, KY-023 joystick, TTP223 touch, BMP280, a single LED and a passive buzzer, plus the R4's built-in LED matrix. Firmware compiles with arduino-cli for `arduino:renesas_uno:unor4wifi` (35% flash); it has not been run on a real board yet.
-- One Switch per server; it follows the most recently armed session (in memory, so restarting the server unlinks it until the next arm). Auth is a shared `SWITCH_KEY` header.
+- One Switch per server; it's linked to one night explicitly (`POST /api/sessions/:id/link-switch`, done automatically by the stage). The link is in memory, so a restart unlinks it. Auth is a shared `SWITCH_KEY` header.
 - Joystick PIN uses digits 1 to 4 only (up/right/down/left), so a PIN with 0 or 5 to 9 can't be entered on the Switch; the phone keypad still works.
 - NFC home tag resolves the night with no PIN; in demo mode any tag works unless `SWITCH_HOME_TAG` is set.
 - Temperature at or below 5°C within the last minute (demo) / 5 min (real) adds a "cold" signal (weight 1). Pressure is logged but not used for prediction yet (too noisy for fall detection without more work).
@@ -72,3 +72,10 @@
 - Jordan's takeover: white shockwave, headline slam, OSM tiles darkened with a CSS filter (CARTO dark tiles now want an API key), map flies from city level to street level, radar rings on the pin.
 - Summary providers: self-hosted OpenAI-compatible model (`LLM_BASE_URL`) → Gemini → template. The source is logged as a `summary` event and shown on Jordan's page.
 - Tiger Data: extension, hypertable, compression (1 day), retention (7 days), continuous aggregate `heartbeat_1m` used for the 45-minute real-night trace. Tested on plain Postgres 14 (features skipped cleanly, smoke passes); the TimescaleDB-only SQL has not been run against a real Timescale instance yet.
+
+## Multi-phone + deploy
+
+- Fixed an endless alarm: a Maya page whose session disappeared (server restart) kept beeping in ALARM forever. Now a 404 ends the night on the page, and the local alarm stops after 20 s without server contact.
+- Rate limit raised to 240 POST/min per IP, with heartbeats and Switch routes exempt, because a whole venue shares one public IP.
+- The stage has QR codes to be Maya or Jordan on your own phone; every Start the demo is its own night.
+- Deploy target is Vultr, not Vercel: the escalation ticker must run continuously, and serverless doesn't. `docker compose up -d` brings up the app, TimescaleDB and Caddy (HTTPS via sslip.io); `--profile model` adds Ollama on a GPU. Compose config validates; the images haven't been built here (no Docker daemon locally).

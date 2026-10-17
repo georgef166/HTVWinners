@@ -44,7 +44,7 @@ If the board connects but can't reach the server, macOS may be blocking incoming
 
 ## How it talks to the server
 
-The Switch follows the **most recently armed night** (one Switch per server). Every request carries `X-Switch-Key`.
+The Switch controls the **night it's linked to** (one Switch per server). The live stage links it automatically when you start a night; on the links page, use **Use the Switch for this night**. Other people starting nights on their own phones can't take it over. Every request carries `X-Switch-Key`.
 
 - `GET /api/switch/state` returns plain text, so the board doesn't need a JSON parser:
   `L=ARMED;S=12;W=15;A=0;O=calm;C=Jordan` (level, seconds left, window, contact acked, outlook, contact name)
