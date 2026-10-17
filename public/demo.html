@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0E1430" />
+  <meta name="theme-color" content="#ffffff" />
   <title>Night Out Switch · Your links</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Unbounded:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/theme.js"></script>
   <link rel="stylesheet" href="/styles.css" />
@@ -27,8 +27,8 @@
         <p class="mt-5 max-w-lg text-xl leading-relaxed text-mist">One link is <span class="who">Maya</span>'s phone. The other is for <span class="contact">Jordan</span>, the friend who gets alerted. Open both side by side, then leave <span class="who">Maya</span>'s phone alone.</p>
 
         <div class="mt-10 space-y-4">
-          <a id="me" target="_blank" rel="noopener" class="group flex items-center gap-5 rounded-[26px] bg-sodium p-5 text-ink transition hover:bg-[#FFC56E] sm:p-6">
-            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ink text-sodium" id="meIcon"></span>
+          <a id="me" target="_blank" rel="noopener" class="group flex items-center gap-5 rounded-[26px] bg-sodium p-5 text-white transition hover:bg-[#FFC56E] sm:p-6">
+            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-sodium" id="meIcon"></span>
             <span>
               <span class="display block text-xl font-semibold">Open <span class="who">Maya</span>'s phone</span>
               <span class="mt-1 block text-[15px] font-semibold opacity-75">Check-ins, the alarm and the PIN pad</span>
@@ -58,7 +58,7 @@
             <li><b class="text-paper">Tap the NFC tag</b> to end the night.</li>
           </ul>
           <button id="linkSwitch" class="btn btn-ghost mt-4 min-h-[2.75rem] text-[14px]">Use the Switch for this night</button>
-          <p class="mt-3 text-[13px] text-mist">No board handy? Run <code class="whitespace-nowrap rounded bg-ink px-1.5 py-0.5 text-paper">npm run switch-sim</code> for a keyboard stand-in.</p>
+          <p class="mt-3 text-[13px] text-mist">No board handy? Run <code class="whitespace-nowrap rounded bg-dusk px-1.5 py-0.5 text-paper">npm run switch-sim</code> for a keyboard stand-in.</p>
         </div>
 
         <div class="mt-4 rounded-[24px] border border-line bg-dusk/60 p-5">
@@ -73,7 +73,7 @@
       </section>
 
       <figure class="mx-auto w-full max-w-sm">
-        <div class="rounded-[32px] bg-paper p-6 shadow-[0_30px_80px_-30px_rgba(255,181,71,.45)]">
+        <div class="rounded-[32px] bg-white p-6 shadow-[0_4px_40px_rgba(0,0,0,.08)]">
           <img id="qr" alt="QR code that opens the trusted contact's link" class="aspect-square w-full" />
         </div>
         <figcaption class="mt-5 text-center">
