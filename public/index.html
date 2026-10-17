@@ -20,8 +20,29 @@
     .phone-screen { position: relative; height: 100%; border-radius: 38px; overflow: hidden; }
     .phone-back { left: 0; top: 0; transform: rotate(-6deg); }
     .phone-front { right: 0; bottom: 0; transform: rotate(4deg); }
-    .alert-screen { background: var(--signal); animation: turn-red 1s ease 1.4s both; }
-    .phone-front { animation: lift .9s cubic-bezier(.2, .7, .2, 1) .2s both; }
+    .alert-screen { background: var(--signal); }
+    .intro-done .alert-screen { animation: turn-red 1s ease 1.2s both; }
+    .intro-done .phone-front { animation: lift .9s cubic-bezier(.2, .7, .2, 1) .35s both; }
+    .hero-rise { opacity: 0; transform: translateY(22px); }
+    .intro-done .hero-rise { animation: rise .8s cubic-bezier(.2, .7, .2, 1) both; }
+    .intro-done .hero-rise:nth-child(2) { animation-delay: .12s; }
+    .intro-done .hero-rise:nth-child(3) { animation-delay: .24s; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+
+    /* Intro: her night as a signal line, then silence, then help. */
+    #intro { position: fixed; inset: 0; z-index: 2000; background: var(--ink); overflow: hidden; cursor: pointer; }
+    #intro svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #intro .lbl { position: absolute; transform: translate(-50%, -100%); text-align: center; opacity: 0; white-space: nowrap; font-weight: 700; transition: opacity .25s ease, transform .35s cubic-bezier(.2,.7,.2,1); }
+    #intro .lbl.on { opacity: 1; transform: translate(-50%, calc(-100% - 6px)); }
+    #intro .lbl small { display: block; font-weight: 600; font-size: 12px; color: var(--mist); }
+    #intro .caption { position: absolute; left: 0; right: 0; bottom: 14vh; text-align: center; font-family: 'Unbounded', sans-serif; font-weight: 600; letter-spacing: -.02em; font-size: clamp(20px, 3.4vw, 38px); opacity: 0; transition: opacity .3s ease; padding: 0 20px; }
+    #intro .caption.on { opacity: 1; }
+    #intro .node { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 0 6px rgba(229,48,58,.25), 0 0 40px 8px rgba(229,48,58,.6); transform: scale(0); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+    #intro .node.on { transform: scale(1); }
+    #intro .shock { position: absolute; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: var(--signal); transform: scale(0); transition: transform .65s cubic-bezier(.6,0,.4,1); }
+    #intro .skip { position: absolute; right: 20px; bottom: 20px; font-size: 14px; font-weight: 700; color: var(--mist); padding: 10px 14px; }
+    #intro.out { opacity: 0; transition: opacity .45s ease; pointer-events: none; }
+    @media (prefers-reduced-motion: reduce) { #intro { display: none; } .hero-rise { opacity: 1; transform: none; } }
     @keyframes turn-red { from { background: var(--ink); color: transparent; } }
     @keyframes lift { from { transform: translateY(24px) rotate(4deg); opacity: 0; } }
     .phone .route-mini { --dot: 9px; --track: 2px; --dot-mid: 4.5px; }
@@ -36,6 +57,15 @@
   </style>
 </head>
 <body class="streetlight min-h-screen">
+  <div id="intro" aria-hidden="true">
+    <svg id="introSvg"></svg>
+    <p class="caption" id="cap1">Maya checks in all night.</p>
+    <p class="caption" id="cap2" style="color: var(--signal)">Then she stops answering.</p>
+    <p class="caption" id="cap3">And help starts.</p>
+    <span class="node" id="introNode"></span>
+    <span class="shock" id="introShock"></span>
+    <button class="skip" id="introSkip">Skip intro</button>
+  </div>
   <div class="mx-auto max-w-6xl px-5 sm:px-8">
     <header class="flex items-center justify-between py-6">
       <a href="/" class="flex items-center gap-3 text-sodium">
@@ -48,13 +78,13 @@
     <main>
       <section class="grid items-center gap-14 pb-20 pt-12 sm:pt-20 lg:grid-cols-[1.1fr_1fr] lg:gap-8">
         <div>
-          <h1 class="display text-[2.6rem] font-extrabold leading-[1.02] sm:text-7xl lg:text-[4.6rem]">
+          <h1 class="hero-rise display text-[2.6rem] font-extrabold leading-[1.02] sm:text-7xl lg:text-[4.6rem]">
             Help starts when you stop answering.
           </h1>
-          <p class="mt-7 max-w-xl text-xl leading-relaxed text-mist sm:text-2xl">
+          <p class="hero-rise mt-7 max-w-xl text-xl leading-relaxed text-mist sm:text-2xl">
             It's a dead man's switch, but for a night out. Your phone checks in. If you go quiet, the people you trust find out, with your last location.
           </p>
-          <div class="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div class="hero-rise mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
             <button id="demo" class="btn btn-sodium text-lg sm:px-10">Start the demo</button>
             <p class="text-[15px] text-mist sm:max-w-xs">Watch Maya go quiet and Jordan get alerted. About 45 seconds.</p>
           </div>
@@ -184,6 +214,85 @@
   </div>
 
   <script>
+    // ---- Intro: check-ins as heartbeats, a flatline, then the alert racing to Jordan ----
+    (function intro() {
+      const el = document.getElementById('intro');
+      const done = () => {
+        if (el.dataset.done) return;
+        el.dataset.done = '1';
+        document.body.classList.add('intro-done');
+        el.classList.add('out');
+        setTimeout(() => el.remove(), 500);
+      };
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { el.remove(); document.body.classList.add('intro-done'); return; }
+      el.addEventListener('click', done);
+      addEventListener('keydown', done, { once: true });
+
+      const W = innerWidth, H = innerHeight, y0 = H * 0.46;
+      const amp = Math.min(120, H * 0.17);
+      const blips = [0.13, 0.3, 0.47].map((f) => f * W);
+      const flatX = W * 0.55, nodeX = W * 0.88;
+      let d = `M 0 ${y0}`;
+      for (const bx of blips) {
+        d += ` L ${bx - 16} ${y0} L ${bx - 9} ${y0 - 9} L ${bx - 4} ${y0} L ${bx} ${y0 - amp} L ${bx + 6} ${y0 + amp * 0.38} L ${bx + 12} ${y0}`;
+      }
+      d += ` L ${flatX} ${y0}`;
+      const svg = document.getElementById('introSvg');
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svg.innerHTML = `
+        <defs><filter id="glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        <path id="lineOk" d="${d}" fill="none" stroke="var(--sodium)" stroke-width="3" stroke-linejoin="round" filter="url(#glow)"/>
+        <path id="lineQuiet" d="M ${flatX} ${y0} L ${nodeX - 14} ${y0}" fill="none" stroke="var(--signal)" stroke-width="3.5" filter="url(#glow)"/>`;
+      const ok = svg.querySelector('#lineOk'), quiet = svg.querySelector('#lineQuiet');
+      const prep = (path) => { const len = path.getTotalLength(); path.style.strokeDasharray = len; path.style.strokeDashoffset = len; return len; };
+      const okLen = prep(ok), quietLen = prep(quiet);
+      const label = (x, html, color) => {
+        const l = document.createElement('div');
+        l.className = 'lbl';
+        l.style.left = `${x}px`; l.style.top = `${y0 - amp - 14}px`; l.style.color = color;
+        l.innerHTML = html;
+        el.appendChild(l);
+        return l;
+      };
+
+      // One clock drives everything, so lines, labels and captions never drift apart.
+      const T_OK = [200, 1500], T_QUIET = [1500, 2400], T_NODE = 2400, T_SHOCK = 3000, T_END = 3700;
+      const cues = [];
+      const cue = (at, fn) => cues.push({ at, fn });
+      ['10:14 PM', '10:34 PM', '10:54 PM'].forEach((time, i) => {
+        const l = label(blips[i], `<small>${time}</small>I'm OK`, 'var(--mint)');
+        cue(T_OK[0] + (T_OK[1] - T_OK[0]) * (blips[i] / flatX), () => l.classList.add('on'));
+      });
+      const noAnswer = label(flatX + (nodeX - flatX) * 0.3, '<small>11:14 PM</small>No answer', 'var(--signal)');
+      cue(T_QUIET[0] + 250, () => noAnswer.classList.add('on'));
+      const jordan = label(nodeX, '<small>alerted</small>Jordan', '#fff');
+      const node = document.getElementById('introNode');
+      node.style.left = `${nodeX}px`; node.style.top = `${y0}px`;
+      cue(T_NODE, () => { node.classList.add('on'); jordan.classList.add('on'); });
+      const cap = (id) => document.getElementById(id).classList;
+      cue(100, () => cap('cap1').add('on'));
+      cue(T_QUIET[0], () => { cap('cap1').remove('on'); cap('cap2').add('on'); });
+      cue(T_NODE + 150, () => { cap('cap2').remove('on'); cap('cap3').add('on'); });
+      const shock = document.getElementById('introShock');
+      shock.style.left = `${nodeX}px`; shock.style.top = `${y0}px`;
+      const cover = (Math.hypot(Math.max(nodeX, W - nodeX), Math.max(y0, H - y0)) * 2) / 40;
+      cue(T_SHOCK, () => { shock.style.transform = `scale(${cover})`; });
+      cue(T_END, done);
+
+      const progress = (t, [a, b]) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+      const t0 = performance.now();
+      const tick = (now) => {
+        if (el.dataset.done) return;
+        const t = now - t0;
+        ok.style.strokeDashoffset = okLen * (1 - progress(t, T_OK));
+        quiet.style.strokeDashoffset = quietLen * (1 - progress(t, T_QUIET));
+        while (cues.length && cues[0].at <= t) cues.shift().fn();
+        requestAnimationFrame(tick);
+      };
+      cues.sort((a, b) => a.at - b.at);
+      requestAnimationFrame(tick);
+    })();
+
     document.getElementById('logo').innerHTML = NOS.logo();
     document.querySelectorAll('.mini-logo').forEach((el) => { el.innerHTML = NOS.logo('sm').replace('width="30"', 'width="16"').replace(/height="[\d.]+"/, 'height="9.3"'); });
     NOS.route(document.querySelector('.mini-route'), { level: 'ARMED', variant: 'mini' });
@@ -207,7 +316,7 @@
       btn.disabled = true; btn.textContent = 'Starting…';
       try {
         const { id } = await post('/api/demo');
-        location.href = `/demo.html?id=${id}`;
+        location.href = `/stage.html?id=${id}`;
       } catch (err) {
         btn.disabled = false; btn.textContent = 'Start the demo';
         showErr('demoErr', err.message);
