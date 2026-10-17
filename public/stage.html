@@ -76,6 +76,8 @@
       <button id="restart" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Restart night</button>
       <button id="drain" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Drain battery</button>
       <button id="cold" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Switch reads −2°C</button>
+      <button id="distress" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Phone hears “help”</button>
+      <a id="nightLink" target="_blank" rel="noopener" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Her dashboard</a>
       <div class="ml-2 flex items-center gap-3 rounded-2xl bg-white p-1.5 pr-3 text-black">
         <img id="qrMaya" alt="QR code to open Maya's phone on your phone" class="h-14 w-14 rounded-lg" />
         <span class="text-[13px] font-bold leading-tight">Scan to<br />be Maya</span>
@@ -88,7 +90,7 @@
   </header>
 
   <main class="stage">
-    <div class="device" id="mayaDevice"><iframe id="maya" title="Maya's phone" allow="autoplay; geolocation"></iframe><p class="who">Maya's phone</p></div>
+    <div class="device" id="mayaDevice"><iframe id="maya" title="Maya's phone" allow="autoplay; geolocation; microphone"></iframe><p class="who">Maya's phone</p></div>
     <div class="wire" id="wireIn"></div>
 
     <section class="flex min-w-0 flex-col justify-center gap-5 px-2">
@@ -162,6 +164,12 @@
     function onEvent(e, animate) {
       const wIn = $('#wireIn'), wOut = $('#wireOut');
       if (e.kind === 'heartbeat') { if (animate) packet(wIn, { color: '#5BE3B0', ms: 700 }); return; }
+      if (e.kind === 'distress_check') {
+        const heard = (e.detail?.cues || []).join(' and ') || 'nothing worrying';
+        feed(e.detail?.score >= 0.5 ? `Phone heard ${heard}. Asking Maya if she’s OK` : `30-second check: ${heard}`, e.detail?.score >= 0.5 ? 'text-signal' : 'text-mist', e.t);
+        if (animate) packet(wIn, { color: '#FF4D3D' });
+        return;
+      }
       if (e.kind === 'device' && DEVICE_FEED[e.detail?.type]) { feed(DEVICE_FEED[e.detail.type], 'text-sodium', e.t); if (animate) packet(wIn, { color: '#FFB547' }); return; }
       if (e.kind === 'level_change') {
         const lf = LEVEL_FEED[e.detail?.to];
@@ -245,6 +253,7 @@
       fetch(`/api/sessions/${id}/link-switch`, { method: 'POST' }).catch(() => {});
       $('#qr').src = links.qr;
       $('#qrMaya').src = links.qr_me;
+      $('#nightLink').href = `/night.html?id=${id}`;
       $('#maya').src = `/me.html?id=${id}&stage=1`;
       $('#jordan').src = `/contact.html?t=${links.contactToken}&stage=1`;
       seen = new Set(); lastLevel = null; $('#feed').innerHTML = '';
@@ -266,6 +275,7 @@
     });
     $('#restart').addEventListener('click', async () => { id = null; await startNight(); });
     $('#drain').addEventListener('click', () => id && fetch(`/api/demo/${id}/drain-battery`, { method: 'POST' }));
+    $('#distress').addEventListener('click', () => id && fetch(`/api/demo/${id}/distress`, { method: 'POST' }));
     $('#cold').addEventListener('click', async (e) => {
       if (!id) return;
       const { cold } = await fetch(`/api/demo/${id}/cold`, { method: 'POST' }).then((r) => r.json());
