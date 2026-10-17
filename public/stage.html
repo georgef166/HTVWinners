@@ -16,8 +16,8 @@
   <style>
     html, body { height: 100%; }
     body { overflow: hidden; }
-    /* Red glow while Maya is silent; an overlay so it can fade (gradients can't transition) */
-    body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(70% 60% at 50% 42%, rgb(var(--signal-rgb) / .2), transparent 70%); opacity: 0; transition: opacity .9s ease; }
+    /* Flat red tint while Maya is silent, on an overlay so it can fade */
+    body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: rgb(var(--signal-rgb) / .08); opacity: 0; transition: opacity .9s ease; }
     body.silent::before { opacity: 1; }
 
     /* Header controls: one quiet group, so the phones stay the loudest thing on screen */
@@ -110,7 +110,7 @@
   </div>
 
   <header class="relative z-20 flex h-[72px] items-center gap-3 px-8">
-    <a href="/" class="flex items-center gap-2.5"><span id="logo"></span><span class="wordmark text-[19px]">tenshi</span></a>
+    <a href="/" class="flex items-center gap-3"><span id="logo"></span><span class="wordmark text-[22px]">tenshi</span></a>
     <span class="ml-1 flex items-center gap-2 rounded-full px-2.5 py-1 text-[12.5px] font-semibold text-paper/80 shadow-[inset_0_0_0_1px_rgb(var(--paper-rgb)/.12)]"><span class="breathe h-1.5 w-1.5 rounded-full bg-signal"></span>Live</span>
     <div class="ml-auto flex items-center gap-2.5">
       <div class="tools" role="group" aria-label="Make something happen">

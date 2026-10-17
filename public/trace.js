@@ -147,14 +147,11 @@
         prev = { px, y };
       }
 
-      // Leading edge: a glowing dot where "now" is
+      // Leading edge: a dot where "now" is
       const nowLevel = levelAt(now);
       const edge = alertTone ? '#fff' : SILENT[nowLevel] ? P(SILENT[nowLevel]) : nowLevel === 'RESOLVED' ? P('mist') : P('sodium');
-      const pulse = this.reduced ? 1 : 0.6 + 0.4 * Math.sin(now / 180);
       ctx.fillStyle = edge;
-      ctx.shadowColor = edge; ctx.shadowBlur = 14 * pulse;
       ctx.beginPath(); ctx.arc(w - 3, prev ? prev.y : base, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0;
 
       // Phone heartbeats lane
       ctx.fillStyle = alertTone ? 'rgba(255,255,255,.75)' : P('mint', 0.85);

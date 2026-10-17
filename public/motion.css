@@ -12,17 +12,6 @@
 /* Pages paint their own background; isolation lets z-index:-1 scenery (bokeh) sit above it. */
 body { isolation: isolate; }
 
-/* Film grain: a faint, living texture over the night. */
-.grain::after {
-  content: ''; position: fixed; inset: -50%; z-index: 3000; pointer-events: none; opacity: .07;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  animation: grain .9s steps(6) infinite;
-}
-@keyframes grain {
-  0% { transform: translate(0, 0); } 20% { transform: translate(-3%, 2%); } 40% { transform: translate(2%, -4%); }
-  60% { transform: translate(-4%, -1%); } 80% { transform: translate(3%, 3%); } 100% { transform: translate(0, 0); }
-}
-
 /* Scroll and load reveals. data-reveal on an element, --i for stagger order. */
 [data-reveal] { opacity: 0; transform: translateY(26px); transition: opacity var(--t-long) var(--ease-out), transform var(--t-long) var(--ease-out); transition-delay: calc(var(--i, 0) * 70ms); }
 [data-reveal].in { opacity: 1; transform: none; }
@@ -32,10 +21,8 @@ body { isolation: isolate; }
 .words .w > span { display: inline-block; transform: translateY(105%); transition: transform .9s var(--ease-out); transition-delay: calc(var(--i) * 55ms + var(--base, 0ms)); }
 .words.in .w > span { transform: none; }
 
-/* Magnetic buttons with a sheen sweep */
+/* Magnetic buttons: lean toward the pointer */
 .magnetic { position: relative; overflow: hidden; transition: transform var(--t-short) var(--ease-out), box-shadow var(--t-short) var(--ease-out); will-change: transform; }
-.magnetic::before { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.55) 50%, transparent 65%); transform: translateX(-120%); transition: transform .8s var(--ease-out); pointer-events: none; }
-.magnetic:hover::before { transform: translateX(120%); }
 
 /* Iris page transition: a sodium circle closes over the page, then opens on the next one */
 #iris { position: fixed; inset: 0; z-index: 4000; pointer-events: none; background: var(--sodium); clip-path: circle(0 at var(--x, 50%) var(--y, 50%)); }
@@ -59,13 +46,11 @@ body { isolation: isolate; }
 
 /* Physical slide-to-arm switch */
 .slide-switch { position: relative; width: min(320px, 82vw); height: 80px; border-radius: 999px; background: rgb(var(--paper-rgb) / .05); border: 1px solid rgb(var(--sodium-rgb) / .35); touch-action: none; user-select: none; cursor: grab; }
-.slide-switch .fill { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, rgb(var(--sodium-rgb) / .0), rgb(var(--sodium-rgb) / .35)); clip-path: inset(0 calc(100% - var(--p, 0) * 100%) 0 0); }
+.slide-switch .fill { position: absolute; inset: 0; border-radius: inherit; background: rgb(var(--sodium-rgb) / .22); clip-path: inset(0 calc(100% - var(--p, 0) * 100%) 0 0); }
 .slide-switch .label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-left: 64px; font-weight: 500; font-size: 17px; color: var(--mist); opacity: calc(1 - var(--p, 0) * 1.6); }
-.slide-switch .label span { background: linear-gradient(90deg, rgb(var(--mist-rgb) / .55) 0%, var(--paper) 50%, rgb(var(--mist-rgb) / .55) 100%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 2.4s linear infinite; }
-@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
-.slide-switch .knob { position: absolute; top: 7px; left: 7px; width: 66px; height: 66px; border-radius: 50%; background: var(--sodium); box-shadow: 0 6px 18px -6px rgb(var(--sodium-rgb) / .6); display: flex; align-items: center; justify-content: center; color: #fff; transform: translateX(var(--x, 0px)); }
+.slide-switch .knob { position: absolute; top: 7px; left: 7px; width: 66px; height: 66px; border-radius: 50%; background: var(--sodium); display: flex; align-items: center; justify-content: center; color: var(--on-sodium); transform: translateX(var(--x, 0px)); }
 .slide-switch.snap .knob { transition: transform .5s var(--ease-spring); }
-.slide-switch.armed { border-color: var(--sodium); box-shadow: 0 0 0 10px rgb(var(--sodium-rgb) / .12), 0 0 60px rgb(var(--sodium-rgb) / .45); }
+.slide-switch.armed { border-color: var(--sodium); }
 .slide-switch:focus-visible { outline: 3px solid var(--sodium); outline-offset: 4px; }
 
 /* Expanding rings when something powers on */
@@ -81,7 +66,5 @@ body { isolation: isolate; }
 .press:active { transform: scale(.96); }
 
 @media (prefers-reduced-motion: reduce) {
-  .grain::after { animation: none; }
   [data-reveal], .words .w > span, .boot [data-boot] { opacity: 1 !important; transform: none !important; transition: none !important; }
-  .slide-switch .label span { animation: none; color: #fff; }
-}
+  }

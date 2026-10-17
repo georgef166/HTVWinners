@@ -50,44 +50,27 @@ body {
 .display.font-extrabold { font-weight: 700; }
 .tnum { font-variant-numeric: tabular-nums; }
 
-/* The wordmark: light, widely tracked, in sand. */
-.wordmark { font-weight: 300; letter-spacing: .08em; color: var(--gold); line-height: 1; }
+/* The wordmark: lowercase, tracked, in the text colour like the mark. */
+.wordmark { font-weight: 500; letter-spacing: .06em; color: var(--paper); line-height: 1; }
 
 /* Plain page background (kept as a class name the pages already use). */
 .streetlight { background: var(--ink); }
 
-/* App pages: deep navy with a teal wash from the top and two soft silk arcs (from the Figma design). */
-body.app { background: linear-gradient(180deg, #0a1222 0%, #050911 100%) fixed; }
-body.app::before {
-  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .9;
-  background: linear-gradient(180deg, rgb(62 134 142 / .26), rgb(62 134 142 / 0) 360px) top / 100% 360px no-repeat;
-}
-/* The silk arcs are drawn for a phone; on wide screens they'd read as one giant ring. */
-@media (max-width: 640px) {
-  body.app::before {
-    background:
-      linear-gradient(180deg, rgb(62 134 142 / .26), rgb(62 134 142 / 0) 360px) top / 100% 360px no-repeat,
-      url(/assets/silk-arc-b.svg) calc(50% + 25px) -210px / 572px no-repeat,
-      url(/assets/silk-arc-a.svg) calc(50% - 55px) -350px / 772px no-repeat;
-  }
-}
-body.app.state-contact::before, body.app.alerting::before, body.app.flash::before { filter: hue-rotate(155deg) saturate(1.8); }
-body.app.flash, body.app.state-contact, body.app.alerting { background: linear-gradient(180deg, #3c1621 0%, #1e0c12 60%, #12080d 100%) fixed; }
-body.app.ok { background: linear-gradient(180deg, #123c40 0%, #0a2023 60%, #071416 100%) fixed; }
+/* App pages: flat navy. Alerts turn the whole page deep red, a stand-down turns it deep teal. */
+body.app { background: #0b1220; }
+body.app.state-contact, body.app.alerting { background: #2a1119; }
+body.app.flash { background: #2a1119; animation: alarmBg 1.2s ease-in-out infinite; }
+@keyframes alarmBg { 50% { background-color: #3d1520; } }
+body.app.ok { background: #0f2f32; }
 
 :focus-visible { outline: 3px solid rgb(var(--sodium-rgb) / .5); outline-offset: 2px; border-radius: 12px; }
 
 /* Frosted bar for navigation */
 .glass { background: rgb(var(--ink-rgb) / .72); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
 
-/* Cards: a quiet tinted panel on light pages, liquid glass on the dark ones. */
+/* Cards: a flat tinted panel; on dark pages, a faint fill with a hairline. */
 .glass-card { position: relative; border-radius: 22px; background: var(--dusk); }
-.theme-dark .glass-card, body.app .glass-card {
-  border: 1px solid rgb(182 221 230 / .22);
-  background: linear-gradient(180deg, rgb(156 195 228 / .12), rgb(54 71 111 / .12));
-  -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%);
-  box-shadow: inset 0 1px 1px rgb(191 229 255 / .12);
-}
+.theme-dark .glass-card, body.app .glass-card { background: rgb(255 255 255 / .04); border: 1px solid rgb(255 255 255 / .08); }
 
 /* ---------- Buttons ---------- */
 .btn {
@@ -109,7 +92,7 @@ body.app.ok { background: linear-gradient(180deg, #123c40 0%, #0a2023 60%, #0714
 
 /* Signature: the main button is a switch. A white knob that nudges over when you're about to flip it. */
 .btn-switch { padding-left: .4rem; gap: .75rem; }
-.btn-switch .knob { width: 2.15rem; height: 2.15rem; border-radius: 50%; background: #fff; display: grid; place-items: center; box-shadow: 0 1px 3px rgba(0,0,0,.18); transition: transform .35s cubic-bezier(.34,1.56,.64,1); }
+.btn-switch .knob { width: 2.15rem; height: 2.15rem; border-radius: 50%; background: #fff; display: grid; place-items: center; transition: transform .35s cubic-bezier(.34,1.56,.64,1); }
 .btn-switch .knob::after { content: ''; width: .55rem; height: .55rem; border-radius: 50%; background: var(--sodium); transition: transform .35s cubic-bezier(.34,1.56,.64,1), background-color .2s ease; }
 .btn-switch:hover .knob { transform: translateX(4px); }
 .btn-switch:hover .knob::after { transform: scale(1.25); background: var(--mint); }
@@ -193,16 +176,11 @@ body.app.ok { background: linear-gradient(180deg, #123c40 0%, #0a2023 60%, #0714
 /* ---------- Countdown ring ---------- */
 .ring-track { stroke: var(--line); }
 .ring-fill { stroke: var(--mint); stroke-linecap: round; transition: stroke-dashoffset .25s linear; }
-body.app .ring-fill { filter: drop-shadow(0 0 8px rgb(var(--mint-rgb) / .55)); }
 .ring-amber { stroke: var(--amber); }
-body.app .ring-amber { filter: drop-shadow(0 0 10px rgb(var(--amber-rgb) / .55)); }
 
-/* The big "I'm OK" button: amber, the colour of a check-in that's due. */
-.ok-button {
-  color: #1a1206;
-  background: linear-gradient(180deg, #ffcf7a, #e8962a);
-  box-shadow: inset 0 4px 8px rgb(255 255 255 / .55), inset 0 -8px 14px rgb(160 80 0 / .2), 0 30px 90px -24px rgb(240 176 74 / .65);
-}
+/* The big "I'm OK" button: flat amber, the colour of a check-in that's due. */
+.ok-button { color: #1f1405; background: var(--amber); font-weight: 700; letter-spacing: -0.02em; word-spacing: .12em; }
+.ok-button:hover { background: rgb(var(--amber-rgb) / .92); }
 
 /* ---------- Keypad ---------- */
 .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem; }
@@ -219,9 +197,7 @@ body.app .ring-amber { filter: drop-shadow(0 0 10px rgb(var(--amber-rgb) / .55))
 .shake { animation: shake .35s ease; }
 @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
 
-/* ---------- Alarm: deep red with a slow pulse (no white strobe) ---------- */
-@keyframes alarmPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25) saturate(1.15); } }
-.flash::before { animation: alarmPulse 1.2s ease-in-out infinite; }
+/* ---------- Alarm keys on the red page ---------- */
 .flash .key { background: rgb(255 140 130 / .14); }
 
 /* Breathing pilot light while armed */
