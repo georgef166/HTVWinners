@@ -1,0 +1,10 @@
+# GPU override for a Vultr Cloud GPU server (needs the NVIDIA driver and container toolkit installed).
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
