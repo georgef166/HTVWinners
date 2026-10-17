@@ -176,11 +176,11 @@ body.app.ok { background: #0f2f32; }
 /* ---------- Countdown ring ---------- */
 .ring-track { stroke: var(--line); }
 .ring-fill { stroke: var(--mint); stroke-linecap: round; transition: stroke-dashoffset .25s linear; }
-.ring-amber { stroke: var(--amber); }
+.ring-amber { stroke: var(--signal); }  /* the check-in ring, red to match the I'm OK button */
 
-/* The big "I'm OK" button: flat amber, the colour of a check-in that's due. */
-.ok-button { color: #1f1405; background: var(--amber); font-weight: 700; letter-spacing: -0.02em; word-spacing: .12em; }
-.ok-button:hover { background: rgb(var(--amber-rgb) / .92); }
+/* The big "I'm OK" button: flat red, the same red as the alarm and alert steps. */
+.ok-button { color: #fff; background: var(--signal); font-weight: 700; letter-spacing: -0.02em; word-spacing: .12em; }
+.ok-button:hover { background: rgb(var(--signal-rgb) / .92); }
 
 /* ---------- Keypad ---------- */
 .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem; }
