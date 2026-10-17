@@ -95,7 +95,7 @@
 
       // Level change markers + labels
       if (this.showLabels) {
-        ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif';
+        ctx.font = '600 11px Geist, Inter, system-ui, sans-serif';
         const rowEnds = [-Infinity, -Infinity, -Infinity]; // stagger labels that would overlap
         for (const e of this.events) {
           if (e.kind !== 'level_change' || !LABELS[e.detail?.to] || e.ms < t0) continue;

@@ -14,8 +14,8 @@ tailwind.config = {
         paper: 'rgb(var(--paper-rgb) / <alpha-value>)',   // primary text
       },
       fontFamily: {
-        display: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', 'Inter', 'system-ui', 'sans-serif'],
-        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Geist', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Geist', 'Inter', 'system-ui', 'sans-serif'],
       },
     },
   },
