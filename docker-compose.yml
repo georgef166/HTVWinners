@@ -37,6 +37,37 @@ services:
     volumes:
       - ollama:/root/.ollama
 
+  # Speech-to-text for the 30-second distress checks (Whisper, CPU), private to this server.
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    restart: unless-stopped
+    profiles: ["model"]
+    volumes:
+      - whisper-models:/home/ubuntu/.cache/huggingface/hub
+
+  # Grafana on top of Tiger Data, served at /grafana. Read-only for visitors.
+  grafana:
+    image: grafana/grafana:11.3.0
+    restart: unless-stopped
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD}
+      GF_SERVER_ROOT_URL: https://${SITE_HOST}/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_USERS_DEFAULT_THEME: light
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/night-out-switch.json
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      db:
+        condition: service_healthy
+
   caddy:
     image: caddy:2
     restart: unless-stopped
@@ -55,3 +86,5 @@ volumes:
   tiger-data:
   ollama:
   caddy-data:
+  whisper-models:
+  grafana-data:

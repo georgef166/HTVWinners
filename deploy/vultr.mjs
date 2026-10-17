@@ -65,6 +65,10 @@ DEMO=1
 LLM_BASE_URL=http://ollama:11434/v1
 LLM_MODEL=${MODEL}
 LLM_TIMEOUT_MS=90000
+WHISPER_URL=http://whisper:8000
+WHISPER_MODEL=Systran/faster-whisper-base.en
+GRAFANA_URL=/grafana
+GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 12)
 ENV
 docker compose --profile model up -d --build
 for i in $(seq 1 30); do docker compose exec -T ollama ollama pull ${MODEL} && break; sleep 5; done
