@@ -11,6 +11,29 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/theme.js"></script>
   <link rel="stylesheet" href="/styles.css" />
+  <style>
+    .phone {
+      position: absolute; width: 238px; height: 488px; padding: 9px; border-radius: 46px;
+      background: #060A1F; box-shadow: 0 0 0 1.5px #2C3670, 0 40px 90px -30px rgba(0, 0, 0, .8);
+    }
+    .phone::before { content: ''; position: absolute; top: 18px; left: 50%; width: 70px; height: 20px; margin-left: -35px; border-radius: 12px; background: #060A1F; z-index: 2; }
+    .phone-screen { position: relative; height: 100%; border-radius: 38px; overflow: hidden; }
+    .phone-back { left: 0; top: 0; transform: rotate(-6deg); }
+    .phone-front { right: 0; bottom: 0; transform: rotate(4deg); }
+    .alert-screen { background: var(--signal); animation: turn-red 1s ease 1.4s both; }
+    .phone-front { animation: lift .9s cubic-bezier(.2, .7, .2, 1) .2s both; }
+    @keyframes turn-red { from { background: var(--ink); color: transparent; } }
+    @keyframes lift { from { transform: translateY(24px) rotate(4deg); opacity: 0; } }
+    .phone .route-mini { --dot: 9px; --track: 2px; --dot-mid: 4.5px; }
+    .phone .route-mini .stop-name { font-size: 7.5px; margin-top: .35rem; }
+    .phone .route-mini .is-here .stop-dot { box-shadow: 0 0 0 3px rgba(255, 181, 71, .25); }
+    @media (max-width: 480px) {
+      .phones { height: 430px; }
+      .phone { transform-origin: top left; }
+      .phone-back { transform: scale(.82) rotate(-6deg); }
+      .phone-front { transform-origin: bottom right; transform: scale(.82) rotate(4deg); animation: none; }
+    }
+  </style>
 </head>
 <body class="streetlight min-h-screen">
   <div class="mx-auto max-w-6xl px-5 sm:px-8">
@@ -19,22 +42,74 @@
         <span id="logo"></span>
         <span class="display text-[15px] font-semibold text-paper">Night Out Switch</span>
       </a>
-      <a href="#arm" class="text-sm font-semibold text-mist hover:text-paper">Arm a real night</a>
+      <a href="#arm" class="hidden text-sm font-semibold text-mist hover:text-paper sm:inline">Arm a real night</a>
     </header>
 
     <main>
-      <section class="pb-16 pt-14 sm:pt-24">
-        <h1 class="display max-w-4xl text-[2.6rem] font-extrabold leading-[1.02] sm:text-7xl lg:text-[5.5rem]">
-          Help starts when you stop answering.
-        </h1>
-        <p class="mt-7 max-w-xl text-xl leading-relaxed text-mist sm:text-2xl">
-          It's a dead man's switch, but for a night out. Your phone checks in. If you go quiet, the people you trust find out, with your last location.
-        </p>
-        <div class="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
-          <button id="demo" class="btn btn-sodium text-lg sm:px-10">Start the demo</button>
-          <p class="text-[15px] text-mist sm:max-w-xs">Watch Maya go quiet and Jordan get alerted. About 45 seconds.</p>
+      <section class="grid items-center gap-14 pb-20 pt-12 sm:pt-20 lg:grid-cols-[1.1fr_1fr] lg:gap-8">
+        <div>
+          <h1 class="display text-[2.6rem] font-extrabold leading-[1.02] sm:text-7xl lg:text-[4.6rem]">
+            Help starts when you stop answering.
+          </h1>
+          <p class="mt-7 max-w-xl text-xl leading-relaxed text-mist sm:text-2xl">
+            It's a dead man's switch, but for a night out. Your phone checks in. If you go quiet, the people you trust find out, with your last location.
+          </p>
+          <div class="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <button id="demo" class="btn btn-sodium text-lg sm:px-10">Start the demo</button>
+            <p class="text-[15px] text-mist sm:max-w-xs">Watch Maya go quiet and Jordan get alerted. About 45 seconds.</p>
+          </div>
+          <p id="demoErr" class="mt-3 hidden text-[15px] font-semibold text-signal" role="alert"></p>
         </div>
-        <p id="demoErr" class="mt-3 hidden text-[15px] font-semibold text-signal" role="alert"></p>
+
+        <!-- The product, not a description of it: Maya's phone armed, Jordan's phone after she goes quiet. -->
+        <div class="phones relative mx-auto h-[470px] w-full max-w-[460px] sm:h-[540px]" aria-label="Maya's phone shows a check-in countdown. Jordan's phone shows a red alert with her last location." role="img">
+          <div class="phone phone-back">
+            <div class="phone-screen streetlight flex flex-col items-center px-4 pt-9">
+              <div class="flex w-full items-center gap-1.5 text-sodium"><span class="mini-logo"></span><span class="display text-[9px] font-semibold text-paper">Night Out Switch</span></div>
+              <div class="relative mt-7 h-[150px] w-[150px]">
+                <svg viewBox="0 0 160 160" class="absolute inset-0 -rotate-90" aria-hidden="true">
+                  <circle cx="80" cy="80" r="72" fill="none" stroke-width="6" class="ring-track"/>
+                  <circle cx="80" cy="80" r="72" fill="none" stroke-width="6" class="ring-fill" stroke-dasharray="452" stroke-dashoffset="150"/>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span class="breathe h-2 w-2 rounded-full bg-sodium shadow-[0_0_10px_2px_rgba(255,181,71,.6)]"></span>
+                  <span class="display tnum mt-2 text-[34px] font-semibold leading-none">12:40</span>
+                  <span class="mt-1.5 text-[9px] font-semibold text-mist">until your next check-in</span>
+                </div>
+              </div>
+              <span class="display mt-6 text-[17px] font-bold">You're armed</span>
+              <span class="mt-1 text-center text-[10px] text-mist">If you go quiet, Jordan hears about it.</span>
+              <div class="mini-route mt-auto mb-8 w-full"></div>
+            </div>
+          </div>
+
+          <div class="phone phone-front">
+            <div class="phone-screen alert-screen flex flex-col px-4 pt-9 text-white">
+              <div class="flex items-center gap-1.5"><span class="mini-logo"></span><span class="display text-[9px] font-semibold">Night Out Switch</span></div>
+              <span class="display mt-4 text-[19px] font-extrabold leading-[1.1]">Maya hasn't responded for 4 minutes</span>
+              <span class="mt-2.5 rounded-lg bg-ink/25 px-2.5 py-1.5 text-[9px] font-bold leading-snug">Tap “I'm on it” within 0:52, or Maya's backup contact gets this alert too.</span>
+              <div class="relative mt-3 h-[124px] overflow-hidden rounded-2xl border-[3px] border-white/90">
+                <svg viewBox="0 0 220 124" class="h-full w-full" aria-hidden="true">
+                  <rect width="220" height="124" fill="#EDE8E1"/>
+                  <path d="M0 30 L220 18 M0 78 L220 92 M40 0 L58 124 M120 0 L132 124 M180 0 L168 124" stroke="#fff" stroke-width="9"/>
+                  <path d="M0 30 L220 18 M0 78 L220 92 M40 0 L58 124 M120 0 L132 124 M180 0 L168 124" stroke="#D9D2C7" stroke-width="1"/>
+                  <rect x="66" y="38" width="44" height="30" rx="3" fill="#C8E6C0"/>
+                  <rect x="140" y="98" width="22" height="22" rx="3" fill="#C8E6C0"/>
+                  <path d="M0 108 Q60 96 110 110 T220 104" stroke="#F4C77B" stroke-width="7" fill="none"/>
+                </svg>
+                <span class="absolute left-[118px] top-[44px] block h-[18px] w-[18px] -rotate-45 rounded-[50%_50%_50%_0] border-[3px] border-white bg-signal shadow"></span>
+              </div>
+              <div class="mt-3 grid grid-cols-2 border-y border-white/25 py-2 text-[9px]">
+                <span><span class="block text-white/80">Last location</span><span class="display text-[13px] font-semibold">1:47 AM</span></span>
+                <span class="border-l border-white/25 pl-3"><span class="block text-white/80">Battery</span><span class="display text-[13px] font-semibold">18%</span></span>
+              </div>
+              <div class="mt-auto mb-6 grid grid-cols-2 gap-2">
+                <span class="flex h-9 items-center justify-center rounded-full bg-white text-[11px] font-bold text-signal">Call Maya</span>
+                <span class="flex h-9 items-center justify-center rounded-full bg-ink text-[11px] font-bold">I'm on it</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section aria-labelledby="route-h" class="border-t border-line py-16">
@@ -88,6 +163,8 @@
 
   <script>
     document.getElementById('logo').innerHTML = NOS.logo();
+    document.querySelectorAll('.mini-logo').forEach((el) => { el.innerHTML = NOS.logo('sm').replace('width="30"', 'width="16"').replace(/height="[\d.]+"/, 'height="9.3"'); });
+    NOS.route(document.querySelector('.mini-route'), { level: 'ARMED', variant: 'mini' });
     const routeEl = document.getElementById('route');
     NOS.route(routeEl, { variant: 'full', level: null });
     routeEl.classList.add('route-draw');

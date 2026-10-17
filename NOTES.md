@@ -36,3 +36,11 @@
 - Type: Unbounded (wide, flyer-style display and numbers) + Hanken Grotesk (body), from Google Fonts.
 - The escalation ladder is drawn as a night-bus route (`NOS.route` in `public/theme.js`) on the landing page, Jordan's waiting screen, and as a "you are here" line on Maya's phone.
 - Shared tokens live in `public/theme.js` (Tailwind config) and `public/styles.css`. Reduced motion turns off the alarm flash (solid red instead) and the breathing/route animations.
+- Second pass, using the "what would make you wince" test from obra/superpowers' brainstorming skill, aimed at the contact at 2am:
+  - Call and "I'm on it" stay pinned to the bottom of the alert screen. After acking, the second button becomes Directions (Google Maps link to the last location).
+  - The summary's "Suggested next step" is split out and leads as a numbered "What to do now" list; the rest is "What we know".
+  - The contact sees a countdown before the backup contact is alerted (`seconds_to_wider` on `GET /api/contact/:token`), then a note once it happens.
+  - Last location shows clock time and "N seconds/minutes ago"; battery at 20% or below gets a "Low" tag.
+  - Maya gets a confirmation toast after checking in or cancelling the alarm, and the alarm screen has a draining bar showing time until the contact is alerted.
+  - The landing hero shows the product: Maya's armed phone and Jordan's alert phone (static HTML mockup; Jordan's screen turns red once on load).
+- Spec deviations kept on purpose: demo.html says "Open Jordan's link" rather than "Contact link"; the alarm heading reads "Tap your PIN if you're OK".
