@@ -21,7 +21,7 @@ app.use(express.static('public'));
 // ---- Simple in-memory rate limit on POST routes: 60 req/min per IP ----
 const hits = new Map();
 app.use((req, res, next) => {
-  if (req.method !== 'POST') return next();
+  if (req.method !== 'POST' || req.path.startsWith('/api/switch/')) return next();
   const now = Date.now();
   const h = hits.get(req.ip);
   if (!h || now - h.start > 60_000) {
@@ -101,6 +101,7 @@ async function arm(fields) {
     ...fields,
   });
   await store.addEvent({ session_id: s.id, kind: 'level_change', detail: { from: null, to: 'ARMED' } });
+  sw.sessionId = s.id; // the Switch follows the most recently armed night
   return s;
 }
 
@@ -132,7 +133,7 @@ app.post('/api/demo', wrap(async (req, res) => {
 app.get('/api/demo/:id', wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
   const l = links(s);
-  res.json({ ...l, qr: await QRCode.toDataURL(l.contactUrl, { margin: 1, width: 480 }) });
+  res.json({ ...l, qr: await QRCode.toDataURL(l.contactUrl, { margin: 1, width: 480 }), switch: switchInfo(s), cold: sw.coldDemo });
 }));
 
 // Demo only: make Maya's battery drain fast so the battery forecast can be shown live.
@@ -175,6 +176,7 @@ app.get('/api/sessions/:id', wrap(async (req, res) => {
     // Length of the current window, so the phone can draw a draining ring.
     window_s: s.level === 'ARMED' ? Math.max(1, Math.round((new Date(s.next_checkin_at) - sinceResponse) / 1000)) : ({ NUDGE: TIMINGS.nudge, ALARM: TIMINGS.alarm, CONTACT: TIMINGS.contact })[s.level] ?? null,
     demo: DEMO,
+    switch: switchInfo(s),
     outlook: {
       level: outlook.level,
       signals: outlook.signals.filter((x) => x.key !== 'phone_offline').map((x) => ({ key: x.key, text: x.you })),
@@ -264,6 +266,102 @@ app.post('/api/contact/:token/ack', wrap(async (req, res) => {
 app.post('/api/contact/:token/resolve', wrap(async (req, res) => {
   const s = await resolve(store, await loadByToken(req.params.token), 'contact');
   res.json({ level: s.level });
+}));
+
+// ---- Hardware Switch (Arduino Uno R4 WiFi) ----
+// One Switch per server, authenticated with SWITCH_KEY. It follows the most recently armed session.
+const SWITCH_KEY = process.env.SWITCH_KEY || (DEMO ? 'demo-switch' : null);
+const HOME_TAGS = (process.env.SWITCH_HOME_TAG || '').split(',').map((t) => t.trim().toUpperCase()).filter(Boolean);
+const sw = { sessionId: null, lastSeen: 0, tempC: null, pressureHpa: null, coldDemo: false };
+const switchConnected = () => Date.now() - sw.lastSeen < 10_000;
+const switchInfo = (s) => (sw.sessionId === s.id
+  ? { linked: true, connected: switchConnected(), temp_c: sw.tempC }
+  : { linked: false, connected: false, temp_c: null });
+
+function requireSwitch(req) {
+  if (!SWITCH_KEY) throw new LadderError(404, 'Not found');
+  if (req.get('X-Switch-Key') !== SWITCH_KEY) throw new LadderError(401, 'Bad switch key');
+  sw.lastSeen = Date.now();
+}
+async function switchSession() {
+  const s = sw.sessionId && (await store.getSession(sw.sessionId));
+  return s && s.level !== 'RESOLVED' ? s : null;
+}
+
+// Plain text so the Arduino can parse it without a JSON library:
+// L=level;S=seconds left;W=window;A=contact acked;O=outlook;C=contact name
+app.get('/api/switch/state', wrap(async (req, res) => {
+  requireSwitch(req);
+  res.type('text/plain');
+  const s = await switchSession();
+  if (!s) return res.send('L=NONE\n');
+  const outlook = assess(s, await store.listEvents(s.id));
+  const since = await lastResponseAt(store, s);
+  const window = s.level === 'ARMED'
+    ? Math.max(1, Math.round((new Date(s.next_checkin_at) - since) / 1000))
+    : ({ NUDGE: TIMINGS.nudge, ALARM: TIMINGS.alarm, CONTACT: TIMINGS.contact })[s.level] ?? 0;
+  res.send(`L=${s.level};S=${secondsLeft(s) ?? 0};W=${window};A=${s.contact_acked ? 1 : 0};O=${outlook.level};C=${s.contact_name.replace(/[;=\n]/g, '')}\n`);
+}));
+
+app.post('/api/switch/event', wrap(async (req, res) => {
+  requireSwitch(req);
+  res.type('text/plain');
+  const b = req.body || {};
+  const s = await switchSession();
+  if (!s) return res.status(409).send('ERR;NOSESSION\n');
+  const log = (detail) => store.addEvent({ session_id: s.id, kind: 'device', detail });
+
+  switch (b.type) {
+    case 'touch': {
+      // A touch is the check-in. Once the alarm is going, it takes the joystick code.
+      if (['ALARM', 'CONTACT', 'WIDER'].includes(s.level)) return res.status(409).send('ERR;NEEDCODE\n');
+      await log({ type: 'touch' });
+      const out = await checkinAck(store, s);
+      return res.send(`OK;L=${out.level}\n`);
+    }
+    case 'code': {
+      // Joystick directions map to digits: up=1, right=2, down=3, left=4.
+      const code = String(b.code ?? '');
+      if (!/^[1-4]{4,8}$/.test(code)) throw new BadRequest('Code must be 4–8 joystick moves');
+      await log({ type: 'code' });
+      try {
+        const out = await standDown(store, s, code);
+        return res.send(`OK;L=${out.level}\n`);
+      } catch (err) {
+        if (err.status === 403) return res.status(403).send('ERR;WRONGCODE\n');
+        throw err;
+      }
+    }
+    case 'nfc': {
+      // Tapping the home tag by the front door ends the night, no PIN needed.
+      const tag = String(b.tag ?? '').toUpperCase().replace(/[^0-9A-F]/g, '');
+      if (!tag) throw new BadRequest('tag is required');
+      const isHome = HOME_TAGS.length ? HOME_TAGS.includes(tag) : DEMO;
+      await log({ type: 'nfc', tag, home: isHome });
+      if (!isHome) return res.status(403).send('ERR;UNKNOWNTAG\n');
+      await resolve(store, s, 'home_tag');
+      return res.send('OK;L=RESOLVED\n');
+    }
+    case 'reading': {
+      let tempC = num(b.temp_c, -40, 85);
+      const pressureHpa = num(b.pressure_hpa, 300, 1100);
+      if (DEMO && sw.coldDemo) tempC = -2; // demo: pretend it's freezing outside
+      sw.tempC = tempC;
+      sw.pressureHpa = pressureHpa;
+      await log({ type: 'reading', temp_c: tempC, pressure_hpa: pressureHpa });
+      return res.send('OK\n');
+    }
+    default:
+      throw new BadRequest('Unknown event type');
+  }
+}));
+
+// Demo only: pretend the Switch is reading freezing temperatures.
+app.post('/api/demo/:id/cold', wrap(async (req, res) => {
+  if (!DEMO) throw new LadderError(404, 'Not found');
+  await loadSession(req.params.id);
+  sw.coldDemo = !sw.coldDemo;
+  res.json({ cold: sw.coldDemo });
 }));
 
 startTicker(store);

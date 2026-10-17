@@ -5,8 +5,10 @@
 const DEMO = process.env.DEMO !== '0';
 
 const T = DEMO
-  ? { batteryHorizonMs: 3 * 60e3, minBatterySpanMs: 15e3, slowReplyMs: 5e3, quickReplyMs: 3e3, offlineMs: 25e3, minIntervalS: 8 }
-  : { batteryHorizonMs: 60 * 60e3, minBatterySpanMs: 10 * 60e3, slowReplyMs: 60e3, quickReplyMs: 15e3, offlineMs: 3 * 60e3, minIntervalS: 5 * 60 };
+  ? { readingFreshMs: 60e3, batteryHorizonMs: 3 * 60e3, minBatterySpanMs: 15e3, slowReplyMs: 5e3, quickReplyMs: 3e3, offlineMs: 25e3, minIntervalS: 8 }
+  : { readingFreshMs: 5 * 60e3, batteryHorizonMs: 60 * 60e3, minBatterySpanMs: 10 * 60e3, slowReplyMs: 60e3, quickReplyMs: 15e3, offlineMs: 3 * 60e3, minIntervalS: 5 * 60 };
+
+const COLD_C = 5; // at or below this, being outside for long is a real risk
 
 const ms = (t) => new Date(t).getTime();
 const clock = (d) => new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -85,6 +87,17 @@ export function assess(session, events, now = new Date()) {
       key: 'missed_before', weight: 1.5,
       you: `You missed ${missedBefore === 1 ? 'a check-in' : `${missedBefore} check-ins`} earlier tonight.`,
       them: `${name} missed ${missedBefore === 1 ? 'a check-in' : `${missedBefore} check-ins`} earlier tonight.`,
+    });
+  }
+
+  // Cold: the Switch's temperature sensor says she's likely outside in the cold.
+  const reading = [...events].reverse().find((e) => e.kind === 'device' && e.detail?.type === 'reading' && e.detail.temp_c != null);
+  if (reading && now - ms(reading.time) < T.readingFreshMs && reading.detail.temp_c <= COLD_C) {
+    const t = String(Math.round(reading.detail.temp_c)).replace('-', '−'); // typographic minus
+    signals.push({
+      key: 'cold', weight: 1,
+      you: `Your Switch reads ${t}°C. If you're outside, get somewhere warm.`,
+      them: `${name}'s Switch read ${t}°C at ${clock(reading.time)}, so ${name} is likely outside in the cold.`,
     });
   }
 
