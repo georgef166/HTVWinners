@@ -7,8 +7,8 @@
   --paper-rgb: 14 16 32;         /* primary text: night ink */
   --mist-rgb: 94 99 120;         /* secondary text */
   --sodium-rgb: 47 69 255;       /* brand: Switch Blue */
-  --signal-rgb: 255 77 61;       /* alert coral red */
-  --mint-rgb: 16 185 129;        /* OK emerald */
+  --signal-rgb: 217 45 32;       /* alert red: white text on it passes AA */
+  --mint-rgb: 4 120 87;          /* OK green: readable as text on white */
   --font-display: 'Geist', 'Inter', system-ui, sans-serif;
   --font-text: 'Geist', 'Inter', system-ui, sans-serif;
   --ink: rgb(var(--ink-rgb)); --dusk: rgb(var(--dusk-rgb)); --line: rgb(var(--line-rgb));
