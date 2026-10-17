@@ -35,7 +35,7 @@
 - Visual language comes from the street at night: indigo night sky (`#0E1430`), sodium streetlight amber (`#FFB547`) for "armed" and primary actions, signal red for alarm, mint for "OK".
 - Type: Unbounded (wide, flyer-style display and numbers) + Hanken Grotesk (body), from Google Fonts.
 - The escalation ladder is drawn as a night-bus route (`NOS.route` in `public/theme.js`) on the landing page, Jordan's waiting screen, and as a "you are here" line on Maya's phone.
-- Shared tokens live in `public/theme.js` (Tailwind config) and `public/styles.css`. Reduced motion turns off the alarm flash (solid red instead) and the breathing/route animations.
+- Shared tokens live in `tailwind.config.cjs` (compiled into `public/tw.css` with `npm run build:css`) and `public/styles.css`. Reduced motion turns off the alarm flash (solid red instead) and the breathing/route animations.
 - Second pass, using the "what would make you wince" test from obra/superpowers' brainstorming skill, aimed at the contact at 2am:
   - Call and "I'm on it" stay pinned to the bottom of the alert screen. After acking, the second button becomes Directions (Google Maps link to the last location).
   - The summary's "Suggested next step" is split out and leads as a numbered "What to do now" list; the rest is "What we know".

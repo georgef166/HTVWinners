@@ -75,7 +75,7 @@ Copy `.env.example` to `.env`. Every variable is optional.
 - `src/predict.js`: predicts trouble before the silence (battery forecast, slow or missed replies, phone gone dark) and sets the pace of the next check-in
 - `src/summary.js`: the contact's summary. It tries our own model on Vultr first, then Gemini, then a factual template, each with a timeout. It's told never to guess at causes.
 - `src/notify.js`: Twilio REST call, or a console log
-- `public/`: plain HTML, Tailwind (CDN), vanilla JS, Leaflet + OpenStreetMap
+- `public/`: plain HTML, Tailwind (precompiled to `public/tw.css`; run `npm run build:css` after changing classes), vanilla JS, Leaflet + OpenStreetMap
 
 ## AI tools used
 
