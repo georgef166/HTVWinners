@@ -2,6 +2,8 @@
 
 **It's a dead man's switch, but for a night out.**
 
+**Live demo:** https://155-138-145-175.sslip.io (tap **Start the demo**, then scan the QR codes to be Maya or Jordan on your own phone)
+
 Help starts when a person *stops answering*. Silence triggers the alert, not a button press. You arm it before you go out. Your phone checks in on a timer. If you stop responding, the server climbs an escalation ladder on its own and eventually sends your trusted contact a link with your last location, your battery, and a plain-language summary.
 
 ```
