@@ -7,7 +7,7 @@
   <title>Night Out Switch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/theme.js"></script>
   <script src="/motion.js"></script>
@@ -32,7 +32,7 @@
     @keyframes rise { to { opacity: 1; transform: none; } }
 
     /* Intro: a keynote slide. Her night as a heartbeat line, then silence, then help. */
-    #intro { position: fixed; inset: 0; z-index: 2000; background: #000; color: #f5f5f7; overflow: hidden; cursor: pointer; }
+    #intro { position: fixed; inset: 0; z-index: 2000; background: #05060D; color: #f5f5f7; overflow: hidden; cursor: pointer; }
     #intro svg { position: absolute; inset: 0; width: 100%; height: 100%; }
     #intro .lbl { position: absolute; transform: translate(-50%, -100%); text-align: center; opacity: 0; white-space: nowrap; font-weight: 600; font-size: 15px; transition: opacity .3s ease, transform .4s cubic-bezier(.16,1,.3,1); }
     #intro .lbl.on { opacity: 1; transform: translate(-50%, calc(-100% - 6px)); }
@@ -74,7 +74,7 @@
   <nav class="glass sticky top-0 z-40 border-b border-line/60">
     <div class="mx-auto flex h-12 max-w-[1024px] items-center justify-between px-5">
       <a href="/" class="flex items-center gap-2 text-paper">
-        <span id="logo"></span>
+        <span id="logo" class="text-sodium"></span>
         <span class="text-[15px] font-semibold tracking-tight">Night Out Switch</span>
       </a>
       <div class="flex items-center gap-6 text-[13px] text-paper/80">
@@ -88,11 +88,10 @@
 
   <main>
     <section class="px-5 pt-16 text-center sm:pt-24">
-      <p class="hero-rise text-[19px] font-semibold text-signal sm:text-[21px]">Night Out Switch</p>
-      <h1 id="heroTitle" class="display mx-auto mt-3 max-w-[13ch] text-[46px] font-semibold leading-[1.04] sm:text-[80px]">Help starts when you stop answering.</h1>
+      <h1 id="heroTitle" class="display mx-auto mt-2 max-w-[13ch] text-[46px] font-semibold leading-[1.02] sm:text-[84px]">Help starts when you stop answering.</h1>
       <p class="hero-rise mx-auto mt-6 max-w-[32ch] text-[21px] leading-snug text-mist sm:text-[25px]">A dead man's switch for a night out. If you go quiet, the people you trust find out, with your last location.</p>
       <div class="hero-rise mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
-        <button id="demo" class="btn btn-sodium px-6">Start the demo</button>
+        <button id="demo" class="btn btn-sodium btn-switch pr-6"><span class="knob" aria-hidden="true"></span>Start the demo</button>
         <a href="#how" class="link-arrow text-[17px]">See how it works</a>
       </div>
       <p class="hero-rise mt-4 text-[14px] text-mist">Maya goes quiet. Jordan gets alerted. About 25 seconds.</p>
@@ -152,6 +151,7 @@
 
     <section id="how" class="bg-dusk px-5 py-24 sm:py-32">
       <div class="mx-auto max-w-[1024px]">
+        <div class="pulse" data-reveal aria-hidden="true"><span class="ln"></span><svg viewBox="0 0 46 36"><path d="M0 18 H12 L17 9 L22 30 L27 4 L32 22 L35 18 H46"/></svg><span class="ln"></span></div>
         <h2 id="route-h" data-reveal class="display mx-auto max-w-[18ch] text-center text-[40px] font-semibold leading-[1.08] sm:text-[56px]">If you go quiet, here's what happens.</h2>
         <p data-reveal style="--i:1" class="mx-auto mt-5 max-w-[40ch] text-center text-[19px] leading-snug text-mist sm:text-[21px]">Every step has a timer, and the timers run on our server. A dead phone can't stop the climb. Your PIN can.</p>
         <div id="route" class="mt-16 rounded-[28px] bg-ink p-8 sm:p-12"></div>
@@ -160,6 +160,7 @@
 
     <section id="predict" class="px-5 py-24 sm:py-32">
       <div class="mx-auto max-w-[1024px] text-center">
+        <div class="pulse" data-reveal aria-hidden="true"><span class="ln"></span><svg viewBox="0 0 46 36"><path d="M0 18 H12 L17 9 L22 30 L27 4 L32 22 L35 18 H46"/></svg><span class="ln"></span></div>
         <h2 id="predict-h" data-reveal class="display text-[40px] font-semibold leading-[1.08] sm:text-[56px]">It sees trouble coming.</h2>
         <p data-reveal style="--i:1" class="mx-auto mt-5 max-w-[42ch] text-[19px] leading-snug text-mist sm:text-[21px]">The best alert is the one you never need. Your phone watches for signs you're about to go quiet, and never guesses why.</p>
         <div class="mt-14 grid gap-5 sm:grid-cols-3">
@@ -184,6 +185,7 @@
 
     <section id="arm" class="bg-dusk px-5 py-24 sm:py-32">
       <div class="mx-auto max-w-[1024px] text-center">
+        <div class="pulse" data-reveal aria-hidden="true"><span class="ln"></span><svg viewBox="0 0 46 36"><path d="M0 18 H12 L17 9 L22 30 L27 4 L32 22 L35 18 H46"/></svg><span class="ln"></span></div>
         <h2 id="arm-h" data-reveal class="display text-[40px] font-semibold leading-[1.08] sm:text-[56px]">Arm a real night.</h2>
         <p data-reveal style="--i:1" class="mx-auto mt-5 max-w-[40ch] text-[19px] leading-snug text-mist sm:text-[21px]">Pick who gets alerted, how often you'll check in, and a PIN only you know. You'll get a link to send them.</p>
         <form id="armForm" data-reveal style="--i:1" class="mx-auto mt-12 grid max-w-[720px] gap-5 rounded-[28px] bg-ink p-6 text-left shadow-[0_2px_24px_rgba(0,0,0,.06)] sm:grid-cols-2 sm:p-10">
