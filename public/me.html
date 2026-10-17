@@ -11,6 +11,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/theme.js"></script>
   <script src="/motion.js"></script>
+  <script src="/sound.js"></script>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/motion.css" />
   <style>
@@ -202,33 +203,9 @@
     let state = null;
     let deadline = null; // local timestamp of the next server deadline
 
-    // ---- Audio ----
-    let audio = null;
-    let beepTimer = null;
-    function unlockAudio() {
-      try {
-        audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-        audio.resume();
-        const o = audio.createOscillator(); const g = audio.createGain();
-        g.gain.value = 0; o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.01);
-      } catch {}
-    }
-    function beep(freq = 880, ms = 220) {
-      if (!audio) return;
-      const o = audio.createOscillator(); const g = audio.createGain();
-      o.type = 'square'; o.frequency.value = freq;
-      g.gain.setValueAtTime(0.4, audio.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + ms / 1000);
-      o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + ms / 1000);
-    }
-    function setAlarmSound(on) {
-      if (on && !beepTimer) {
-        let hi = true;
-        beepTimer = setInterval(() => { beep(hi ? 1046 : 784); hi = !hi; }, 450);
-      } else if (!on && beepTimer) {
-        clearInterval(beepTimer); beepTimer = null;
-      }
-    }
+    // ---- Audio (see sound.js) ----
+    const unlockAudio = () => NOS_SOUND.unlock();
+    const setAlarmSound = (on) => (on ? NOS_SOUND.alarmStart() : NOS_SOUND.alarmStop());
     const vibrate = (p) => navigator.vibrate && navigator.vibrate(p);
 
     // Boot: the armed screen assembles itself, the ring sweeps in, then settles into ticking.
@@ -240,7 +217,7 @@
     NOS_MOTION.reveal($('#unlock'));
     NOS_MOTION.slideSwitch($('#armSwitch'), () => {
       unlockAudio();
-      beep(1318, 90); setTimeout(() => beep(1760, 140), 110);
+      NOS_SOUND.arm();
       // Arming starts the clock: the first check-in is a full interval from this moment.
       api('/checkin-ack', {}).then(() => api('')).then(applyState).catch(() => {});
       $('#armRings').classList.add('go');
@@ -249,7 +226,7 @@
     });
     // Stage mode: embedded in the demo stage, which already unlocked sound with its Start click.
     const STAGE = new URLSearchParams(location.search).has('stage');
-    if (STAGE) { try { audio = window.parent.NOS_AUDIO || null; } catch {} $('#unlock').remove(); setTimeout(boot, 300); }
+    if (STAGE) { try { NOS_SOUND.attach(window.parent.NOS_AUDIO); } catch {} $('#unlock').remove(); setTimeout(boot, 300); }
 
     // ---- Keypad ----
     function keypad(container, onSubmit) {
@@ -276,6 +253,7 @@
         try { await onSubmit(p); errEl.textContent = ''; }
         catch (err) {
           errEl.textContent = err.status === 403 ? 'That PIN didn’t match. Try again.' : err.message;
+          NOS_SOUND.error();
           dots.classList.remove('shake'); void dots.offsetWidth; dots.classList.add('shake');
           vibrate(200);
         }
@@ -294,6 +272,7 @@
     const standDown = async (pin) => {
       await api('/stand-down', { pin });
       applyState(await api(''));
+      NOS_SOUND.resolve();
       toast(`Alarm cancelled. ${state.contact_name} can see you're OK.`);
     };
     $$('main .keypad').forEach((el) => keypad(el, standDown));
@@ -312,6 +291,7 @@
       try {
         await api('/checkin-ack', {});
         applyState(await api(''));
+        NOS_SOUND.ok();
         toast(`Checked in. Next one in ${fmt(state.seconds_left ?? 0)}.`);
       }
       catch (err) { showErr(err.message); }
@@ -369,7 +349,7 @@
             ? `${next.contact_name} can see your last location. Enter your PIN if you’re OK.`
             : `${next.contact_name} can see your last location and is being asked to check on you.`;
       }
-      if (next.level === 'NUDGE' && prev !== 'NUDGE') { vibrate([400, 150, 400, 150, 400]); beep(660, 300); }
+      if (next.level === 'NUDGE' && prev !== 'NUDGE') { vibrate([400, 150, 400, 150, 400]); NOS_SOUND.nudge(); }
       if (next.level === 'RESOLVED') { clearInterval(pollTimer); clearInterval(beatTimer); }
       renderClock();
     }
@@ -434,7 +414,7 @@
     }
     // The alarm is local so it still sounds if the server blips, but never forever.
     setInterval(() => {
-      if (beepTimer && Date.now() - lastOkAt > 20000) { setAlarmSound(false); showErr('Lost the connection to the server. Alarm stopped.'); }
+      if (NOS_SOUND.alarmOn() && Date.now() - lastOkAt > 20000) { setAlarmSound(false); showErr('Lost the connection to the server. Alarm stopped.'); }
     }, 1000);
 
     // ---- Heartbeats: location + battery every 10 s ----

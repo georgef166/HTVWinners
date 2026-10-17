@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/motion.css" />
   <script src="/motion.js"></script>
+  <script src="/sound.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/trace.js"></script>
@@ -199,25 +200,14 @@
     let lastName = null;
     $('#linkBtn').addEventListener('click', () => {
       try {
-        audio = new (window.AudioContext || window.webkitAudioContext)();
-        audio.resume();
+        NOS_SOUND.unlock();
       } catch {}
       $('#unlock').style.opacity = '0';
       setTimeout(() => $('#unlock') && $('#unlock').remove(), 500);
     });
     const STAGE = new URLSearchParams(location.search).has('stage');
-    if (STAGE) { try { audio = window.parent.NOS_AUDIO || null; } catch {} $('#unlock').remove(); }
-    function alertSound() {
-      if (!audio) return;
-      [0, 0.35, 0.7].forEach((t) => {
-        const o = audio.createOscillator(); const g = audio.createGain();
-        o.type = 'sawtooth'; o.frequency.value = 880;
-        const start = audio.currentTime + t;
-        g.gain.setValueAtTime(0.35, start);
-        g.gain.exponentialRampToValueAtTime(0.001, start + 0.3);
-        o.connect(g).connect(audio.destination); o.start(start); o.stop(start + 0.3);
-      });
-    }
+    if (STAGE) { try { NOS_SOUND.attach(window.parent.NOS_AUDIO); } catch {} $('#unlock').remove(); }
+    const alertSound = () => NOS_SOUND.alert();
 
     // ---- Map ----
     let map = null; let marker = null;
@@ -359,6 +349,7 @@
         }
       }
       if (prevView === null && alerting) alertSound();
+      if (view === 'ok' && prevView === 'alert') NOS_SOUND.resolve(); // she's OK
       prevView = view;
     }
 
