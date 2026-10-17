@@ -12,6 +12,8 @@
   <script src="/theme.js"></script>
   <script src="/trace.js"></script>
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/motion.css" />
+  <script src="/motion.js"></script>
   <style>
     html, body { height: 100%; }
     body { overflow: hidden; transition: background-color .5s ease; }
@@ -37,17 +39,35 @@
     .flash { animation: stage-flash .9s ease-out; }
     @keyframes stage-flash { 0% { box-shadow: 0 0 0 0 rgba(229,48,58,.9), 0 0 0 1.5px #E5303A; } 100% { box-shadow: 0 0 0 40px rgba(229,48,58,0), 0 0 0 1.5px #2C3670; } }
 
-    #start { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    #start { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow: hidden; transition: opacity .6s ease, transform .9s cubic-bezier(.7,0,.84,0); }
+    #start.leave { opacity: 0; transform: scale(1.06); pointer-events: none; }
+    /* Devices fly in from the wings once the night starts */
+    .stage .device { opacity: 0; transform: translateX(var(--from, 0)) rotateY(var(--turn, 0)) scale(.92); transition: opacity .9s ease, transform 1.2s cubic-bezier(.16,1,.3,1); }
+    #mayaDevice { --from: -40vw; --turn: 28deg; }
+    #jordanDevice { --from: 40vw; --turn: -28deg; }
+    .stage { perspective: 1600px; }
+    .stage.live .device { opacity: 1; transform: none; }
+    .stage .wire, .stage > section { opacity: 0; transition: opacity .8s ease .6s; }
+    .stage.live .wire, .stage.live > section { opacity: 1; }
+    @media (prefers-reduced-motion: reduce) { .stage .device, .stage .wire, .stage > section { opacity: 1; transform: none; transition: none; } }
     @media (prefers-reduced-motion: reduce) { .wire { animation: none; } }
   </style>
 </head>
-<body class="streetlight">
+<body class="streetlight grain">
   <!-- One click unlocks sound for both phones and starts a fresh night -->
-  <div id="start" class="streetlight">
-    <span class="breathe text-sodium" id="startLogo"></span>
-    <h1 class="display mt-8 max-w-3xl px-6 text-5xl font-extrabold leading-[1.05]">Two phones. One night. No one presses a button.</h1>
-    <p class="mt-5 max-w-xl px-6 text-xl text-mist">Maya's phone on the left, her friend Jordan's on the right. Watch what happens when Maya goes quiet.</p>
-    <button id="startBtn" class="btn btn-sodium mt-10 px-12 text-xl">Start the night</button>
+  <div id="start" class="streetlight letterbox">
+    <canvas id="startBokeh" class="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true"></canvas>
+    <div class="power-rings" id="startRings" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="relative text-[14px] font-semibold text-mist" data-reveal style="--i:0">Live demo</p>
+    <h1 class="display relative mt-5 max-w-5xl px-6 text-[clamp(34px,4.3vw,60px)] font-extrabold leading-[1.04]" data-reveal style="--i:1">Two phones. One night.<br />No one presses a button.</h1>
+    <p class="relative mt-6 max-w-xl px-6 text-xl text-mist" data-reveal style="--i:2">Maya's phone on the left, her friend Jordan's on the right. Flip the switch, then watch what happens when Maya goes quiet.</p>
+    <div class="relative mt-12" data-reveal style="--i:3">
+      <div id="startSwitch" class="slide-switch" role="switch" aria-checked="false" tabindex="0" aria-label="Flip the switch to start the night">
+        <span class="fill"></span>
+        <span class="label"><span>Start the night</span></span>
+        <span class="knob"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </div>
+    </div>
   </div>
 
   <header class="flex h-[76px] items-center gap-4 px-7">
@@ -95,7 +115,6 @@
   <script>
     const $ = (s) => document.querySelector(s);
     $('#logo').innerHTML = NOS.logo();
-    $('#startLogo').innerHTML = NOS.logo().replace('width="38"', 'width="96"').replace(/height="[\d.]+"/, 'height="56"');
     const trace = new SignalTrace($('#trace'));
 
     let id = new URLSearchParams(location.search).get('id');
@@ -234,11 +253,18 @@
     }
     setInterval(poll, 1000);
 
-    $('#startBtn').addEventListener('click', async () => {
-      // This click is the user gesture that lets both embedded phones make sound.
+    // Opening scene: city lights, the letterbox opens, then flip the switch to start.
+    NOS_MOTION.bokeh($('#startBokeh'), { count: 36 });
+    requestAnimationFrame(() => setTimeout(() => $('#start').classList.add('open'), 200));
+    NOS_MOTION.reveal($('#start'));
+    NOS_MOTION.slideSwitch($('#startSwitch'), async () => {
+      // This gesture lets both embedded phones make sound.
       try { window.NOS_AUDIO = new (window.AudioContext || window.webkitAudioContext)(); window.NOS_AUDIO.resume(); } catch {}
-      $('#start').remove();
-      await startNight();
+      $('#startRings').classList.add('go');
+      const night = startNight();
+      setTimeout(() => $('#start').classList.add('leave'), 450);
+      setTimeout(() => { $('.stage').classList.add('live'); $('#start').remove(); }, 1100);
+      await night;
     });
     $('#restart').addEventListener('click', async () => { id = null; await startNight(); });
     $('#drain').addEventListener('click', () => id && fetch(`/api/demo/${id}/drain-battery`, { method: 'POST' }));
