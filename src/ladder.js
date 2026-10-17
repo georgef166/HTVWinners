@@ -1,7 +1,7 @@
 // Escalation ladder: ARMED → NUDGE → ALARM → CONTACT → WIDER, plus RESOLVED.
 // The timer lives here on the server, so the ladder climbs even if the phone goes silent.
 import { hashPin } from './store.js';
-import { summarize } from './summary.js';
+import { summarize, templateSummary } from './summary.js';
 import { sendSms } from './notify.js';
 import { assess } from './predict.js';
 
@@ -61,14 +61,17 @@ async function stepSession(store, s, now) {
       break;
     case 'ALARM':
       if (past(s.level_deadline)) {
+        // The alert never waits for AI: send it now with the factual summary,
+        // then let the model's version replace it when it's ready.
         const events = await store.listEvents(s.id);
-        const { text: summary, source } = await summarize(s, events, now);
-        await store.addEvent({ session_id: s.id, kind: 'summary', detail: { source } });
+        const summary = templateSummary(s, events, now);
+        await store.addEvent({ session_id: s.id, kind: 'summary', detail: { source: 'template' } });
         await setLevel(store, s, 'CONTACT', now, { summary });
         await sendSms(
           s.contact_phone,
           `Night Out Switch: ${s.user_name} hasn't responded to check-ins. ${summary}\nDetails: ${contactLink(s)}`,
         );
+        upgradeSummary(store, s, events, now);
       }
       break;
     case 'CONTACT':
@@ -81,6 +84,17 @@ async function stepSession(store, s, now) {
       }
       break;
   }
+}
+
+// Background: ask the model for a better-written summary and swap it in if it answers.
+function upgradeSummary(store, s, events, now) {
+  summarize(s, events, now)
+    .then(async ({ text, source }) => {
+      if (source === 'template') return;
+      await store.updateSession(s.id, { summary: text });
+      await store.addEvent({ session_id: s.id, kind: 'summary', detail: { source } });
+    })
+    .catch((err) => console.warn('[ladder] summary upgrade failed:', err.message));
 }
 
 let ticking = false;
