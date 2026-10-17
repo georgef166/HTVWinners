@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#ffffff" />
+  <meta name="theme-color" content="#0b1220" />
   <title>Night Out Switch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <script src="/theme.js"></script>
   <script src="/motion.js"></script>
   <link rel="stylesheet" href="/styles.css" />
@@ -325,7 +325,7 @@
     });
 
     document.getElementById('logo').innerHTML = NOS.logo();
-    document.querySelectorAll('.mini-logo').forEach((el) => { el.innerHTML = NOS.logo('sm').replace('width="30"', 'width="16"').replace(/height="[\d.]+"/, 'height="9.3"'); });
+    document.querySelectorAll('.mini-logo').forEach((el) => { el.innerHTML = NOS.logo('sm', 24); });
     NOS.route(document.querySelector('.mini-route'), { level: 'ARMED', variant: 'mini' });
     const routeEl = document.getElementById('route');
     NOS.route(routeEl, { variant: 'full', level: null });
