@@ -18,17 +18,18 @@ app.set('trust proxy', true);
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static('public'));
 
-// ---- Simple in-memory rate limit on POST routes: 60 req/min per IP ----
+// ---- Simple in-memory rate limit on POST routes: 240 req/min per IP ----
+// Generous because a whole venue shares one public IP; heartbeats and the Switch are exempt.
 const hits = new Map();
 app.use((req, res, next) => {
-  if (req.method !== 'POST' || req.path.startsWith('/api/switch/')) return next();
+  if (req.method !== 'POST' || req.path.startsWith('/api/switch/') || req.path.endsWith('/heartbeat')) return next();
   const now = Date.now();
   const h = hits.get(req.ip);
   if (!h || now - h.start > 60_000) {
     hits.set(req.ip, { start: now, count: 1 });
     return next();
   }
-  if (++h.count > 60) return res.status(429).json({ error: 'Too many requests' });
+  if (++h.count > 240) return res.status(429).json({ error: 'Too many requests' });
   next();
 });
 setInterval(() => {
@@ -101,7 +102,6 @@ async function arm(fields) {
     ...fields,
   });
   await store.addEvent({ session_id: s.id, kind: 'level_change', detail: { from: null, to: 'ARMED' } });
-  sw.sessionId = s.id; // the Switch follows the most recently armed night
   return s;
 }
 
@@ -136,7 +136,12 @@ app.post('/api/demo', wrap(async (req, res) => {
 app.get('/api/demo/:id', wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
   const l = links(s);
-  res.json({ ...l, qr: await QRCode.toDataURL(l.contactUrl, { margin: 1, width: 480 }), switch: switchInfo(s), cold: sw.coldDemo });
+  res.json({
+    ...l,
+    qr: await QRCode.toDataURL(l.contactUrl, { margin: 1, width: 480 }),
+    qr_me: await QRCode.toDataURL(l.meUrl, { margin: 1, width: 480 }),
+    switch: switchInfo(s), cold: sw.coldDemo,
+  });
 }));
 
 // Demo only: make Maya's battery drain fast so the battery forecast can be shown live.
@@ -312,7 +317,7 @@ app.post('/api/contact/:token/resolve', wrap(async (req, res) => {
 }));
 
 // ---- Hardware Switch (Arduino Uno R4 WiFi) ----
-// One Switch per server, authenticated with SWITCH_KEY. It follows the most recently armed session.
+// One Switch per server, authenticated with SWITCH_KEY. It controls the night it was linked to.
 const SWITCH_KEY = process.env.SWITCH_KEY || (DEMO ? 'demo-switch' : null);
 const HOME_TAGS = (process.env.SWITCH_HOME_TAG || '').split(',').map((t) => t.trim().toUpperCase()).filter(Boolean);
 const sw = { sessionId: null, lastSeen: 0, tempC: null, pressureHpa: null, coldDemo: false };
@@ -397,6 +402,13 @@ app.post('/api/switch/event', wrap(async (req, res) => {
     default:
       throw new BadRequest('Unknown event type');
   }
+}));
+
+// Link the Switch to one night explicitly, so other people's sessions on other phones can't take it over.
+app.post('/api/sessions/:id/link-switch', wrap(async (req, res) => {
+  const s = await loadSession(req.params.id);
+  sw.sessionId = s.id;
+  res.json({ linked: true });
 }));
 
 // Demo only: pretend the Switch is reading freezing temperatures.

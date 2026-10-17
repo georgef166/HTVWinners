@@ -58,8 +58,12 @@
       <button id="drain" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Drain battery</button>
       <button id="cold" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Switch reads −2°C</button>
       <div class="ml-2 flex items-center gap-3 rounded-2xl bg-paper p-1.5 pr-3 text-ink">
+        <img id="qrMaya" alt="QR code to open Maya's phone on your phone" class="h-14 w-14 rounded-lg" />
+        <span class="text-[13px] font-bold leading-tight">Scan to<br />be Maya</span>
+      </div>
+      <div class="flex items-center gap-3 rounded-2xl bg-paper p-1.5 pr-3 text-ink">
         <img id="qr" alt="QR code to open Jordan's view on your phone" class="h-14 w-14 rounded-lg" />
-        <span class="text-[13px] font-bold leading-tight">Scan to be<br />Jordan too</span>
+        <span class="text-[13px] font-bold leading-tight">Scan to<br />be Jordan</span>
       </div>
     </div>
   </header>
@@ -220,7 +224,9 @@
         history.replaceState(null, '', `?id=${id}`);
       }
       links = await fetch(`/api/demo/${id}`).then((r) => r.json());
+      fetch(`/api/sessions/${id}/link-switch`, { method: 'POST' }).catch(() => {});
       $('#qr').src = links.qr;
+      $('#qrMaya').src = links.qr_me;
       $('#maya').src = `/me.html?id=${id}&stage=1`;
       $('#jordan').src = `/contact.html?t=${links.contactToken}&stage=1`;
       seen = new Set(); lastLevel = null; $('#feed').innerHTML = '';
