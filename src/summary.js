@@ -2,7 +2,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { assess } from './predict.js';
 
-const INSTRUCTION = `Write 2–3 short factual sentences for a trusted friend about this person's night, using ONLY the facts below: when they turned on Night Out Switch, the last time they responded, how long since, the phone's status and battery, and whether a location is on the map. Then one line starting "Suggested next step:" (call them; if no answer and you are nearby, go to the last location; if you believe they are in danger, call 911). Never guess at causes, substances, intoxication or intent. Never say "drugged" or "drunk". Say "hasn't responded". Do not add facts that are not listed. Do not include coordinates. Never say "armed". Reply with only the sentences, no introduction.`;
+const INSTRUCTION = `Write 2–3 short factual sentences for a trusted friend about this person's night, using ONLY the facts below: when they turned on tenshi, the last time they responded, how long since, the phone's status and battery, and whether a location is on the map. Then one line starting "Suggested next step:" (call them; if no answer and you are nearby, go to the last location; if you believe they are in danger, call 911). Never guess at causes, substances, intoxication or intent. Never say "drugged" or "drunk". Say "hasn't responded". Do not add facts that are not listed. Do not include coordinates. Never say "armed". Reply with only the sentences, no introduction.`;
 
 const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 3000;
 
@@ -30,7 +30,7 @@ export function templateSummary(session, events, now = new Date()) {
   const f = facts(session, events, now);
   const mins = f.minutesSince < 1 ? 'under a minute' : f.minutesSince === 1 ? '1 minute' : `${f.minutesSince} minutes`;
   const parts = [
-    `${f.name} armed Night Out Switch at ${fmtTime(f.armedAt)} and last responded at ${fmtTime(f.lastResponse)}; ${f.name} hasn't responded for ${mins}.`,
+    `${f.name} turned on tenshi at ${fmtTime(f.armedAt)} and last responded at ${fmtTime(f.lastResponse)}; ${f.name} hasn't responded for ${mins}.`,
     f.lastLocationAt
       ? `The last known location was recorded at ${fmtTime(f.lastLocationAt)}${f.battery != null ? ` with battery at ${f.battery}%` : ''}.`
       : `No location has been shared${f.battery != null ? `; battery was last at ${f.battery}%` : ''}.`,
@@ -51,7 +51,7 @@ function factsForModel(session, events, now) {
   const located = [...events].reverse().find((e) => e.kind === 'heartbeat' && e.lat != null);
   const lines = [
     `Person: ${f.name}`,
-    `Turned on Night Out Switch at: ${fmtTime(f.armedAt)}`,
+    `Turned on tenshi at: ${fmtTime(f.armedAt)}`,
     `Last responded at: ${fmtTime(f.lastResponse)} (${mins(f.lastResponse)} minutes ago)`,
     `Phone: ${!o.phone.lastSeenAt ? 'has not reported' : o.phone.offline ? `stopped reporting at ${fmtTime(o.phone.lastSeenAt)}` : 'still reporting, so it has power and signal'}`,
     `Battery: ${f.battery != null ? `${f.battery}%` : 'unknown'}${o.battery.diesAt ? `, on track to run out around ${fmtTime(o.battery.diesAt)}` : ''}`,

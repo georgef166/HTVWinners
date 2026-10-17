@@ -69,7 +69,7 @@ async function stepSession(store, s, now) {
         await setLevel(store, s, 'CONTACT', now, { summary });
         await sendSms(
           s.contact_phone,
-          `Night Out Switch: ${s.user_name} hasn't responded to check-ins. ${summary}\nDetails: ${contactLink(s)}`,
+          `tenshi: ${s.user_name} hasn't responded to check-ins. ${summary}\nDetails: ${contactLink(s)}`,
         );
         upgradeSummary(store, s, events, now);
       }
@@ -79,7 +79,7 @@ async function stepSession(store, s, now) {
         await setLevel(store, s, 'WIDER', now);
         await sendSms(
           s.backup_phone,
-          `Night Out Switch: ${s.user_name} hasn't responded and ${s.contact_name} hasn't confirmed they're on it. Details: ${contactLink(s)}`,
+          `tenshi: ${s.user_name} hasn't responded and ${s.contact_name} hasn't confirmed they're on it. Details: ${contactLink(s)}`,
         );
       }
       break;

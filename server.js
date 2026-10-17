@@ -500,5 +500,5 @@ app.post('/api/demo/:id/cold', wrap(async (req, res) => {
 
 startTicker(store);
 app.listen(PORT, () => {
-  console.log(`Night Out Switch on ${PUBLIC_URL} (store: ${store.kind}, demo: ${DEMO ? 'on' : 'off'})`);
+  console.log(`tenshi on ${PUBLIC_URL} (store: ${store.kind}, demo: ${DEMO ? 'on' : 'off'})`);
 });
