@@ -208,6 +208,8 @@ app.get('/api/contact/:token', wrap(async (req, res) => {
     seconds_since_response: Math.max(0, Math.floor((now - lastResp) / 1000)),
     // Green "says they're OK" only if the contact was alerted at some point and the person stood down.
     stood_down: !alerting && !!s.summary && !!standDownEvt,
+    // Countdown until the backup contact is alerted, so the contact knows to confirm.
+    seconds_to_wider: s.level === 'CONTACT' && !s.contact_acked && s.backup_phone ? secondsLeft(s, now) : null,
     summary: null,
     last_heartbeat: null,
   };
