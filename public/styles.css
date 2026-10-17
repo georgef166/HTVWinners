@@ -1,61 +1,82 @@
 :root {
-  --ink: #0E1430;
-  --dusk: #18204A;
-  --line: #2C3670;
-  --sodium: #FFB547;
-  --signal: #E5303A;
-  --mint: #5BE3B0;
-  --mist: #AEB5DA;
-  --paper: #F4F5FB;
+  /* Apple-style light theme. Tokens are RGB triplets so Tailwind can apply alpha. */
+  --ink-rgb: 255 255 255;        /* page background */
+  --dusk-rgb: 245 245 247;       /* secondary surface (Apple gray) */
+  --line-rgb: 210 210 215;       /* hairlines */
+  --paper-rgb: 29 29 31;         /* primary text */
+  --mist-rgb: 110 110 115;       /* secondary text */
+  --sodium-rgb: 0 113 227;       /* accent (Apple blue) */
+  --signal-rgb: 255 59 48;       /* alert red */
+  --mint-rgb: 52 199 89;         /* OK green */
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+  --font-text: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+  --ink: rgb(var(--ink-rgb)); --dusk: rgb(var(--dusk-rgb)); --line: rgb(var(--line-rgb));
+  --paper: rgb(var(--paper-rgb)); --mist: rgb(var(--mist-rgb));
+  --sodium: rgb(var(--sodium-rgb)); --signal: rgb(var(--signal-rgb)); --mint: rgb(var(--mint-rgb));
+}
+/* Keynote dark: used by the live stage */
+.theme-dark {
+  --ink-rgb: 0 0 0; --dusk-rgb: 28 28 30; --line-rgb: 56 56 58;
+  --paper-rgb: 245 245 247; --mist-rgb: 161 161 166;
+  --sodium-rgb: 41 151 255; --signal-rgb: 255 69 58; --mint-rgb: 48 209 88;
+  /* derived colors resolve where they're declared, so restate them here */
+  --ink: rgb(var(--ink-rgb)); --dusk: rgb(var(--dusk-rgb)); --line: rgb(var(--line-rgb));
+  --paper: rgb(var(--paper-rgb)); --mist: rgb(var(--mist-rgb));
+  --sodium: rgb(var(--sodium-rgb)); --signal: rgb(var(--signal-rgb)); --mint: rgb(var(--mint-rgb));
+  color: var(--paper); background-color: var(--ink);
 }
 
 html { background: var(--ink); }
 body {
   margin: 0;
-  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  font-family: var(--font-text);
   color: var(--paper);
   background-color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
+  letter-spacing: -0.011em;
 }
-.display { font-family: 'Unbounded', system-ui, sans-serif; letter-spacing: -0.02em; }
+.display { font-family: var(--font-display); letter-spacing: -0.032em; }
+.display.font-extrabold { font-weight: 700; }
 .tnum { font-variant-numeric: tabular-nums; }
 
-/* A single streetlight pooling light from above. */
-.streetlight {
-  background:
-    radial-gradient(60% 42% at 50% -8%, rgba(255, 176, 64, 0.30), rgba(255, 150, 40, 0.07) 50%, transparent 72%),
-    var(--ink);
-}
+/* Plain page background (kept as a class name the pages already use). */
+.streetlight { background: var(--ink); }
 
-:focus-visible { outline: 3px solid var(--sodium); outline-offset: 3px; border-radius: 12px; }
+:focus-visible { outline: 3px solid rgb(var(--sodium-rgb) / .5); outline-offset: 2px; border-radius: 12px; }
+
+/* Frosted bar, like Apple's navigation */
+.glass { background: rgb(var(--ink-rgb) / .72); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
 
 /* ---------- Buttons ---------- */
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
-  min-height: 3.5rem; padding: 0 1.75rem; border-radius: 999px;
-  font-weight: 700; font-size: 1.0625rem; letter-spacing: .005em;
-  transition: transform .12s ease, background-color .15s ease, box-shadow .15s ease;
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 2.9rem; padding: 0 1.4rem; border-radius: 980px;
+  font-weight: 500; font-size: 1.0625rem; letter-spacing: -0.01em;
+  transition: transform .12s ease, background-color .2s ease, opacity .2s ease;
   cursor: pointer;
 }
 .btn:active { transform: scale(.98); }
-.btn-sodium { background: var(--sodium); color: var(--ink); box-shadow: 0 10px 40px -12px rgba(255, 181, 71, .7); }
-.btn-sodium:hover { background: #FFC56E; }
-.btn-ghost { border: 1.5px solid var(--line); color: var(--paper); }
-.btn-ghost:hover { border-color: var(--mist); }
-.btn:disabled { opacity: .6; cursor: progress; }
+.btn-sodium { background: var(--sodium); color: #fff; }
+.btn-sodium:hover { background: rgb(var(--sodium-rgb) / .88); }
+.btn-ghost { color: var(--sodium); border: 1px solid rgb(var(--sodium-rgb) / .9); }
+.btn-ghost:hover { background: rgb(var(--sodium-rgb) / .06); }
+.btn:disabled { opacity: .5; cursor: progress; }
+.link-arrow { color: var(--sodium); font-weight: 500; }
+.link-arrow::after { content: ' ›'; }
+.link-arrow:hover { text-decoration: underline; }
 
 /* ---------- Form fields ---------- */
-.field { display: block; font-size: .9375rem; font-weight: 600; color: var(--mist); }
+.field { display: block; font-size: .875rem; font-weight: 500; color: var(--mist); }
 .field input {
-  display: block; width: 100%; margin-top: .4rem; padding: .8rem 1rem;
-  font: 500 1.0625rem 'Hanken Grotesk', sans-serif; color: var(--paper);
-  background: var(--ink); border: 1.5px solid var(--line); border-radius: 14px;
-  transition: border-color .15s ease;
+  display: block; width: 100%; margin-top: .4rem; padding: .85rem 1rem;
+  font: 400 1.0625rem var(--font-text); color: var(--paper);
+  background: var(--ink); border: 1px solid var(--line); border-radius: 12px;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
-.field input::placeholder { color: #5D6699; }
-.field input:focus { outline: none; border-color: var(--sodium); }
-.field input[type="time"] { color-scheme: dark; }
+.field input::placeholder { color: rgb(var(--mist-rgb) / .7); }
+.field input:focus { outline: none; border-color: var(--sodium); box-shadow: 0 0 0 4px rgb(var(--sodium-rgb) / .15); }
 
 /* ---------- Route (the escalation ladder as a night-bus line) ---------- */
 .route ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); position: relative; }
@@ -71,8 +92,8 @@ body {
   background: var(--ink); border: var(--track) solid var(--line); box-sizing: border-box;
 }
 .route .stop.is-past .stop-dot { background: var(--sodium); border-color: var(--sodium); }
-.route .stop.is-here .stop-dot { background: var(--paper); border-color: var(--sodium); box-shadow: 0 0 0 6px rgba(255, 181, 71, .25); }
-.route .stop-name { margin-top: .55rem; font-weight: 700; color: var(--mist); }
+.route .stop.is-here .stop-dot { background: var(--ink); border-color: var(--sodium); box-shadow: 0 0 0 6px rgb(var(--sodium-rgb) / .18); }
+.route .stop-name { margin-top: .55rem; font-weight: 600; color: var(--mist); }
 .route .is-here .stop-name, .route .is-past .stop-name { color: var(--paper); }
 
 .route-mini { --dot: 14px; --track: 3px; --dot-mid: 7px; }
@@ -81,7 +102,7 @@ body {
 .route-full { --dot: 22px; --track: 4px; --dot-mid: 11px; container-type: inline-size; }
 .route-full .stop { align-items: flex-start; text-align: left; padding-right: 1.25rem; }
 .route-full .stop:not(:last-child)::after { left: 0; width: 100%; }
-.route-full .stop-name { font-family: 'Unbounded', sans-serif; font-weight: 600; font-size: 1.05rem; margin-top: 1rem; color: var(--paper); }
+.route-full .stop-name { font-family: var(--font-display); font-weight: 600; font-size: 1.2rem; letter-spacing: -0.02em; margin-top: 1rem; color: var(--paper); }
 .route-full .stop-desc { margin-top: .4rem; color: var(--mist); font-size: .975rem; line-height: 1.5; max-width: 22ch; }
 .route-full .stop-dot { border-color: var(--sodium); }
 .route-full .stop:nth-child(1)::after { background: var(--sodium); }
@@ -119,12 +140,12 @@ body {
 /* ---------- Keypad ---------- */
 .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem; }
 .key {
-  height: 4.25rem; border-radius: 999px; font-family: 'Unbounded', sans-serif; font-weight: 500; font-size: 1.6rem;
-  color: inherit; background: rgba(255, 255, 255, .07); border: 1.5px solid rgba(255, 255, 255, .14);
-  transition: background-color .1s ease, transform .1s ease;
+  height: 4.4rem; border-radius: 999px; font-family: var(--font-display); font-weight: 400; font-size: 1.85rem;
+  color: inherit; background: rgb(var(--paper-rgb) / .07); border: 0;
+  transition: background-color .12s ease, transform .1s ease;
 }
-.key:active { transform: scale(.95); background: rgba(255, 255, 255, .18); }
-.key-text { font-family: 'Hanken Grotesk', sans-serif; font-size: 1rem; font-weight: 700; background: transparent; border-color: transparent; }
+.key:active { transform: scale(.95); background: rgb(var(--paper-rgb) / .2); }
+.key-text { font-family: var(--font-text); font-size: 1rem; font-weight: 500; background: transparent; }
 .pin-dots { display: flex; justify-content: center; gap: .9rem; height: 1rem; }
 .pin-dots span { width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid currentColor; opacity: .5; }
 .pin-dots span.on { background: currentColor; opacity: 1; }
@@ -134,7 +155,7 @@ body {
 /* ---------- Alarm flash (red/white) ---------- */
 @keyframes flash { 0%, 49% { background-color: var(--signal); color: #fff; } 50%, 100% { background-color: #fff; color: var(--signal); } }
 .flash { animation: flash .6s steps(1) infinite; }
-.flash .key { background: transparent; border-color: currentColor; }
+.flash .key { background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
 
 /* Breathing pilot light while armed */
 @keyframes breathe { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }

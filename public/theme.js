@@ -3,18 +3,19 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        ink: '#0E1430',     // night sky
-        dusk: '#18204A',    // raised surface
-        line: '#2C3670',    // hairlines, tracks
-        sodium: '#FFB547',  // streetlight amber: armed, primary action
-        signal: '#E5303A',  // alarm red
-        mint: '#5BE3B0',    // OK
-        mist: '#AEB5DA',    // secondary text
-        paper: '#F4F5FB',   // primary text
+        // CSS-variable tokens (see styles.css): light Apple theme by default, .theme-dark for the stage.
+        ink: 'rgb(var(--ink-rgb) / <alpha-value>)',       // background
+        dusk: 'rgb(var(--dusk-rgb) / <alpha-value>)',     // secondary surface
+        line: 'rgb(var(--line-rgb) / <alpha-value>)',     // hairlines
+        sodium: 'rgb(var(--sodium-rgb) / <alpha-value>)', // accent
+        signal: 'rgb(var(--signal-rgb) / <alpha-value>)', // alert red
+        mint: 'rgb(var(--mint-rgb) / <alpha-value>)',     // OK green
+        mist: 'rgb(var(--mist-rgb) / <alpha-value>)',     // secondary text
+        paper: 'rgb(var(--paper-rgb) / <alpha-value>)',   // primary text
       },
       fontFamily: {
-        display: ['Unbounded', 'system-ui', 'sans-serif'],
-        sans: ['"Hanken Grotesk"', 'system-ui', 'sans-serif'],
+        display: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', 'Inter', 'system-ui', 'sans-serif'],
       },
     },
   },
