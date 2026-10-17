@@ -379,10 +379,26 @@
     }
     setInterval(renderClock, 250);
 
+    let lastOkAt = Date.now();
     async function poll() {
-      try { applyState(await api('')); showErr(''); }
-      catch (err) { showErr(err.status === 404 ? 'This session doesn’t exist. Start a new one from the home page.' : 'Lost the connection. Retrying…'); }
+      try { applyState(await api('')); lastOkAt = Date.now(); showErr(''); }
+      catch (err) {
+        if (err.status === 404) return sessionGone();
+        showErr('Lost the connection. Retrying…');
+      }
     }
+    // The session no longer exists (ended, or the server restarted): stop everything, no endless alarm.
+    function sessionGone() {
+      setAlarmSound(false);
+      document.body.classList.remove('flash');
+      clearInterval(pollTimer); clearInterval(beatTimer);
+      applyState({ ...(state || {}), level: 'RESOLVED', seconds_left: null, contact_name: state?.contact_name || 'your contact' });
+      showErr('This night has ended. Start a new one from the home page.');
+    }
+    // The alarm is local so it still sounds if the server blips, but never forever.
+    setInterval(() => {
+      if (beepTimer && Date.now() - lastOkAt > 20000) { setAlarmSound(false); showErr('Lost the connection to the server. Alarm stopped.'); }
+    }, 1000);
 
     // ---- Heartbeats: location + battery every 10 s ----
     const DEMO_LOCATION = { lat: 43.7845, lng: -79.1870 }; // used only in demo mode when geolocation is unavailable
