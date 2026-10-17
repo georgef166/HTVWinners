@@ -3,6 +3,7 @@
 import { hashPin } from './store.js';
 import { summarize } from './summary.js';
 import { sendSms } from './notify.js';
+import { assess } from './predict.js';
 
 // Demo timings unless DEMO=0, so an empty .env still gives a seconds-long demo.
 export const DEMO = process.env.DEMO !== '0';
@@ -113,11 +114,16 @@ function checkPin(s, pin) {
   if (hashPin(pin) !== s.pin_hash) throw new LadderError(403, 'Wrong PIN');
 }
 
+// The prediction engine sets the pace of the next check-in.
+async function nextIntervalS(store, s, now) {
+  return assess(s, await store.listEvents(s.id), now).nextIntervalS;
+}
+
 export async function checkinAck(store, s, now = new Date()) {
   requireActive(s);
   if (ALERTING.includes(s.level)) throw new LadderError(409, 'PIN required to stand down');
   await store.addEvent({ session_id: s.id, kind: 'checkin_ack' });
-  const next = at(now, s.checkin_every_s);
+  const next = at(now, await nextIntervalS(store, s, now));
   if (s.level === 'NUDGE') return setLevel(store, s, 'ARMED', now, { next_checkin_at: next });
   return store.updateSession(s.id, { next_checkin_at: next });
 }
@@ -126,7 +132,7 @@ export async function standDown(store, s, pin, now = new Date()) {
   requireActive(s);
   checkPin(s, pin);
   await store.addEvent({ session_id: s.id, kind: 'stand_down', detail: { from: s.level } });
-  const extra = { next_checkin_at: at(now, s.checkin_every_s), contact_acked: false };
+  const extra = { next_checkin_at: at(now, await nextIntervalS(store, s, now)), contact_acked: false };
   if (s.level === 'ARMED') return store.updateSession(s.id, extra);
   return setLevel(store, s, 'ARMED', now, extra);
 }

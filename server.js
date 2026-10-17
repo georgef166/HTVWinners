@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import QRCode from 'qrcode';
 import { createStore, newId, newToken, hashPin } from './src/store.js';
+import { assess } from './src/predict.js';
 import {
   DEMO, TIMINGS, LadderError, startTicker, contactLink, lastResponseAt, secondsLeft,
   checkinAck, standDown, disarm, contactAck, resolve,
@@ -134,6 +135,15 @@ app.get('/api/demo/:id', wrap(async (req, res) => {
   res.json({ ...l, qr: await QRCode.toDataURL(l.contactUrl, { margin: 1, width: 480 }) });
 }));
 
+// Demo only: make Maya's battery drain fast so the battery forecast can be shown live.
+const batteryDrains = new Map();
+app.post('/api/demo/:id/drain-battery', wrap(async (req, res) => {
+  if (!DEMO) throw new LadderError(404, 'Not found');
+  const s = await loadSession(req.params.id);
+  batteryDrains.set(s.id, { start: 0.32, perMin: 0.1, at: Date.now() }); // 32%, losing 10 points a minute
+  res.json({ ok: true });
+}));
+
 app.post('/api/sessions', wrap(async (req, res) => {
   const b = req.body || {};
   const everyMin = num(b.checkin_every_min, 1, 240);
@@ -153,6 +163,8 @@ app.post('/api/sessions', wrap(async (req, res) => {
 
 app.get('/api/sessions/:id', wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
+  const outlook = assess(s, await store.listEvents(s.id));
+  const sinceResponse = await lastResponseAt(store, s);
   res.json({
     level: s.level,
     seconds_left: secondsLeft(s),
@@ -161,8 +173,15 @@ app.get('/api/sessions/:id', wrap(async (req, res) => {
     contact_name: s.contact_name,
     checkin_every_s: s.checkin_every_s,
     // Length of the current window, so the phone can draw a draining ring.
-    window_s: s.level === 'ARMED' ? s.checkin_every_s : ({ NUDGE: TIMINGS.nudge, ALARM: TIMINGS.alarm, CONTACT: TIMINGS.contact })[s.level] ?? null,
+    window_s: s.level === 'ARMED' ? Math.max(1, Math.round((new Date(s.next_checkin_at) - sinceResponse) / 1000)) : ({ NUDGE: TIMINGS.nudge, ALARM: TIMINGS.alarm, CONTACT: TIMINGS.contact })[s.level] ?? null,
     demo: DEMO,
+    outlook: {
+      level: outlook.level,
+      signals: outlook.signals.filter((x) => x.key !== 'phone_offline').map((x) => ({ key: x.key, text: x.you })),
+      interval_s: outlook.nextIntervalS,
+      reason: outlook.intervalReason,
+      battery_dies_at: outlook.battery.diesAt,
+    },
   });
 }));
 
@@ -173,7 +192,11 @@ app.post('/api/sessions/:id/heartbeat', wrap(async (req, res) => {
   let lat = num(b.lat, -90, 90);
   let lng = num(b.lng, -180, 180);
   if (lat == null || lng == null) lat = lng = null;
-  await store.addEvent({ session_id: s.id, kind: 'heartbeat', lat, lng, battery: num(b.battery, 0, 1) });
+  let battery = num(b.battery, 0, 1);
+  // Demo only: a simulated fast battery drain replaces the real reading.
+  const drain = DEMO && batteryDrains.get(s.id);
+  if (drain) battery = Math.max(0.02, drain.start - ((Date.now() - drain.at) / 60000) * drain.perMin);
+  await store.addEvent({ session_id: s.id, kind: 'heartbeat', lat, lng, battery });
   res.json({ ok: true });
 }));
 
@@ -213,9 +236,16 @@ app.get('/api/contact/:token', wrap(async (req, res) => {
     summary: null,
     last_heartbeat: null,
   };
-  // Location and the summary are only shared once the person has stopped responding.
+  // Location, summary and phone status are only shared once the person has stopped responding.
   if (alerting) {
     out.summary = s.summary;
+    const outlook = assess(s, await store.listEvents(s.id), now);
+    out.outlook = {
+      level: outlook.level,
+      signals: outlook.signals.map((x) => ({ key: x.key, text: x.them })),
+      phone_reporting: outlook.phone.lastSeenAt ? !outlook.phone.offline : null,
+      phone_last_seen: outlook.phone.lastSeenAt,
+    };
     const beat = await store.lastEvent(s.id, ['heartbeat']);
     if (beat) {
       out.last_heartbeat = {

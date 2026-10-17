@@ -1,7 +1,8 @@
 // Plain-language summary for the trusted contact. Gemini when configured, template otherwise.
 import { GoogleGenAI } from '@google/genai';
+import { assess } from './predict.js';
 
-const INSTRUCTION = `Write 2–3 short factual sentences for a trusted friend about this person's night, using ONLY the events given: when they armed it, the last time they responded, how long since, the last known location time, and battery. Then one line starting "Suggested next step:" (call them; if no answer and you are nearby, go to the last location; if you believe they are in danger, call 911). Never guess at causes, substances, intoxication or intent. Never say "drugged" or "drunk". Say "hasn't responded".`;
+const INSTRUCTION = `Write 2–3 short factual sentences for a trusted friend about this person's night, using ONLY the events given: when they armed it, the last time they responded, how long since, the last known location time, and battery. Then one line starting "Suggested next step:" (call them; if no answer and you are nearby, go to the last location; if you believe they are in danger, call 911). Never guess at causes, substances, intoxication or intent. Never say "drugged" or "drunk". Say "hasn't responded". You may also use the phone_status facts (whether the phone is still reporting, and the battery forecast) to say whether the phone still has signal.`;
 
 const TIMEOUT_MS = 3000;
 
@@ -21,6 +22,7 @@ function facts(session, events, now) {
     minutesSince: minutesBetween(lastResponse, now),
     lastLocationAt: lastLoc ? new Date(lastLoc.time) : null,
     battery: lastBeat && lastBeat.battery != null ? Math.round(lastBeat.battery * 100) : null,
+    outlook: assess(session, events, now),
   };
 }
 
@@ -32,13 +34,23 @@ export function templateSummary(session, events, now = new Date()) {
     f.lastLocationAt
       ? `The last known location was recorded at ${fmtTime(f.lastLocationAt)}${f.battery != null ? ` with battery at ${f.battery}%` : ''}.`
       : `No location has been shared${f.battery != null ? `; battery was last at ${f.battery}%` : ''}.`,
+    f.outlook.phone.offline
+      ? `The phone stopped reporting at ${fmtTime(f.outlook.phone.lastSeenAt)}${f.battery != null && f.battery <= 10 ? `, with ${f.battery}% battery, so it may have run out of power` : ''}.`
+      : f.outlook.phone.lastSeenAt ? 'The phone is still reporting, so it has power and signal.' : '',
     `Suggested next step: call ${f.name}; if there is no answer and you are nearby, go to the last location; if you believe ${f.name} is in danger, call 911.`,
   ];
-  return parts.join(' ');
+  return parts.filter(Boolean).join(' ');
 }
 
 function compactEvents(session, events) {
+  const o = assess(session, events);
   return {
+    phone_status: {
+      still_reporting: o.phone.lastSeenAt ? !o.phone.offline : null,
+      last_report: o.phone.lastSeenAt,
+      battery_pct: o.battery.pct,
+      battery_forecast_empty_at: o.battery.diesAt,
+    },
     person: session.user_name,
     armed_at: session.armed_at,
     now: new Date().toISOString(),
