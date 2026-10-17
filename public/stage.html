@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0E1430" />
+  <meta name="theme-color" content="#000000" />
   <title>Night Out Switch · Live</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Unbounded:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/theme.js"></script>
   <script src="/trace.js"></script>
@@ -17,7 +17,7 @@
   <style>
     html, body { height: 100%; }
     body { overflow: hidden; transition: background-color .5s ease; }
-    body.silent { background: radial-gradient(70% 60% at 50% 40%, rgba(229, 48, 58, .22), transparent 70%), #160E26; }
+    body.silent { background: radial-gradient(70% 60% at 50% 40%, rgb(var(--signal-rgb) / .22), transparent 70%), #000; }
 
     .stage { display: grid; grid-template-columns: auto minmax(40px, 90px) minmax(0, 1fr) minmax(40px, 90px) auto; align-items: center; height: calc(100vh - 76px); padding: 0 28px 20px; }
     .device { position: relative; width: calc(375px * var(--s)); height: calc(780px * var(--s)); border-radius: calc(52px * var(--s)); padding: calc(10px * var(--s)); background: #060A1F; box-shadow: 0 0 0 1.5px #2C3670, 0 40px 100px -30px rgba(0, 0, 0, .9); }
@@ -29,7 +29,7 @@
 
     /* Wires carry real events between the phones and the server */
     .wire { position: relative; height: 4px; border-radius: 4px; background: repeating-linear-gradient(90deg, rgba(174,181,218,.35) 0 8px, transparent 8px 16px); background-size: 32px 4px; animation: flow 1.2s linear infinite; }
-    .silent .wire.out { background: repeating-linear-gradient(90deg, rgba(229,48,58,.6) 0 8px, transparent 8px 16px); background-size: 32px 4px; }
+    .silent .wire.out { background: repeating-linear-gradient(90deg, rgb(var(--signal-rgb) / .6) 0 8px, transparent 8px 16px); background-size: 32px 4px; }
     @keyframes flow { to { background-position: 32px 0; } }
     .packet { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; }
     .packet.big { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
@@ -37,7 +37,7 @@
     .feed li { animation: feed-in .45s cubic-bezier(.2,.7,.2,1) both; }
     @keyframes feed-in { from { opacity: 0; transform: translateY(-10px); } }
     .flash { animation: stage-flash .9s ease-out; }
-    @keyframes stage-flash { 0% { box-shadow: 0 0 0 0 rgba(229,48,58,.9), 0 0 0 1.5px #E5303A; } 100% { box-shadow: 0 0 0 40px rgba(229,48,58,0), 0 0 0 1.5px #2C3670; } }
+    @keyframes stage-flash { 0% { box-shadow: 0 0 0 0 rgb(var(--signal-rgb) / .9), 0 0 0 1.5px #E5303A; } 100% { box-shadow: 0 0 0 40px rgb(var(--signal-rgb) / 0), 0 0 0 1.5px #2C3670; } }
 
     #start { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow: hidden; transition: opacity .6s ease, transform .9s cubic-bezier(.7,0,.84,0); }
     #start.leave { opacity: 0; transform: scale(1.06); pointer-events: none; }
@@ -53,11 +53,10 @@
     @media (prefers-reduced-motion: reduce) { .wire { animation: none; } }
   </style>
 </head>
-<body class="streetlight grain">
+<body class="streetlight theme-dark">
   <!-- One click unlocks sound for both phones and starts a fresh night -->
   <div id="start" class="streetlight letterbox">
-    <canvas id="startBokeh" class="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true"></canvas>
-    <div class="power-rings" id="startRings" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="power-rings" id="startRings" aria-hidden="true"><i></i><i></i><i></i></div>
     <p class="relative text-[14px] font-semibold text-mist" data-reveal style="--i:0">Live demo</p>
     <h1 class="display relative mt-5 max-w-5xl px-6 text-[clamp(34px,4.3vw,60px)] font-extrabold leading-[1.04]" data-reveal style="--i:1">Two phones. One night.<br />No one presses a button.</h1>
     <p class="relative mt-6 max-w-xl px-6 text-xl text-mist" data-reveal style="--i:2">Maya's phone on the left, her friend Jordan's on the right. Flip the switch, then watch what happens when Maya goes quiet.</p>
@@ -77,11 +76,11 @@
       <button id="restart" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Restart night</button>
       <button id="drain" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Drain battery</button>
       <button id="cold" class="btn btn-ghost min-h-[2.5rem] px-4 text-[14px]">Switch reads −2°C</button>
-      <div class="ml-2 flex items-center gap-3 rounded-2xl bg-paper p-1.5 pr-3 text-ink">
+      <div class="ml-2 flex items-center gap-3 rounded-2xl bg-white p-1.5 pr-3 text-black">
         <img id="qrMaya" alt="QR code to open Maya's phone on your phone" class="h-14 w-14 rounded-lg" />
         <span class="text-[13px] font-bold leading-tight">Scan to<br />be Maya</span>
       </div>
-      <div class="flex items-center gap-3 rounded-2xl bg-paper p-1.5 pr-3 text-ink">
+      <div class="flex items-center gap-3 rounded-2xl bg-white p-1.5 pr-3 text-black">
         <img id="qr" alt="QR code to open Jordan's view on your phone" class="h-14 w-14 rounded-lg" />
         <span class="text-[13px] font-bold leading-tight">Scan to<br />be Jordan</span>
       </div>
@@ -254,7 +253,6 @@
     setInterval(poll, 1000);
 
     // Opening scene: city lights, the letterbox opens, then flip the switch to start.
-    NOS_MOTION.bokeh($('#startBokeh'), { count: 36 });
     requestAnimationFrame(() => setTimeout(() => $('#start').classList.add('open'), 200));
     NOS_MOTION.reveal($('#start'));
     NOS_MOTION.slideSwitch($('#startSwitch'), async () => {
