@@ -2,7 +2,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { assess } from './predict.js';
 
-const INSTRUCTION = `Write 2–3 short factual sentences for a trusted friend about this person's night, using ONLY the events given: when they armed it, the last time they responded, how long since, the last known location time, and battery. Then one line starting "Suggested next step:" (call them; if no answer and you are nearby, go to the last location; if you believe they are in danger, call 911). Never guess at causes, substances, intoxication or intent. Never say "drugged" or "drunk". Say "hasn't responded". You may also use the phone_status facts (whether the phone is still reporting, and the battery forecast) to say whether the phone still has signal.`;
+const INSTRUCTION = `Write 2–3 short factual sentences for a trusted friend about this person's night, using ONLY the facts below: when they armed it, the last time they responded, how long since, the phone's status and battery, and whether a location is on the map. Then one line starting "Suggested next step:" (call them; if no answer and you are nearby, go to the last location; if you believe they are in danger, call 911). Never guess at causes, substances, intoxication or intent. Never say "drugged" or "drunk". Say "hasn't responded". Do not add facts that are not listed. Do not include coordinates. Reply with only the sentences, no introduction.`;
 
 const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 3000;
 
@@ -42,26 +42,33 @@ export function templateSummary(session, events, now = new Date()) {
   return parts.filter(Boolean).join(' ');
 }
 
-function compactEvents(session, events) {
-  const o = assess(session, events);
-  return {
-    phone_status: {
-      still_reporting: o.phone.lastSeenAt ? !o.phone.offline : null,
-      last_report: o.phone.lastSeenAt,
-      battery_pct: o.battery.pct,
-      battery_forecast_empty_at: o.battery.diesAt,
-    },
-    person: session.user_name,
-    armed_at: session.armed_at,
-    now: new Date().toISOString(),
-    events: events.map((e) => ({
-      t: new Date(e.time).toISOString(),
-      kind: e.kind,
-      ...(e.lat != null ? { lat: +Number(e.lat).toFixed(4), lng: +Number(e.lng).toFixed(4) } : {}),
-      ...(e.battery != null ? { battery: e.battery } : {}),
-      ...(e.detail ? { detail: e.detail } : {}),
-    })),
-  };
+// Small models invent things when handed raw events, so give them facts that are already true,
+// in local time and plain words.
+function factsForModel(session, events, now) {
+  const f = facts(session, events, now);
+  const o = f.outlook;
+  const mins = (d) => Math.max(0, Math.floor((now - d) / 60000));
+  const located = [...events].reverse().find((e) => e.kind === 'heartbeat' && e.lat != null);
+  const lines = [
+    `Person: ${f.name}`,
+    `Armed at: ${fmtTime(f.armedAt)}`,
+    `Last responded at: ${fmtTime(f.lastResponse)} (${mins(f.lastResponse)} minutes ago)`,
+    `Phone: ${!o.phone.lastSeenAt ? 'has not reported' : o.phone.offline ? `stopped reporting at ${fmtTime(o.phone.lastSeenAt)}` : 'still reporting, so it has power and signal'}`,
+    `Battery: ${f.battery != null ? `${f.battery}%` : 'unknown'}${o.battery.diesAt ? `, on track to run out around ${fmtTime(o.battery.diesAt)}` : ''}`,
+    `Location: ${located ? `shown on the map, last updated ${fmtTime(located.time)}` : 'not shared'}`,
+  ];
+  const extra = o.signals.filter((x) => !['phone_offline', 'battery_forecast', 'battery_low'].includes(x.key)).map((x) => x.them);
+  if (extra.length) lines.push(`Other facts: ${extra.join(' ')}`);
+  return lines.join('\n');
+}
+
+// Reject anything that doesn't look like a clean, safe summary; the template stays in that case.
+function cleanModelText(text) {
+  let t = (text || '').trim().replace(/^(here (are|is)|sure|okay)[^\n]*\n+/i, '').trim();
+  if (!/suggested next step:/i.test(t)) throw new Error('missing "Suggested next step"');
+  if (/-?\d{1,3}\.\d{3,}/.test(t)) throw new Error('contains coordinates');
+  if (/drunk|drugged|intoxicat|spiked/i.test(t)) throw new Error('speculates about causes');
+  return t;
 }
 
 // Race a model call against the timeout so a slow model never delays the alert.
@@ -104,16 +111,14 @@ async function gemini(prompt) {
  * leaves our servers), then Gemini, then a factual template. Returns { text, source }.
  */
 export async function summarize(session, events, now = new Date()) {
-  const prompt = `${INSTRUCTION}\n\nEvents (JSON):\n${JSON.stringify(compactEvents(session, events))}`;
+  const prompt = `${INSTRUCTION}\n\nFacts:\n${factsForModel(session, events, now)}`;
   const providers = [
     process.env.LLM_BASE_URL && ['vultr', selfHosted],
     process.env.GEMINI_API_KEY && ['gemini', gemini],
   ].filter(Boolean);
   for (const [source, call] of providers) {
     try {
-      const text = ((await withTimeout(call(prompt))) || '').trim();
-      if (text) return { text, source };
-      throw new Error('empty response');
+      return { text: cleanModelText(await withTimeout(call(prompt))), source };
     } catch (err) {
       console.warn(`[summary] ${source} failed (${err.message}), trying the next option`);
     }
