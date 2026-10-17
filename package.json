@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node server.js",
     "smoke": "node scripts/smoke.js",
-    "switch-sim": "node scripts/switch-sim.js"
+    "switch-sim": "node scripts/switch-sim.js",
+    "build:css": "tailwindcss -c tailwind.config.cjs -i src/css/tw.css -o public/tw.css --minify"
   },
   "dependencies": {
     "@google/genai": "^2.30.0",
@@ -18,5 +19,8 @@
     "express": "^5.3.0",
     "pg": "^8.23.1",
     "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
   }
 }

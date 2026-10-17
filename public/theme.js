@@ -1,25 +1,4 @@
-// Shared Tailwind theme (loaded right after the Tailwind CDN script) + small UI helpers.
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        // CSS-variable tokens (see styles.css): light Apple theme by default, .theme-dark for the stage.
-        ink: 'rgb(var(--ink-rgb) / <alpha-value>)',       // background
-        dusk: 'rgb(var(--dusk-rgb) / <alpha-value>)',     // secondary surface
-        line: 'rgb(var(--line-rgb) / <alpha-value>)',     // hairlines
-        sodium: 'rgb(var(--sodium-rgb) / <alpha-value>)', // accent
-        signal: 'rgb(var(--signal-rgb) / <alpha-value>)', // alert red
-        mint: 'rgb(var(--mint-rgb) / <alpha-value>)',     // OK green
-        mist: 'rgb(var(--mist-rgb) / <alpha-value>)',     // secondary text
-        paper: 'rgb(var(--paper-rgb) / <alpha-value>)',   // primary text
-      },
-      fontFamily: {
-        display: ['Geist', 'Inter', 'system-ui', 'sans-serif'],
-        sans: ['Geist', 'Inter', 'system-ui', 'sans-serif'],
-      },
-    },
-  },
-};
+// Small shared UI helpers. The Tailwind theme lives in tailwind.config.cjs (compiled to /tw.css).
 
 window.NOS = {
   STOPS: [
