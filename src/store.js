@@ -71,6 +71,18 @@ function memoryStore() {
     async listEvents(sessionId) {
       return events.filter((e) => e.session_id === sessionId).sort((a, b) => a.time - b.time);
     },
+    async heartbeatBuckets(sessionId, since) {
+      const buckets = new Map();
+      for (const e of events) {
+        if (e.session_id !== sessionId || e.kind !== 'heartbeat' || e.time < since) continue;
+        const b = Math.floor(e.time.getTime() / 60000) * 60000;
+        const cur = buckets.get(b) || { time: new Date(b), beats: 0, min_battery: null };
+        cur.beats += 1;
+        if (e.battery != null) cur.min_battery = cur.min_battery == null ? e.battery : Math.min(cur.min_battery, e.battery);
+        buckets.set(b, cur);
+      }
+      return [...buckets.values()].sort((a, b) => a.time - b.time);
+    },
     async lastEvent(sessionId, kinds) {
       for (let i = events.length - 1; i >= 0; i--) {
         const e = events[i];
@@ -88,15 +100,46 @@ async function pgStore(url) {
     ssl: /sslmode=disable|localhost|127\.0\.0\.1/.test(url) ? false : { rejectUnauthorized: false },
   });
   const q = (text, params) => pool.query(text, params);
+  const tryQ = async (text) => { try { await q(text); return true; } catch (err) { console.warn(`[store] skipped: ${err.message}`); return false; } };
   return {
     kind: 'postgres',
+    timescale: false,
     async init() {
       await q(SCHEMA);
-      try {
-        await q(`SELECT create_hypertable('events','time', if_not_exists => TRUE)`);
-      } catch {
-        // Only works on Timescale / Tiger Data; plain Postgres is fine without it.
+      // Tiger Data (TimescaleDB) features. Each is optional: plain Postgres skips them and still works.
+      await tryQ('CREATE EXTENSION IF NOT EXISTS timescaledb');
+      const { rows } = await q(`SELECT 1 FROM pg_extension WHERE extname = 'timescaledb'`);
+      this.timescale = rows.length > 0;
+      if (!this.timescale) return;
+      // Hypertable: events are a time series, partitioned by time.
+      await tryQ(`SELECT create_hypertable('events', 'time', if_not_exists => TRUE, migrate_data => TRUE)`);
+      // Compression: older nights shrink by ~90%, grouped per session.
+      await tryQ(`ALTER TABLE events SET (timescaledb.compress, timescaledb.compress_segmentby = 'session_id', timescaledb.compress_orderby = 'time DESC')`);
+      await tryQ(`SELECT add_compression_policy('events', INTERVAL '1 day', if_not_exists => TRUE)`);
+      // Retention: her location trail deletes itself after a week. Privacy by default.
+      await tryQ(`SELECT add_retention_policy('events', INTERVAL '7 days', if_not_exists => TRUE)`);
+      // Continuous aggregate: heartbeats per minute, kept fresh in the background, for the signal trace.
+      await tryQ(`CREATE MATERIALIZED VIEW IF NOT EXISTS heartbeat_1m
+        WITH (timescaledb.continuous, timescaledb.materialized_only = false) AS
+        SELECT session_id, time_bucket('1 minute', time) AS bucket, count(*) AS beats, min(battery) AS min_battery
+        FROM events WHERE kind = 'heartbeat' GROUP BY session_id, bucket WITH NO DATA`);
+      await tryQ(`SELECT add_continuous_aggregate_policy('heartbeat_1m',
+        start_offset => INTERVAL '2 hours', end_offset => INTERVAL '1 minute', schedule_interval => INTERVAL '1 minute', if_not_exists => TRUE)`);
+    },
+    async heartbeatBuckets(sessionId, since) {
+      if (this.timescale) {
+        const { rows } = await q(
+          'SELECT bucket AS time, beats, min_battery FROM heartbeat_1m WHERE session_id = $1 AND bucket >= $2 ORDER BY bucket',
+          [sessionId, since],
+        );
+        return rows;
       }
+      const { rows } = await q(
+        `SELECT date_trunc('minute', time) AS time, count(*)::int AS beats, min(battery) AS min_battery
+         FROM events WHERE session_id = $1 AND kind = 'heartbeat' AND time >= $2 GROUP BY 1 ORDER BY 1`,
+        [sessionId, since],
+      );
+      return rows;
     },
     async createSession(s) {
       const vals = SESSION_COLS.map((c) => s[c] ?? null);
