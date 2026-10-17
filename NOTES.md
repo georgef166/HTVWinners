@@ -53,3 +53,13 @@
 - Demo thresholds are compressed (3 min battery horizon, 5 s "slow" reply, 25 s offline). `POST /api/demo/:id/drain-battery` (demo only) fakes a 10-points-a-minute drain from 32%.
 - The contact sees phone status only once alerting: "still on and has signal" vs "gone dark", which tells "not answering" apart from "dead phone".
 - Ideas not built: personal baselines (reply speed vs this person's usual), learning from past nights, movement signals (stationary for long, heading away from home), a weather/temperature signal from hardware.
+
+## Hardware Switch (`hardware/`)
+
+- Uno R4 WiFi talks straight to the server over WiFi. Assumed common kit parts: RC522 NFC, KY-023 joystick, TTP223 touch, BMP280, a single LED and a passive buzzer, plus the R4's built-in LED matrix. Firmware compiles with arduino-cli for `arduino:renesas_uno:unor4wifi` (35% flash); it has not been run on a real board yet.
+- One Switch per server; it follows the most recently armed session (in memory, so restarting the server unlinks it until the next arm). Auth is a shared `SWITCH_KEY` header.
+- Joystick PIN uses digits 1 to 4 only (up/right/down/left), so a PIN with 0 or 5 to 9 can't be entered on the Switch; the phone keypad still works.
+- NFC home tag resolves the night with no PIN; in demo mode any tag works unless `SWITCH_HOME_TAG` is set.
+- Temperature at or below 5°C within the last minute (demo) / 5 min (real) adds a "cold" signal (weight 1). Pressure is logged but not used for prediction yet (too noisy for fall detection without more work).
+- `POST /api/demo/:id/cold` toggles a fake −2°C reading for demos. `npm run switch-sim` speaks the same protocol from the keyboard or piped commands.
+- Ideas not built: pairing several Switches to sessions (e.g. by tapping the Switch's NFC tag on the phone), a "panic" long-press that skips straight to CONTACT, using pressure changes for fall detection, running the Switch's own countdown offline if WiFi drops.

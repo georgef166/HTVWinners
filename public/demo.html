@@ -47,9 +47,25 @@
         <p class="mt-6 text-[15px] text-mist">Sound needs a tap on each page first. The demo PIN is <b class="text-paper">1234</b>.</p>
 
         <div class="mt-8 rounded-[24px] border border-line bg-dusk/60 p-5">
+          <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <h2 class="display text-lg font-semibold">The hardware Switch</h2>
+            <span id="switchStatus" class="flex items-center gap-2 whitespace-nowrap text-[13px] font-semibold text-mist"><span id="switchDot" class="h-2 w-2 rounded-full bg-line"></span><span id="switchLabel">Not connected</span></span>
+          </div>
+          <ul class="mt-3 space-y-1.5 text-[15px] leading-relaxed text-mist">
+            <li><b class="text-paper">Touch</b> the pad to check in.</li>
+            <li><b class="text-paper">Joystick</b> up, right, down, left, then press, to cancel an alarm (that's PIN 1234).</li>
+            <li><b class="text-paper">Tap the NFC tag</b> to end the night.</li>
+          </ul>
+          <p class="mt-3 text-[13px] text-mist">No board handy? Run <code class="whitespace-nowrap rounded bg-ink px-1.5 py-0.5 text-paper">npm run switch-sim</code> for a keyboard stand-in.</p>
+        </div>
+
+        <div class="mt-4 rounded-[24px] border border-line bg-dusk/60 p-5">
           <h2 class="display text-lg font-semibold">See it predict trouble</h2>
           <p class="mt-2 text-[15px] leading-relaxed text-mist">Drain the battery and <span class="who">Maya</span>'s phone warns her before it dies. Or wait a few seconds before tapping “I'm OK” and the check-ins tighten.</p>
-          <button id="drain" class="btn btn-ghost mt-4 min-h-[3rem] text-[15px]">Drain <span class="who">Maya</span>'s battery fast</button>
+          <div class="mt-4 flex flex-wrap gap-3">
+            <button id="drain" class="btn btn-ghost min-h-[3rem] text-[15px]">Drain <span class="who">Maya</span>'s battery fast</button>
+            <button id="cold" class="btn btn-ghost min-h-[3rem] text-[15px]">Make the Switch read −2°C</button>
+          </div>
           <p id="drainNote" class="mt-2 hidden text-[15px] font-semibold text-sodium" role="status">Draining. The warning shows on Maya's phone in about 20 seconds.</p>
         </div>
       </section>
@@ -71,6 +87,25 @@
     document.getElementById('logo').innerHTML = NOS.logo();
     document.getElementById('meIcon').innerHTML = NOS.logo('sm');
     const id = new URLSearchParams(location.search).get('id');
+    document.getElementById('cold').addEventListener('click', async (e) => {
+      const r = await fetch(`/api/demo/${encodeURIComponent(id)}/cold`, { method: 'POST' });
+      if (!r.ok) return;
+      const { cold } = await r.json();
+      e.currentTarget.textContent = cold ? 'Back to normal temperature' : 'Make the Switch read −2°C';
+      const note = document.getElementById('drainNote');
+      note.textContent = cold ? 'The Switch reports −2°C on its next reading (within 10 seconds).' : 'Temperature back to the real reading.';
+      note.classList.remove('hidden');
+    });
+    // Live Switch connection status.
+    setInterval(async () => {
+      const r = await fetch(`/api/demo/${encodeURIComponent(id)}`).catch(() => null);
+      if (!r || !r.ok) return;
+      const { switch: sw } = await r.json();
+      document.getElementById('switchDot').className = `h-2 w-2 rounded-full ${sw.connected ? 'bg-mint' : 'bg-line'}`;
+      document.getElementById('switchLabel').textContent = sw.connected
+        ? `Connected${sw.temp_c != null ? `, ${String(Math.round(sw.temp_c)).replace('-', '−')}°C` : ''}`
+        : 'Not connected';
+    }, 2000);
     document.getElementById('drain').addEventListener('click', async (e) => {
       e.currentTarget.disabled = true;
       const r = await fetch(`/api/demo/${encodeURIComponent(id)}/drain-battery`, { method: 'POST' });

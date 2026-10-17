@@ -73,6 +73,9 @@
             </div>
             <p id="outlookReason" class="mt-1 text-[14px] leading-snug text-mist"></p>
             <ul id="outlookSignals" class="mt-2 hidden space-y-1.5 text-[14px] font-semibold leading-snug text-sodium"></ul>
+            <p id="switchRow" class="mt-2.5 hidden items-center gap-2 border-t border-line pt-2.5 text-[13px] font-semibold text-mist">
+              <span class="breathe h-2 w-2 rounded-full bg-mint"></span><span id="switchText"></span>
+            </p>
           </div>
         </div>
         <div class="route-slot mb-8"></div>
@@ -311,6 +314,10 @@
       }
 
       renderOutlook(next.outlook);
+      const sw = next.switch || {};
+      $('#switchRow').classList.toggle('hidden', !sw.connected);
+      $('#switchRow').classList.toggle('flex', !!sw.connected);
+      $('#switchText').textContent = `Switch connected${sw.temp_c != null ? `, reading ${String(Math.round(sw.temp_c)).replace('-', '−')}°C` : ''}. Touch it to check in.`;
       if (view === 'CONTACT') {
         const onWay = next.contact_acked;
         $('#contactBadge').className = `flex h-16 w-16 items-center justify-center rounded-full ${onWay ? 'bg-mint/15 text-mint' : 'bg-signal/20 text-signal'}`;
