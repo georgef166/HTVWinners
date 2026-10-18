@@ -42,7 +42,7 @@ The BMP280 is a 3.3 V part, so power it from the 3.3V pin.
 1. In the Arduino IDE, install the **Arduino UNO R4 Boards** core (Boards Manager), then the **Adafruit BMP280 Library** (Library Manager; accept the dependencies). The DPS310 driver is included in the sketch.
 2. Copy `night-out-switch/arduino_secrets.example.h` to `night-out-switch/arduino_secrets.h` and fill in:
    - your WiFi name and password (the laptop and board must be on the same network; a phone hotspot works well at hackathons)
-   - `SERVER_HOST` and `SERVER_PORT`: the live server (`155-138-145-175.sslip.io`, port `80`; the server allows plain HTTP for `/api/switch/*` only), or the laptop's IP and port when running locally
+   - `SERVER_HOST` and `SERVER_PORT`: the live server (`stillaliveby.design`, or the older `155-138-145-175.sslip.io`, port `80`; the server allows plain HTTP for `/api/switch/*` only), or the laptop's IP and port when running locally
    - `SWITCH_KEY`: matches `SWITCH_KEY` in the server's `.env` (on Vultr: `node deploy/vultr.mjs ssh`, then look in the app's `.env`). With `DEMO` on and no key set, it's `demo-switch`
    - Leave the WiFi name as `your-wifi-name` to use the USB link instead (below)
 3. Open `night-out-switch/night-out-switch.ino`, pick **Arduino UNO R4 WiFi**, and upload. Open Serial Monitor at 115200 to watch it connect.

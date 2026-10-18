@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const base = (process.env.LIVE_URL || 'https://155-138-145-175.sslip.io').replace(/\/$/, '');
+const base = (process.env.LIVE_URL || 'https://stillaliveby.design').replace(/\/$/, '');
 const ok = (msg) => console.log(`  \x1b[32m✓\x1b[0m ${msg}`);
 const bad = (msg) => console.log(`  \x1b[31m✗\x1b[0m ${msg}`);
 let failures = 0;
