@@ -15,6 +15,14 @@ Disarm (PIN) or the contact's "False alarm / resolved" ──▶ RESOLVED
 
 The timer lives on the server. If the phone dies or goes quiet, the ladder still climbs.
 
+## Demo day
+
+```bash
+npm run live
+```
+
+Checks every live service (app, Tiger Cloud, Llama, Whisper, Grafana), sends a spoken "Help!" and a calm clip through Whisper to prove the instant alert fires only when it should, starts the USB bridge if the Switch is plugged in, and opens the stage.
+
 ## Run it
 
 ```bash

@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "live": "node scripts/live.js",
     "start": "node server.js",
     "smoke": "node scripts/smoke.js",
     "switch-sim": "node scripts/switch-sim.js",
