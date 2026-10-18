@@ -45,13 +45,13 @@ export function createHighlighter({ root, parts, anchors: anchorOpt, reducedMoti
   const _box = new THREE.Box3(), _c = new THREE.Vector3();
   // Non-component meshes on the front side (root-space bbox centre z > -0.2) get owner '*F' and are
   // faded to ~0.03 when focused so they don't ghost through the translucent PCB; the rest dim to 0.25.
+  const frontMeshes = [];
   function ownerFor(o) {
     const p = partMeshes.get(o);
     if (p) return p;
-    root.updateWorldMatrix(true, true);
-    if (_box.setFromObject(o).isEmpty()) return '*';
-    root.worldToLocal(_box.getCenter(_c));
-    return _c.z > -0.2 ? '*F' : '*';
+    // PCB plate (flagged in geometry.js) dims to 0.25; everything else non-component is front jewelry and fades out
+    for (let a = o; a && a !== root; a = a.parent) if (a.userData && a.userData.pcb) return '*P';
+    return '*F';
   }
 
   function register(mat, owner) {
@@ -60,6 +60,7 @@ export function createHighlighter({ root, parts, anchors: anchorOpt, reducedMoti
       mat, owner,
       orig: {
         opacity: mat.opacity, transparent: mat.transparent, depthWrite: mat.depthWrite,
+        col: mat.color && mat.color.isColor ? mat.color.clone() : null,
         hasEm: !!(mat.emissive && mat.emissive.isColor),
         em: mat.emissive && mat.emissive.isColor ? mat.emissive.clone() : null,
         emI: mat.emissiveIntensity,
@@ -72,6 +73,7 @@ export function createHighlighter({ root, parts, anchors: anchorOpt, reducedMoti
   root.traverse((o) => {
     if (!(o.isMesh || o.isLine || o.isPoints) || !o.material || o.userData.isGlowSprite) return;
     const owner = ownerFor(o);
+    if (owner === '*F') frontMeshes.push(o);
     const fix = (m) => {
       const prev = ownerOf.get(m);
       if (prev === undefined) { ownerOf.set(m, owner); return register(m, owner); }
@@ -118,7 +120,8 @@ export function createHighlighter({ root, parts, anchors: anchorOpt, reducedMoti
   }
 
   // ---- focus / hover state ------------------------------------------------------------------
-  let focusId = null, hoverId = null, now = 0, releasedAt = -10, time = 0;
+  let focusId = null, hoverId = null, now = 0, releasedAt = -10, time = 0, frontK = 0;
+  const applyFront = () => { const v = frontK < 0.99; for (const m of frontMeshes) m.visible = v; };
 
   function retarget() {
     for (const s of states.values()) {
@@ -130,10 +133,20 @@ export function createHighlighter({ root, parts, anchors: anchorOpt, reducedMoti
   function settle() { // reduced motion: jump straight to targets
     for (const s of states.values()) { s.dimK = s.dimT; s.emK = s.emT; apply(s); }
     for (const id in glows) { glows[id].k = id === focusId ? 1 : 0; applyGlow(id, 0); }
+    frontK = focusId ? 1 : 0; applyFront();
   }
 
   function apply(s) {
     const m = s.mat, o = s.orig;
+    if (s.owner === '*P') { // PCB plate: darken instead of fading, so overlapping coplanar shapes never show through each other
+      if (s.applied.dim !== s.dimK) {
+        s.applied.dim = s.dimK;
+        const f = THREE.MathUtils.lerp(1, 0.3, s.dimK);
+        if (o.col) m.color.copy(o.col).multiplyScalar(f);
+        if (o.hasEm) m.emissiveIntensity = o.emI * f;
+      }
+      return;
+    }
     if (s.applied.dim !== s.dimK) {
       s.applied.dim = s.dimK;
       const was = m.transparent;
@@ -196,6 +209,7 @@ export function createHighlighter({ root, parts, anchors: anchorOpt, reducedMoti
       now += dt;
       if (rm) { for (const id in glows) applyGlow(id, now); return; }
       const step = dt / 0.4;
+      frontK = approach(frontK, focusId ? 1 : 0, step); applyFront();
       for (const s of states.values()) {
         if (s.dimK === s.dimT && s.emK === s.emT) continue;
         s.dimK = approach(s.dimK, s.dimT, step);

@@ -295,6 +295,7 @@ function stripFrontFaces(geo) {
 
 function buildPcb(M, lowPower, polys, nets, holes, field) {
   const g = new THREE.Group();
+  g.userData.pcb = true; // highlight.js: dims (not hides) with the rest of the back
   const shapes = polys.map((p) => new THREE.Shape(p.map(([x, y]) => new THREE.Vector2(x, y))));
 
   // plate body (navy board edge), tucked up into the wings so it touches them

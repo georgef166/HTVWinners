@@ -173,3 +173,33 @@ body.app { min-height: 100dvh; height: 100dvh; overflow: hidden; user-select: no
   #loading #loadLogo { animation: none; }
 }
 #top .icon-btn { color: var(--paper); }
+
+/* ---- Compatibility with the shared stylesheet ----
+   styles.css no longer ships .icon-btn, .pill, .eyebrow, .mono or --font-mono / --radius, so this page defines
+   what it needs here, using the shared tokens and the 8px / 16px / full radius scale. */
+:root { --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; --radius: 16px; }
+.mono { font-family: var(--font-mono); }
+.eyebrow { font: 500 .75rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mist); }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 999px;
+  color: var(--paper); background: rgb(255 255 255 / .06); border: 1px solid rgb(255 255 255 / .14);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.icon-btn:hover { background: rgb(255 255 255 / .12); }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
+  font: 700 .6875rem var(--font-mono); letter-spacing: .04em; text-transform: uppercase; color: var(--paper);
+  background: rgb(255 255 255 / .06); border: 1px solid rgb(255 255 255 / .14);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+#tooltip { border-radius: 16px; }
+#panel { border-radius: 16px; }
+#fallback li { border-radius: 16px; border: 1px solid rgb(255 255 255 / .1); background: rgb(255 255 255 / .04); }
+#list button, #flip { border-color: rgb(255 255 255 / .14); }
+#flip, .list-btn {
+  color: var(--paper); background: rgb(255 255 255 / .06); border: 1px solid rgb(255 255 255 / .14);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.list-btn:hover { background: rgb(255 255 255 / .12); }
+/* The panel sits over the 3D board, so keep it nearly opaque for readable text. */
+#panel { background: rgb(14 22 40 / .94); border: 1px solid rgb(255 255 255 / .1); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
