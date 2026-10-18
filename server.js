@@ -6,7 +6,7 @@ import { assess } from './src/predict.js';
 import { analyzeClip } from './src/distress.js';
 import {
   DEMO, TIMINGS, LadderError, startTicker, contactLink, lastResponseAt, secondsLeft,
-  checkinAck, standDown, disarm, contactAck, resolve, promptCheckin,
+  checkinAck, standDown, disarm, contactAck, resolve, promptCheckin, alertContact,
 } from './src/ladder.js';
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -183,6 +183,7 @@ app.get('/api/sessions/:id', wrap(async (req, res) => {
     seconds_left: secondsLeft(s),
     // Exact deadline plus the server's clock, so every screen counts down to the same second.
     deadline_ms: deadline ? new Date(deadline).getTime() : null,
+    danger: await dangerFor(s),
     now_ms: Date.now(),
     contact_acked: s.contact_acked,
     user_name: s.user_name,
@@ -205,7 +206,7 @@ app.get('/api/sessions/:id', wrap(async (req, res) => {
 // The signal trace: her night as a time series (responses, phone heartbeats, level changes).
 // No location in here, just timing.
 const TRACE_WINDOW_S = DEMO ? 60 : 45 * 60;
-const TRACE_KINDS = ['heartbeat', 'checkin_sent', 'checkin_ack', 'level_change', 'contact_ack', 'stand_down', 'resolved', 'device', 'distress_check'];
+const TRACE_KINDS = ['heartbeat', 'checkin_sent', 'checkin_ack', 'level_change', 'contact_ack', 'stand_down', 'resolved', 'device', 'distress_check', 'danger_alert'];
 async function traceFor(s) {
   const now = new Date();
   const since = now.getTime() - TRACE_WINDOW_S * 1000;
@@ -220,7 +221,7 @@ async function traceFor(s) {
     }
     if (!TRACE_KINDS.includes(e.kind) || (e.kind === 'device' && e.detail?.type === 'reading')) continue;
     const d = e.detail || {};
-    events.push({ t: new Date(t).toISOString(), kind: e.kind, detail: d.from || d.to || d.type || d.score != null || d.reason ? { from: d.from, to: d.to, type: d.type, score: d.score, cues: d.cues, reason: d.reason } : null });
+    events.push({ t: new Date(t).toISOString(), kind: e.kind, detail: d.from || d.to || d.type || d.score != null || d.reason ? { from: d.from, to: d.to, type: d.type, score: d.score, cues: d.cues, reason: d.reason, danger: d.danger } : null });
   }
   // Over a real night (45 min), phone heartbeats come from the per-minute continuous aggregate
   // instead of every raw row. The demo's 2-minute window keeps raw heartbeats.
@@ -244,16 +245,31 @@ app.get('/api/sessions/:id/trace', wrap(async (req, res) => {
 // The phone keeps a rolling 30 s of audio in memory and sends it only after a sudden loud spike.
 // The clip is analyzed in memory on our server and wiped; only the score and cues are kept.
 const lastAudioCheck = new Map();
+// A heard plea for help or aggression alerts the contact at once; a vaguer signal asks the person first.
 async function recordDistress(s, result, extra = {}) {
-  await store.addEvent({ session_id: s.id, kind: 'distress_check', detail: { score: result.score, cues: result.cues, transcribed: result.transcribed, ...extra } });
+  await store.addEvent({ session_id: s.id, kind: 'distress_check', detail: { score: result.score, cues: result.cues, spoken: result.spoken || [], danger: result.danger || null, transcribed: result.transcribed, ...extra } });
   await store.addMetrics(s.id, [{ metric: 'distress_score', value: result.score, source: extra.simulated ? 'demo' : 'phone' }]);
+  const fresh = await store.getSession(s.id);
+  if (result.danger && ['ARMED', 'NUDGE', 'ALARM'].includes(fresh.level)) {
+    const cues = [...result.cues].sort((x, y) => /loud noise/.test(x) - /loud noise/.test(y));  // what was said first
+    await alertContact(store, fresh, new Date(), { cues, danger: result.danger });
+    return { prompted: false, alerted: true };
+  }
   let prompted = false;
   if (result.score >= 0.5) {
-    const fresh = await store.getSession(s.id);
     prompted = fresh.level === 'ARMED';
     await promptCheckin(store, fresh, 'distress');
   }
-  return prompted;
+  return { prompted, alerted: false };
+}
+
+// What made the contact get alerted, if it was something the phone heard (since the last stand-down).
+async function dangerFor(s) {
+  if (!['CONTACT', 'WIDER'].includes(s.level)) return null;
+  const d = await store.lastEvent(s.id, ['danger_alert']);
+  const stood = await store.lastEvent(s.id, ['stand_down']);
+  if (!d || (stood && new Date(stood.time) > new Date(d.time))) return null;
+  return { level: d.detail.danger, cues: d.detail.cues, at: new Date(d.time).getTime() };
 }
 app.post('/api/sessions/:id/audio-check', express.raw({ type: ['audio/wav', 'application/octet-stream'], limit: '2mb' }), wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
@@ -263,18 +279,18 @@ app.post('/api/sessions/:id/audio-check', express.raw({ type: ['audio/wav', 'app
   lastAudioCheck.set(s.id, Date.now());
   const wav = Buffer.isBuffer(req.body) ? req.body : null;
   const result = await analyzeClip(wav, { peakDb: num(req.query.peak_db, -120, 0), baselineDb: num(req.query.baseline_db, -120, 0) });
-  const prompted = await recordDistress(s, result);
-  console.log(`[distress] session ${s.id.slice(0, 8)} score=${result.score} cues=${result.cues.length} transcribed=${result.transcribed}`);
-  res.json({ ...result, prompted });
+  const outcome = await recordDistress(s, result);
+  console.log(`[distress] session ${s.id.slice(0, 8)} score=${result.score} danger=${result.danger} transcribed=${result.transcribed} alerted=${outcome.alerted}`);
+  res.json({ ...result, ...outcome });
 }));
 
 // Demo only: pretend the phone just heard someone asking for help.
 app.post('/api/demo/:id/distress', wrap(async (req, res) => {
   if (!DEMO) throw new LadderError(404, 'Not found');
   const s = await loadSession(req.params.id);
-  const result = { score: 0.8, cues: ['a sudden loud noise or shouting', 'someone asking for help'], transcribed: false };
-  const prompted = await recordDistress(s, result, { simulated: true });
-  res.json({ ...result, prompted });
+  const result = { score: 0.7, cues: ['a sudden loud noise or shouting', 'someone shouting for help'], spoken: ['help'], danger: 'high', transcribed: false };
+  const outcome = await recordDistress(s, result, { simulated: true });
+  res.json({ ...result, ...outcome });
 }));
 
 // Her own dashboard: signals over the last stretch of the night.
@@ -353,6 +369,7 @@ app.get('/api/contact/:token', wrap(async (req, res) => {
     seconds_to_wider: s.level === 'CONTACT' && !s.contact_acked && s.backup_phone ? secondsLeft(s, now) : null,
     wider_deadline_ms: s.level === 'CONTACT' && !s.contact_acked && s.backup_phone && s.level_deadline ? new Date(s.level_deadline).getTime() : null,
     now_ms: now.getTime(),
+    danger: await dangerFor(s),
     summary: null,
     last_heartbeat: null,
   };

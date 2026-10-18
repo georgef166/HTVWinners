@@ -211,8 +211,10 @@
       const wIn = $('#wireIn'), wOut = $('#wireOut');
       if (e.kind === 'heartbeat') { if (animate) packet(wIn, { color: C.mint, ms: 700 }); return; }
       if (e.kind === 'distress_check') {
-        const heard = (e.detail?.cues || []).join(' and ') || 'nothing worrying';
-        feed(e.detail?.score >= 0.5 ? `Phone heard ${heard}. Asking Maya if she’s OK` : `30-second check: ${heard}`, e.detail?.score >= 0.5 ? 'alert' : 'muted', e.t);
+        const cues = e.detail?.cues || [];
+        const said = cues.filter((c) => !/loud noise/.test(c));
+        if (e.detail?.danger) feed(`Phone heard ${said.join(' and ') || cues.join(' and ')}`, 'alert', e.t);
+        else feed(e.detail?.score >= 0.5 ? `Phone heard ${cues.join(' and ')}. Asking Maya if she’s OK` : `30-second check: ${cues.join(' and ') || 'nothing worrying'}`, e.detail?.score >= 0.5 ? 'alert' : 'muted', e.t);
         if (animate) packet(wIn, { color: C.signal });
         return;
       }
@@ -252,7 +254,9 @@
         ALARM: ['Alarm', 'signal', `${left}s`, 'until Jordan', left ? 'No answer, so her phone is loud. Only her PIN stops it.' : 'Alerting Jordan now…'],
         CONTACT: acked
           ? ['Jordan’s on it', 'mint', fmt(quiet), 'silent', 'Jordan confirmed and is on the way with her last location.']
-          : ['Jordan alerted', 'signal', fmt(quiet), 'silent', left ? `Jordan has her last location. Her backup gets it in ${left}s unless he confirms.` : 'Alerting her backup contact now…'],
+          : state.danger
+            ? ['Jordan alerted', 'signal', fmt(Math.max(0, Math.floor((NOS.clock.now() - state.danger.at) / 1000))), 'since it heard', `Her phone heard ${state.danger.cues.filter((c) => !/loud noise/.test(c)).join(' and ') || 'shouting'}, so Jordan was alerted instantly.`]
+            : ['Jordan alerted', 'signal', fmt(quiet), 'silent', left ? `Jordan has her last location. Her backup gets it in ${left}s unless he confirms.` : 'Alerting her backup contact now…'],
         WIDER: acked
           ? ['Jordan’s on it', 'mint', fmt(quiet), 'silent', 'Jordan confirmed and is on the way.']
           : ['Backup alerted', 'signal', fmt(quiet), 'silent', 'Jordan didn’t confirm, so her backup contact has the link too.'],

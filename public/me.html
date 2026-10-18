@@ -228,7 +228,8 @@
     // Stage mode: embedded in the demo stage, which already unlocked sound with its Start click.
     const STAGE = new URLSearchParams(location.search).has('stage');
     $('#nightLink').href = `/night.html?id=${encodeURIComponent(id)}`;
-    if (STAGE) { try { NOS_SOUND.attach(window.parent.NOS_AUDIO); } catch {} $('#unlock').remove(); setTimeout(boot, 300); }
+    // On the demo stage, Maya's phone listens through the laptop's microphone (the stage's Start click unlocked audio).
+    if (STAGE) { try { NOS_SOUND.attach(window.parent.NOS_AUDIO); } catch {} $('#unlock').remove(); setTimeout(boot, 300); setTimeout(startListening, 600); }
 
     // ---- Keypad ----
     function keypad(container, onSubmit) {
@@ -344,10 +345,13 @@
       $('#switchText').textContent = `Switch connected${sw.temp_c != null ? `, reading ${String(Math.round(sw.temp_c)).replace('-', '−')}°C` : ''}. Touch it to check in.`;
       if (view === 'CONTACT') {
         const onWay = next.contact_acked;
-        $('#contactBadge').className = `flex h-16 w-16 items-center justify-center rounded-full ${onWay ? 'bg-mint/15 text-mint' : 'bg-signal/20 text-signal'}`;
+        $('#contactBadge').className = `flex h-12 w-12 items-center justify-center rounded-full ${onWay ? 'bg-mint/15 text-mint' : 'bg-signal/20 text-signal'}`;
         $('#contactBadge').innerHTML = onWay ? ICON_ON_WAY : ICON_ALERTED;
         $('#contactHeadline').textContent = onWay ? `${next.contact_name} is on the way` : `${next.contact_name} has been alerted`;
-        $('#contactSub').textContent = next.level === 'WIDER' && !onWay
+        const heard = next.danger?.cues?.filter((c) => !/loud noise/.test(c)).join(' and ');
+        $('#contactSub').textContent = heard && !onWay
+          ? `Your phone heard ${heard}, so ${next.contact_name} was alerted right away. Enter your PIN if you’re OK.`
+          : next.level === 'WIDER' && !onWay
           ? 'Your backup contact has the link too. Enter your PIN if you’re OK.'
           : onWay
             ? `${next.contact_name} can see your last location. Enter your PIN if you’re OK.`
@@ -507,7 +511,8 @@
           method: 'POST', headers: { 'Content-Type': 'audio/wav' }, body: clipWav(),
         });
         const res = await r.json();
-        if (res.prompted) { toast('Something sounded wrong. Checking you’re OK.'); poll(); }
+        if (res.alerted) { toast(`Heard ${res.cues.filter((c) => !/loud noise/.test(c)).join(' and ')}. ${state?.contact_name || 'Your contact'} has been alerted.`); poll(); }
+        else if (res.prompted) { toast('Something sounded wrong. Checking you’re OK.'); poll(); }
       } catch {}
     }
 

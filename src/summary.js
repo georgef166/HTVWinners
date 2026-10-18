@@ -17,6 +17,7 @@ function facts(session, events, now) {
   const lastLoc = [...beats].reverse().find((e) => e.lat != null && e.lng != null);
   return {
     name: session.user_name,
+    contact: session.contact_name,
     armedAt: new Date(session.armed_at),
     lastResponse,
     minutesSince: minutesBetween(lastResponse, now),
@@ -29,7 +30,9 @@ function facts(session, events, now) {
 export function templateSummary(session, events, now = new Date()) {
   const f = facts(session, events, now);
   const mins = f.minutesSince < 1 ? 'under a minute' : f.minutesSince === 1 ? '1 minute' : `${f.minutesSince} minutes`;
+  const danger = [...events].reverse().find((e) => e.kind === 'danger_alert');
   const parts = [
+    danger ? `At ${fmtTime(danger.time)}, ${f.name}'s phone heard ${danger.detail.cues.join(' and ')}, so ${f.contact} was alerted right away.` : '',
     `${f.name} turned on tenshi at ${fmtTime(f.armedAt)} and last responded at ${fmtTime(f.lastResponse)}; ${f.name} hasn't responded for ${mins}.`,
     f.lastLocationAt
       ? `The last known location was recorded at ${fmtTime(f.lastLocationAt)}${f.battery != null ? ` with battery at ${f.battery}%` : ''}.`
@@ -50,6 +53,7 @@ function factsForModel(session, events, now) {
   const located = [...events].reverse().find((e) => e.kind === 'heartbeat' && e.lat != null);
   const lines = [
     `Person: ${f.name}`,
+    ...(() => { const d = [...events].reverse().find((e) => e.kind === 'danger_alert'); return d ? [`Why the friend was alerted: at ${fmtTime(d.time)} the phone heard ${d.detail.cues.join(' and ')}`] : []; })(),
     `Turned on tenshi at: ${fmtTime(f.armedAt)}`,
     `Last responded at: ${fmtTime(f.lastResponse)} (${mins(f.lastResponse)} minutes ago)`,
     `Battery: ${f.battery != null ? `${f.battery}%` : 'unknown'}${o.battery.diesAt ? `, on track to run out around ${fmtTime(o.battery.diesAt)}` : ''}`,
