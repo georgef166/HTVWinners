@@ -9,7 +9,7 @@ import { assess } from './predict.js';
 export const DEMO = process.env.DEMO !== '0';
 
 export const TIMINGS = DEMO
-  ? { interval: 8, nudge: 6, alarm: 8, contact: 15 } // fast enough to demo in under 30 s
+  ? { interval: 10, nudge: 10, alarm: 10, contact: 15 } // each phase holds long enough to read; Jordan is alerted at about 30 s
   : { interval: 20 * 60, nudge: 2 * 60, alarm: 60, contact: 5 * 60 };
 
 const ALERTING = ['ALARM', 'CONTACT', 'WIDER'];

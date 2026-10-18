@@ -10,7 +10,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="/theme.js"></script>
-  <script src="/trace.js"></script>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/motion.css" />
   <script src="/motion.js"></script>
@@ -21,24 +20,19 @@
     body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: rgb(var(--signal-rgb) / .08); opacity: 0; transition: opacity .9s ease; }
     body.silent::before { opacity: 1; }
 
-    /* Header controls: one quiet group, so the phones stay the loudest thing on screen */
-    .tools { position: relative; isolation: isolate; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: rgb(var(--paper-rgb) / .05); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .09); }
-    /* A slow signal runs through the group in the ladder's colours: calm purple, check-in orange, alarm red.
-       Same gradient twice: a 1px ring on the edge and a faint wash behind the buttons. */
-    .tools::before, .tools::after {
-      content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
-      background: linear-gradient(90deg, transparent 2%, rgb(var(--signal-rgb)) 14%, rgb(255 149 0) 24%, rgb(var(--sodium-rgb)) 34%, transparent 44%, transparent 100%) 100% 0 / 300% 100% no-repeat;
-      animation: tools-pulse 7s linear infinite;
-    }
-    .tools::before { padding: 1.5px; opacity: .95; -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-    .tools::after { opacity: .16; }
-    @keyframes tools-pulse { from { background-position: 100% 0; } to { background-position: -50% 0; } } /* enters left, leaves right */
-    @media (prefers-reduced-motion: reduce) { .tools::before, .tools::after { animation: none; opacity: 0; } }
     .tool { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13.5px; font-weight: 500; white-space: nowrap; color: rgb(var(--paper-rgb) / .82); transition: background-color .15s ease, color .15s ease, transform .1s ease; }
     .tool svg { opacity: .7; }
     .tool:hover { background: rgb(var(--paper-rgb) / .09); color: var(--paper); }
     .tool:active { transform: scale(.97); }
     .tool.solo { box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .12); }
+    /* Presenter tray: the demo triggers live here, out of the judges' way */
+    #tray { position: fixed; left: 24px; bottom: 20px; z-index: 40; }
+    #trayBtn { height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 500; color: rgb(var(--paper-rgb) / .6); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .12); }
+    #trayBtn:hover, #trayBtn[aria-expanded="true"] { color: var(--paper); background: rgb(var(--paper-rgb) / .08); }
+    #trayMenu { position: absolute; left: 0; bottom: calc(100% + 8px); width: 260px; padding: 6px; border-radius: 16px; background: rgb(var(--dusk-rgb)); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .1); display: none; }
+    #trayMenu.open { display: block; }
+    #trayMenu .tool { width: 100%; justify-content: space-between; height: 40px; border-radius: 10px; }
+    #trayMenu kbd { font: 500 12px var(--font-text); color: var(--mist); padding: 2px 7px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .14); }
     .tool.fired { background: rgb(var(--sodium-rgb) / .22); color: var(--paper); }
     .tool[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
     .tool[aria-pressed="true"] svg { opacity: 1; }
@@ -55,7 +49,7 @@
     /* Phones fade in once their page has painted, instead of flashing white */
     .device iframe { width: 375px; height: 760px; border: 0; border-radius: 42px; transform: scale(var(--s)); transform-origin: top left; background: transparent; opacity: 0; transition: opacity .45s ease; }
     .device iframe.ready { opacity: 1; }
-    .device .who { position: absolute; top: calc(100% + 12px); left: 0; right: 0; text-align: center; font-size: 13px; font-weight: 600; color: var(--mist); }
+    .device .who { position: absolute; top: calc(100% + 14px); left: 0; right: 0; text-align: center; font-size: 16px; font-weight: 600; color: var(--mist); }
     :root { --s: .72; }
     @media (max-height: 760px) { :root { --s: .62; } }
     @media (min-height: 900px) { :root { --s: .82; } }
@@ -67,15 +61,21 @@
     .packet { position: absolute; top: 50%; left: 0; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; will-change: transform; }
     .packet.big { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
 
-    /* Feed: neutral text, the colour lives in the dot */
-    .feed { height: 152px; overflow: hidden; }
-    .feed li { display: grid; grid-template-columns: 84px 8px 1fr; align-items: center; column-gap: 12px; height: 24px; margin-bottom: 8px; animation: feed-in .4s var(--ease-out) both; }
-    .feed .t { font-size: 13px; color: var(--mist); font-variant-numeric: tabular-nums; }
-    .feed .d { width: 8px; height: 8px; border-radius: 50%; }
-    .feed .x { font-size: 15px; font-weight: 500; color: rgb(var(--paper-rgb) / .92); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Readout: one phase, one number, readable from across the room */
+    .phase { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.035em; line-height: 1; font-size: clamp(44px, 4.6vw, 80px); color: rgb(var(--tone)); }
+    .count { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.04em; line-height: .9; font-size: clamp(96px, 10vw, 150px); font-variant-numeric: tabular-nums; }
+    .count-label { font-size: 20px; font-weight: 500; color: var(--mist); }
+    #status { font-size: 22px; line-height: 1.35; color: rgb(var(--paper-rgb) / .86); min-height: 2.7em; text-wrap: balance; max-width: 30ch; }
+    .route-stage { --dot: 22px; --track: 4px; --dot-mid: 11px; }
+    .route-stage .stop-name { font-size: 18px; margin-top: .7rem; }
+    /* Feed: the last three events, neutral text, the colour lives in the dot */
+    .feed { height: 120px; overflow: hidden; }
+    .feed li { display: grid; grid-template-columns: 96px 10px 1fr; align-items: center; column-gap: 14px; height: 32px; margin-bottom: 8px; animation: feed-in .4s var(--ease-out) both; }
+    .feed .t { font-size: 15px; color: var(--mist); font-variant-numeric: tabular-nums; }
+    .feed .d { width: 10px; height: 10px; border-radius: 50%; }
+    .feed .x { font-size: 19px; font-weight: 500; color: rgb(var(--paper-rgb) / .92); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .feed li:nth-child(n+2) .x { color: rgb(var(--paper-rgb) / .62); }
     @keyframes feed-in { from { opacity: 0; transform: translateY(-8px); } }
-    #status { min-height: 2.2em; text-wrap: balance; font-variant-numeric: tabular-nums; }
     .ping { animation: stage-ping .9s ease-out; }
     @keyframes stage-ping { 0% { box-shadow: 0 0 0 0 rgb(var(--signal-rgb) / .9), 0 0 0 1.5px rgb(var(--signal-rgb)); } 100% { box-shadow: 0 0 0 40px rgb(var(--signal-rgb) / 0), 0 0 0 1px rgb(255 255 255 / .14); } }
 
@@ -96,13 +96,13 @@
 </head>
 <body class="streetlight theme-dark">
   <!-- One click unlocks sound for both phones and starts a fresh night -->
-  <div id="start" class="streetlight letterbox">
+  <div id="start" class="streetlight">
         <div class="power-rings" id="startRings" aria-hidden="true"><i></i><i></i><i></i></div>
-    <p class="relative text-[14px] font-semibold text-mist" data-reveal style="--i:0">Live demo</p>
+    <div class="relative flex items-center gap-3" data-reveal style="--i:0"><span id="startLogo"></span><span class="wordmark text-[26px]">tenshi</span></div>
     <h1 class="display relative mt-5 max-w-5xl px-6 text-[clamp(34px,4.3vw,60px)] font-extrabold leading-[1.04]" data-reveal style="--i:1">Two phones. One night.<br />No one presses a button.</h1>
-    <p class="relative mt-6 max-w-xl px-6 text-xl text-mist" data-reveal style="--i:2">Maya's phone on the left, her friend Jordan's on the right. Flip the switch, then watch what happens when Maya goes quiet.</p>
+    <p class="relative mt-6 max-w-xl px-6 text-xl text-mist" data-reveal style="--i:2; text-wrap: balance">Maya's phone on the left, her friend Jordan's on the right. Slide to start, then watch what happens when Maya goes quiet.</p>
     <div class="relative mt-12" data-reveal style="--i:3">
-      <div id="startSwitch" class="slide-switch" role="switch" aria-checked="false" tabindex="0" aria-label="Flip the switch to start the night">
+      <div id="startSwitch" class="slide-switch" role="switch" aria-checked="false" tabindex="0" aria-label="Slide to start the night">
         <span class="fill"></span>
         <span class="label"><span>Start the night</span></span>
         <span class="knob"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
@@ -114,13 +114,6 @@
     <a href="/" class="flex items-center gap-3"><span id="logo"></span><span class="wordmark text-[22px]">tenshi</span></a>
     <span class="ml-1 flex items-center gap-2 rounded-full px-2.5 py-1 text-[12.5px] font-semibold text-paper/80 shadow-[inset_0_0_0_1px_rgb(var(--paper-rgb)/.12)]"><span class="breathe h-1.5 w-1.5 rounded-full bg-signal"></span>Live</span>
     <div class="ml-auto flex items-center gap-2.5">
-      <div class="tools" role="group" aria-label="Make something happen">
-        <button id="drain" class="tool"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2.5"/><path d="M22 11v2M6 11v2"/></svg>Drain battery</button>
-        <button id="cold" class="tool" aria-pressed="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0Z"/></svg><span>Switch reads −2°C</span></button>
-        <button id="distress" class="tool"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Phone hears “help”</button>
-      </div>
-      <a id="nightLink" target="_blank" rel="noopener" class="tool solo">Her dashboard</a>
-      <button id="restart" class="tool solo">Restart</button>
       <div class="relative">
         <button id="phoneBtn" class="tool primary" aria-expanded="false" aria-controls="qrPop">Try it on your phone</button>
         <div id="qrPop">
@@ -131,21 +124,27 @@
     </div>
   </header>
 
+  <!-- Presenter tray: demo triggers, kept out of the story -->
+  <div id="tray">
+    <div id="trayMenu" role="menu" aria-label="Presenter controls">
+      <button id="drain" class="tool" role="menuitem">Drain battery <kbd>B</kbd></button>
+      <button id="cold" class="tool" role="menuitem" aria-pressed="false"><span>Switch reads −2°C</span> <kbd>C</kbd></button>
+      <button id="distress" class="tool" role="menuitem">Phone hears “help” <kbd>H</kbd></button>
+      <a id="nightLink" target="_blank" rel="noopener" class="tool" role="menuitem">Maya's dashboard <kbd>D</kbd></a>
+      <button id="restart" class="tool" role="menuitem">Restart the night <kbd>R</kbd></button>
+    </div>
+    <button id="trayBtn" aria-expanded="false" aria-controls="trayMenu">Presenter <kbd class="ml-1 text-[11px] opacity-70">P</kbd></button>
+  </div>
+
   <main class="stage">
     <div class="device" id="mayaDevice"><iframe id="maya" title="Maya's phone" allow="autoplay; geolocation; microphone"></iframe><p class="who">Maya's phone</p></div>
     <div class="wire" id="wireIn"></div>
 
-    <section class="flex min-w-0 flex-col justify-center gap-5 px-2">
+    <section class="flex min-w-0 flex-col justify-center gap-6 px-4" id="readout" style="--tone: var(--mint-rgb)">
       <div>
-        <p id="statusKicker" class="text-[15px] font-bold text-sodium">Out tonight</p>
-        <h2 id="status" class="display mt-1 text-[clamp(26px,2.6vw,40px)] font-bold leading-[1.1]">Waiting to start</h2>
-      </div>
-      <div class="rounded-[24px] border border-line bg-dusk/60 p-4">
-        <div class="flex items-center justify-between text-[13px] font-semibold text-mist">
-          <span>Maya's signal, last 2 minutes</span>
-          <span class="flex items-center gap-4"><span class="flex items-center gap-1.5"><span class="h-0.5 w-4 rounded bg-sodium"></span>Maya</span><span class="flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-mint"></span>Her phone</span></span>
-        </div>
-        <canvas id="trace" class="mt-3 h-[150px] w-full"></canvas>
+        <p id="statusKicker" class="phase">Out tonight</p>
+        <div class="mt-4 flex items-end gap-4"><span id="count" class="count">0:00</span><span id="countLabel" class="count-label mb-3"></span></div>
+        <p id="status" class="mt-4">Waiting to start</p>
       </div>
       <div id="route"></div>
       <ol id="feed" class="feed" aria-live="polite"></ol>
@@ -158,7 +157,7 @@
   <script>
     const $ = (s) => document.querySelector(s);
     $('#logo').innerHTML = NOS.logo();
-    const trace = new SignalTrace($('#trace'));
+    $('#startLogo').innerHTML = NOS.logo('md', 96);
 
     let id = new URLSearchParams(location.search).get('id');
     let links = null;
@@ -173,14 +172,14 @@
     const FEED = {
       checkin_sent: ['Check-in sent to Maya’s phone', 'wait'],
       checkin_ack: ['Maya: “I’m OK”', 'ok'],
-      stand_down: ['Maya entered her PIN. Alarm cancelled', 'ok'],
+      stand_down: ['Maya’s PIN cancelled the alarm', 'ok'],
       contact_ack: ['Jordan: “I’m on it”', 'ok'],
       resolved: ['Night ended', 'muted'],
     };
     const LEVEL_FEED = {
-      ALARM: ['No answer. Alarm sounding on Maya’s phone', 'alert'],
-      CONTACT: ['Jordan alerted with Maya’s last location', 'alert'],
-      WIDER: ['Jordan hasn’t confirmed. Backup contact alerted', 'alert'],
+      ALARM: ['No answer. Maya’s alarm is sounding', 'alert'],
+      CONTACT: ['Jordan alerted with her last location', 'alert'],
+      WIDER: ['No reply from Jordan. Backup alerted', 'alert'],
     };
     // Packet colours come from the theme tokens so the wires match everything else.
     const css = getComputedStyle(document.body);
@@ -204,7 +203,7 @@
       li.innerHTML = `<span class="t">${new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</span><span class="d ${TONE[tone]}"></span><span class="x"></span>`;
       li.lastChild.textContent = text;
       $('#feed').prepend(li);
-      while ($('#feed').children.length > 5) $('#feed').lastChild.remove();
+      while ($('#feed').children.length > 3) $('#feed').lastChild.remove();
     }
 
     // React to new events: feed lines and packets on the wires.
@@ -241,21 +240,29 @@
     function ping(el) { el.classList.remove('ping'); void el.offsetWidth; el.classList.add('ping'); }
 
     const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s) % 60).padStart(2, '0')}`;
+    // One phase word, one number and one sentence, in the phase's colour.
     function renderStatus() {
       if (!state) return;
       const left = NOS.clock.left(deadline) ?? 0;
       const quiet = silentSince ? Math.floor((Date.now() - silentSince) / 1000) : 0;
-      const S = {
-        ARMED: ['Out tonight', 'text-sodium', left ? `Maya is out. Next check-in in ${fmt(left)}` : 'Check-in going out now…'],
-        NUDGE: ['Check-in', 'text-sodium', left ? `“Still good?” Waiting for Maya… ${left}s` : 'No answer. Sounding the alarm…'],
-        ALARM: ['No answer', 'text-signal', left ? `Maya’s phone is sounding the alarm. Jordan in ${left}s` : 'Alerting Jordan now…'],
-        CONTACT: ['Help is moving', 'text-signal', state.contact_acked ? 'Jordan is on the way.' : `Jordan alerted. Maya silent for ${fmt(quiet)}`],
-        WIDER: ['Help is moving', 'text-signal', state.contact_acked ? 'Jordan is on the way.' : 'Backup contact alerted too.'],
-        RESOLVED: ['Home', 'text-mint', 'Night over. Everyone’s home.'],
+      const acked = state.contact_acked;
+      const V = {
+        ARMED: ['Out tonight', 'mint', fmt(left), 'until her check-in', left ? 'Maya is out. Her phone checks in when this reaches zero.' : 'Check-in going out now…'],
+        NUDGE: ['Check-in', 'amber', `${left}s`, 'to answer', left ? '“Still good?” One tap from Maya says she’s fine.' : 'No answer. Sounding the alarm…'],
+        ALARM: ['Alarm', 'signal', `${left}s`, 'until Jordan', left ? 'No answer, so her phone is loud. Only her PIN stops it.' : 'Alerting Jordan now…'],
+        CONTACT: acked
+          ? ['Jordan’s on it', 'mint', fmt(quiet), 'silent', 'Jordan confirmed and is on the way with her last location.']
+          : ['Jordan alerted', 'signal', fmt(quiet), 'silent', left ? `Jordan has her last location. Her backup gets it in ${left}s unless he confirms.` : 'Alerting her backup contact now…'],
+        WIDER: acked
+          ? ['Jordan’s on it', 'mint', fmt(quiet), 'silent', 'Jordan confirmed and is on the way.']
+          : ['Backup alerted', 'signal', fmt(quiet), 'silent', 'Jordan didn’t confirm, so her backup contact has the link too.'],
+        RESOLVED: ['Home', 'mint', '', '', 'Night over. Everyone’s home.'],
       }[state.level];
-      // Only touch the DOM when something changed (this runs four times a second).
-      if ($('#statusKicker').textContent !== S[0]) { $('#statusKicker').textContent = S[0]; $('#statusKicker').className = `text-[15px] font-semibold ${S[1]}`; }
-      if ($('#status').textContent !== S[2]) $('#status').textContent = S[2];
+      if (!V) return;
+      const [phase, tone, count, label, line] = V;
+      const set = (sel, v) => { if ($(sel).textContent !== v) $(sel).textContent = v; };
+      set('#statusKicker', phase); set('#count', count); set('#countLabel', label); set('#status', line);
+      $('#readout').style.setProperty('--tone', `var(--${tone}-rgb)`);
     }
     setInterval(renderStatus, 250);
 
@@ -266,7 +273,6 @@
           fetch(`/api/sessions/${id}/trace`).then((r) => r.json()),
           fetch(`/api/sessions/${id}`).then((r) => r.json()),
         ]);
-        trace.update(t);
         state = s;
         NOS.clock.sync(s.now_ms);
         deadline = s.deadline_ms;
@@ -285,7 +291,7 @@
         }
         if (!silentLevels.includes(s.level)) silentSince = null;
         document.body.classList.toggle('silent', ['ALARM', 'CONTACT', 'WIDER'].includes(s.level) && !s.contact_acked);
-        if (s.level !== lastLevel) NOS.route($('#route'), { level: s.level, variant: 'mini' });
+        if (s.level !== lastLevel) NOS.route($('#route'), { level: s.level, variant: 'stage' });
         lastLevel = s.level;
         renderStatus();
       } catch {}
@@ -332,6 +338,19 @@
       await night;
     });
     $('#restart').addEventListener('click', async () => { id = null; await startNight(); });
+    // Presenter tray, plus keyboard shortcuts so the triggers never need to be on screen
+    const tray = $('#trayMenu'), trayBtn = $('#trayBtn');
+    const showTray = (open) => { tray.classList.toggle('open', open); trayBtn.setAttribute('aria-expanded', String(open)); };
+    trayBtn.addEventListener('click', (e) => { e.stopPropagation(); showTray(!tray.classList.contains('open')); });
+    document.addEventListener('click', (e) => { if (!$('#tray').contains(e.target)) showTray(false); });
+    document.addEventListener('keydown', (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || /input|textarea/i.test(e.target.tagName)) return;
+      const k = e.key.toLowerCase();
+      const map = { b: '#drain', c: '#cold', h: '#distress', d: '#nightLink', r: '#restart' };
+      if (k === 'p') showTray(!tray.classList.contains('open'));
+      else if (k === 'escape') showTray(false);
+      else if (map[k] && id) $(map[k]).click();
+    });
     // Brief highlight so the presenter sees the click landed.
     function fired(btn) { btn.classList.add('fired'); clearTimeout(btn._t); btn._t = setTimeout(() => btn.classList.remove('fired'), 1200); }
     $('#drain').addEventListener('click', (e) => { if (!id) return; fired(e.currentTarget); fetch(`/api/demo/${id}/drain-battery`, { method: 'POST' }); });
