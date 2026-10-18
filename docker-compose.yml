@@ -11,6 +11,7 @@ services:
       PORT: "3000"
       TZ: ${TZ:-America/Toronto}
       PUBLIC_URL: https://${SITE_HOST:?set SITE_HOST in .env}
+      HOST_LABEL: ${HOST_LABEL:-Vultr · Toronto}
       # Tiger Cloud when TIGER_DATABASE_URL is set in .env; otherwise the TimescaleDB container below.
       DATABASE_URL: ${TIGER_DATABASE_URL:-postgresql://postgres:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/postgres?sslmode=disable}
     depends_on:

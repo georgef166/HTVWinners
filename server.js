@@ -3,7 +3,8 @@ import express from 'express';
 import QRCode from 'qrcode';
 import { createStore, newId, newToken, hashPin } from './src/store.js';
 import { assess } from './src/predict.js';
-import { analyzeClip } from './src/distress.js';
+import { analyzeClip, transcribeLive, cuesIn, dangerOf } from './src/distress.js';
+import { instrument, note, since } from './src/pipeline.js';
 import {
   DEMO, TIMINGS, LadderError, startTicker, contactLink, lastResponseAt, secondsLeft,
   checkinAck, standDown, disarm, contactAck, resolve, promptCheckin, alertContact,
@@ -13,7 +14,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_URL = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
 const PLACEHOLDER_PHONE = '+15555550123';
 
-const store = await createStore();
+const store = instrument(await createStore());
 const app = express();
 app.set('trust proxy', true);
 app.use(express.json({ limit: '10kb' }));
@@ -283,6 +284,49 @@ app.post('/api/sessions/:id/audio-check', express.raw({ type: ['audio/wav', 'app
   const outcome = await recordDistress(s, result);
   console.log(`[distress] session ${s.id.slice(0, 8)} score=${result.score} danger=${result.danger} transcribed=${result.transcribed} alerted=${outcome.alerted}`);
   res.json({ ...result, ...outcome });
+}));
+
+// Stage only: live captions. On a real night audio leaves the phone only after a loud spike (above); on stage the
+// phone sends each phrase it hears so the audience can watch Whisper on Vultr work. The text is held in memory
+// for the stage and never stored. A danger phrase that was also shouted alerts the contact, same as a spike.
+const listening = new Set();
+app.post('/api/sessions/:id/listen', express.raw({ type: ['audio/wav', 'application/octet-stream'], limit: '400kb' }), wrap(async (req, res) => {
+  if (!DEMO || !process.env.WHISPER_URL) throw new LadderError(404, 'Not found');
+  const s = await loadSession(req.params.id);
+  if (s.level === 'RESOLVED' || !Buffer.isBuffer(req.body)) return res.json({ text: '' });
+  if (listening.has(s.id)) return res.status(429).json({ error: 'Still transcribing the last phrase' });
+  listening.add(s.id);
+  try {
+    const peak = num(req.query.peak_db, -120, 0), base = num(req.query.baseline_db, -120, 0);
+    const loud = peak != null && ((base != null && peak - base >= 10) || peak > -15);
+    const { text, ms, model } = await transcribeLive(req.body);
+    const heard = cuesIn(text);
+    const danger = dangerOf(heard.spoken);
+    let alerted = false;
+    if (danger && loud) {
+      const cues = ['a sudden loud noise or shouting', ...heard.cues];
+      ({ alerted } = await recordDistress(s, { score: Math.min(1, 0.3 + heard.score), cues, spoken: heard.spoken, danger, transcribed: true }, { live: true }));
+    }
+    note(s.id, { kind: 'whisper', text, ms, model, spoken: heard.spoken, danger, loud, alerted });
+    res.json({ text, ms, spoken: heard.spoken, danger, loud, alerted });
+  } finally {
+    listening.delete(s.id);
+  }
+}));
+
+// What Vultr and Tiger Data just did for this night, for the stage's flow panel.
+let rowCache = { n: null, at: 0 };
+app.get('/api/sessions/:id/pipeline', wrap(async (req, res) => {
+  const s = await loadSession(req.params.id);
+  if (Date.now() - rowCache.at > 5000) rowCache = { n: await store.rowCount().catch(() => null), at: Date.now() };
+  const tiger = /tsdb\.cloud\.timescale\.com|tigerdata\.(com|cloud)/.test(process.env.DATABASE_URL || '');
+  res.json({
+    ...since(s.id, num(req.query.after, 0, Number.MAX_SAFE_INTEGER) || 0),
+    host: process.env.HOST_LABEL || 'This laptop',
+    db: { kind: tiger ? 'tiger' : store.timescale ? 'timescale' : store.kind, region: tiger ? process.env.TIGER_REGION_LABEL || 'Canada (Central)' : null, total_rows: rowCache.n },
+    whisper: process.env.WHISPER_URL ? (process.env.WHISPER_MODEL || 'faster-whisper-small.en').split('/').pop() : null,
+    llm: process.env.LLM_BASE_URL ? process.env.LLM_MODEL || 'llama3.1:8b' : null,
+  });
 }));
 
 // Demo only: pretend the phone just heard someone asking for help.
