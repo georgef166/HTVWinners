@@ -91,19 +91,19 @@ def bargauge(title, sql, unit, steps, lo=0, hi=100, desc="", mode="gradient"):
             "fieldConfig": {"defaults": {"unit": unit, "min": lo, "max": hi, "color": {"mode": "thresholds"}, "decimals": 0,
                                          "thresholds": {"mode": "absolute", "steps": steps}}, "overrides": []},
             "options": {"orientation": "horizontal", "displayMode": mode, "valueMode": "color", "namePlacement": "left", "showUnfilled": True,
-                        "text": {"titleSize": 13, "valueSize": 24},
+                        "text": {"titleSize": 12, "valueSize": 24},
                         "sizing": "auto", "minVizHeight": 16, "maxVizHeight": 300,
                         "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": True}}}
 
 
-def geomap(title, targets, layers, lat=43.655, lon=-79.39, zoom=12, desc=""):
+def geomap(title, targets, layers, lat=43.655, lon=-79.39, zoom=12, desc="", fit=True):
     return {"type": "geomap", "title": title, "description": desc, "datasource": DS, "targets": targets,
             "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": PURPLE}}, "overrides": []},
             "options": {"basemap": {"type": "xyz", "name": "Dark", "config": {
                             "url": "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
                             "attribution": "Tiles © Esri"}},
                         "controls": {"showZoom": True, "mouseWheelZoom": False, "showAttribution": True},
-                        "view": {"id": "fit", "lat": lat, "lon": lon, "zoom": zoom, "maxZoom": 15, "allLayers": True, "padding": 12},
+                        "view": {"id": "fit" if fit else "coords", "lat": lat, "lon": lon, "zoom": zoom, "maxZoom": 15, "allLayers": True, "padding": 12},
                         "layers": layers, "tooltip": {"mode": "details"}}}
 
 
@@ -251,7 +251,7 @@ w.at(geomap("Where the nights went", [q(f"""SELECT time_bucket('5 minutes', e.ti
     WHERE {P} AND e.kind = 'heartbeat' AND e.lat IS NOT NULL AND $__timeFilter(e.time) GROUP BY 1, s.id ORDER BY 1""", "table", "A")],
     [{"type": "heatmap", "name": "Nights", "filterData": {"id": "byRefId", "options": "A"}, "tooltip": False,
       "location": {"mode": "coords", "latitude": "latitude", "longitude": "longitude"},
-      "config": {"blur": 18, "radius": 9, "weight": {"fixed": 1, "min": 0, "max": 1}}}], lat=43.68, lon=-79.36, zoom=11,
+      "config": {"blur": 22, "radius": 14, "weight": {"fixed": 1, "min": 0, "max": 1}}}], lat=43.695, lon=-79.345, zoom=11.3, fit=False,
     desc="Heartbeat locations from every night, five-minute averages."), 0, 5, 9, 9)
 w.at(donut("How fast she answered", f"""SELECT CASE WHEN m.value < 5 THEN 'Under 5 s' WHEN m.value < 15 THEN '5 to 15 s' WHEN m.value < 30 THEN '15 to 30 s' ELSE 'Over 30 s' END AS "reply",
       count(*) AS "check-ins" {J} WHERE {P} AND m.metric = 'reply_s' AND $__timeFilter(m.time) GROUP BY 1 ORDER BY min(m.value)""",
@@ -276,7 +276,9 @@ w.at({"type": "barchart", "title": "How loud each hour gets", "datasource": DS,
           SELECT extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') AS h, avg(m.avg) AS avg_db {JA}
           WHERE {P} AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY 1) x ORDER BY (h + 12)::int % 24""", "table")],
       "description": "Average dB above a quiet room (-60 dB), by hour.",
-      "fieldConfig": {"defaults": {"color": {"mode": "continuous-BlPu"}, "min": 10, "max": 45, "unit": "dB", "custom": {"fillOpacity": 85, "gradientMode": "hue", "lineWidth": 0}}, "overrides": []},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "unit": "dB", "min": 10,
+                                   "thresholds": {"mode": "absolute", "steps": [{"color": BLUE, "value": None}, {"color": PURPLE, "value": 20}, {"color": ORANGE, "value": 28}]},
+                                   "custom": {"fillOpacity": 85, "gradientMode": "opacity", "lineWidth": 0}}, "overrides": []},
       "options": {"orientation": "vertical", "barWidth": 0.75, "showValue": "auto", "xTickLabelRotation": 0, "legend": {"showLegend": False}, "tooltip": {"mode": "single"}}}, 14, 19, 10, 9)
 
 w.row("Night by night", 28)
@@ -303,12 +305,12 @@ w.at(table("Every night", f"""SELECT to_char(s.armed_at AT TIME ZONE 'America/To
     (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS "Battery home (%)"
     FROM sessions s WHERE {P} AND $__timeFilter(s.armed_at) ORDER BY s.armed_at DESC""",
     [override("Night", **{"custom.cellOptions": {"type": "color-background", "mode": "gradient"}, "color": {"mode": "fixed", "fixedColor": DBLUE}}),
-     override("Hours", **cells("color-background", [{"color": TEAL, "value": None}])),
+     override("Hours", decimals=1, **cells("color-background", [{"color": TEAL, "value": None}])),
      override("Check-ins", **cells("color-background", [{"color": GREEN, "value": None}])),
-     override("Avg reply (s)", **cells("color-background", [{"color": GREEN, "value": None}, {"color": ORANGE, "value": 15}, {"color": RED, "value": 30}])),
+     override("Avg reply (s)", decimals=1, **cells("color-background", [{"color": GREEN, "value": None}, {"color": ORANGE, "value": 15}, {"color": RED, "value": 30}])),
      override("Alarms", **cells("color-background", [{"color": GREEN, "value": None}, {"color": RED, "value": 1}])),
      override("Danger score", **cells("color-background", [{"color": GREEN, "value": None}, {"color": ORANGE, "value": 0.3}, {"color": RED, "value": 0.5}])),
-     override("Coldest (°C)", **cells("color-background", [{"color": BLUE, "value": None}, {"color": TEAL, "value": 5}])),
+     override("Coldest (°C)", decimals=1, **cells("color-background", [{"color": BLUE, "value": None}, {"color": TEAL, "value": 5}])),
      override("Battery home (%)", **{"custom.cellOptions": {"type": "gauge", "mode": "gradient"}, "min": 0, "max": 100, "color": {"mode": "thresholds"},
                                      "thresholds": {"mode": "absolute", "steps": [{"color": RED, "value": None}, {"color": ORANGE, "value": 20}, {"color": GREEN, "value": 40}]}})]), 0, 37, 24, 8)
 

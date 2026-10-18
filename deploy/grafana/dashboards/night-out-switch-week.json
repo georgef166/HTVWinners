@@ -491,10 +491,10 @@
           "showAttribution": true
         },
         "view": {
-          "id": "fit",
-          "lat": 43.68,
-          "lon": -79.36,
-          "zoom": 11,
+          "id": "coords",
+          "lat": 43.695,
+          "lon": -79.345,
+          "zoom": 11.3,
           "maxZoom": 15,
           "allLayers": true,
           "padding": 12
@@ -514,8 +514,8 @@
               "longitude": "longitude"
             },
             "config": {
-              "blur": 18,
-              "radius": 9,
+              "blur": 22,
+              "radius": 14,
               "weight": {
                 "fixed": 1,
                 "min": 0,
@@ -716,7 +716,7 @@
         "namePlacement": "left",
         "showUnfilled": true,
         "text": {
-          "titleSize": 13,
+          "titleSize": 12,
           "valueSize": 24
         },
         "sizing": "auto",
@@ -1245,14 +1245,30 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-BlPu"
+            "mode": "thresholds"
           },
-          "min": 10,
-          "max": 45,
           "unit": "dB",
+          "min": 10,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3274D9",
+                "value": null
+              },
+              {
+                "color": "#A352CC",
+                "value": 20
+              },
+              {
+                "color": "#FF780A",
+                "value": 28
+              }
+            ]
+          },
           "custom": {
             "fillOpacity": 85,
-            "gradientMode": "hue",
+            "gradientMode": "opacity",
             "lineWidth": 0
           }
         },
@@ -1501,7 +1517,7 @@
         "namePlacement": "left",
         "showUnfilled": true,
         "text": {
-          "titleSize": 13,
+          "titleSize": 12,
           "valueSize": 24
         },
         "sizing": "auto",
@@ -1584,6 +1600,10 @@
             },
             "properties": [
               {
+                "id": "decimals",
+                "value": 1
+              },
+              {
                 "id": "custom.cellOptions",
                 "value": {
                   "type": "color-background",
@@ -1649,6 +1669,10 @@
               "options": "Avg reply (s)"
             },
             "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              },
               {
                 "id": "custom.cellOptions",
                 "value": {
@@ -1768,6 +1792,10 @@
               "options": "Coldest (\u00b0C)"
             },
             "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              },
               {
                 "id": "custom.cellOptions",
                 "value": {
