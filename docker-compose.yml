@@ -91,6 +91,7 @@ services:
       - "443:443"
     environment:
       SITE_HOST: ${SITE_HOST}
+      ALT_HOSTS: ${ALT_HOSTS:-}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

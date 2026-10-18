@@ -1,5 +1,6 @@
-# HTTPS for phones (location and battery need a secure page). SITE_HOST comes from .env.
-{$SITE_HOST} {
+# HTTPS for phones (location and battery need a secure page). SITE_HOST comes from .env; ALT_HOSTS lists other
+# names served the same way (www, and the old sslip.io address so existing links and QR codes keep working).
+{$SITE_HOST} {$ALT_HOSTS} {
 	encode gzip
 	handle /grafana* {
 		reverse_proxy grafana:3000
@@ -9,8 +10,8 @@
 	}
 }
 
-# Plain HTTP only for the Arduino Switch (its firmware speaks HTTP); everything else redirects to HTTPS.
-http://{$SITE_HOST} {
+# Plain HTTP only for the Arduino Switch (its firmware speaks HTTP), on any name; everything else redirects to HTTPS.
+http:// {
 	@switch path /api/switch/*
 	handle @switch {
 		reverse_proxy app:3000
