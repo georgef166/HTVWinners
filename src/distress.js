@@ -16,7 +16,7 @@ const CUES = [
   { key: 'aggression', label: 'someone swearing aggressively', re: /\b(f+u+c+k\w*|motherf\w*|shit\w*|bitch\w*|asshole|bastard|cunt)\b/i, danger: 'elevated', weight: 0.3 },
 ];
 
-async function transcribe(wav, { hint = true } = {}) {
+async function transcribe(wav) {
   const base = process.env.WHISPER_URL.replace(/\/$/, '');
   const form = new FormData();
   form.append('file', new Blob([wav], { type: 'audio/wav' }), 'clip.wav');
@@ -24,8 +24,7 @@ async function transcribe(wav, { hint = true } = {}) {
   form.append('language', 'en');
   form.append('response_format', 'json');
   // A vocabulary hint: shouted words clip the mic, and a small model guesses better when it expects them.
-  // Left off for live captions: on near-silence Whisper tends to echo the hint back as if it heard it.
-  if (hint) form.append('prompt', 'Help! Help me! Somebody help! Stop! Get off me! Get away from me! Leave me alone! Call the police!');
+  form.append('prompt', 'Help! Help me! Somebody help! Stop! Get off me! Get away from me! Leave me alone! Call the police!');
   const res = await fetch(`${base}/v1/audio/transcriptions`, { method: 'POST', body: form, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) throw new Error(`whisper ${res.status}`);
   return (await res.json()).text || '';
@@ -69,17 +68,23 @@ export function cuesIn(text) {
   return { cues: hits.map((c) => c.label), spoken: hits.map((c) => c.key), score: hits.reduce((n, c) => n + c.weight, 0) };
 }
 
-// Things Whisper says when it hears breath, music or nothing at all.
-const FILLER = /^(thank you( for watching)?|thanks for watching|you|bye|\[.*\]|\(.*\)|[.\s♪-]*)[.!]*$/i;
+// Streaming text has no punctuation, so mid-utterance only phrases that can't mean anything else count
+// ("get off me", "somebody help"). Single words like "help" or "stop" wait until the utterance ends on them.
+const NOW = [
+  { key: 'help', re: /\b(somebody|someone|please) help\b|\bhelp help\b|\bhelp me (please|somebody|someone|now)\b/ },
+  { key: 'stop', re: /\b(get (the \w+ )?off( of)? me|get away from me|leave me alone|don'?t touch me|let go of me|stop it|stop stop)\b/ },
+  { key: 'police', re: /\b(call (the )?(police|cops)|call 911|call nine one one)\b/ },
+  { key: 'aggression', re: /\b(f+u+c+k\w*|motherf\w*|shit\w*|bitch\w*|asshole|bastard|cunt)\b/ },
+];
 
 /**
- * Live captions for the stage: one short phrase (a few seconds), transcribed on our server.
- * @returns {Promise<{text: string, ms: number, model: string}>}
+ * Keywords in live, unpunctuated speech. final = the speaker paused, so the utterance ends here.
+ * @returns {{cues: string[], spoken: string[], score: number}}
  */
-export async function transcribeLive(wav) {
-  const t = performance.now();
-  let text = (await transcribe(wav, { hint: false })).trim();
-  wav.fill(0);
-  if (FILLER.test(text)) text = '';
-  return { text, ms: Math.round(performance.now() - t), model: (process.env.WHISPER_MODEL || 'faster-whisper-small.en').split('/').pop() };
+export function spotCues(text, { final = false } = {}) {
+  const t = text.toLowerCase();
+  const keys = new Set(NOW.filter((c) => c.re.test(t)).map((c) => c.key));
+  if (final) for (const k of cuesIn(t).spoken) keys.add(k);
+  const hits = CUES.filter((c) => keys.has(c.key));
+  return { cues: hits.map((c) => c.label), spoken: hits.map((c) => c.key), score: hits.reduce((n, c) => n + c.weight, 0) };
 }

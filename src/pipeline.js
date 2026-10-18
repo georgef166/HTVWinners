@@ -1,9 +1,24 @@
 // What the stage shows under the hood: a short in-memory log per night of what Vultr and Tiger Data just did
-// (Whisper heard a phrase, Llama wrote a summary, a row landed in a hypertable). Live captions live here only,
+// (words recognised, Llama wrote a summary, a row landed in a hypertable). Live words live here only,
 // a few lines in memory, and are never written to the database.
+import { EventEmitter } from 'node:events';
+
 const KEEP = 40;
 const logs = new Map();
+const bus = new EventEmitter();
+bus.setMaxListeners(0);
 let seq = 0;
+
+// Live-only updates (words as they're spoken): pushed to whoever is watching, never kept.
+export function flash(sessionId, entry) {
+  bus.emit(sessionId, { at: Date.now(), ...entry });
+}
+
+// Push every update for one night to the stage as it happens (Server-Sent Events).
+export function watch(sessionId, send) {
+  bus.on(sessionId, send);
+  return () => bus.off(sessionId, send);
+}
 
 export function note(sessionId, entry) {
   if (!sessionId) return;
@@ -13,6 +28,7 @@ export function note(sessionId, entry) {
   if (log.entries.length > KEEP) log.entries.shift();
   if (entry.kind === 'tiger') { log.writes++; log.rows += entry.rows || 1; }
   log.touched = Date.now();
+  bus.emit(sessionId, { ...log.entries.at(-1), writes: log.writes, rows: log.rows });
 }
 
 export function since(sessionId, after = 0) {
