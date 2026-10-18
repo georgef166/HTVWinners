@@ -485,7 +485,7 @@
           if (baseline == null) baseline = db;
           if (db > baseline + 18 && db > -30) loudFrames++; else { loudFrames = 0; baseline = baseline * 0.995 + db * 0.005; }
           const cooldown = state?.demo ? 12000 : 60000;
-          if (loudFrames >= 6 && Date.now() - lastCheck > cooldown) { lastCheck = Date.now(); loudFrames = 0; setTimeout(() => sendClip(db), 3000); }
+          if (loudFrames >= 6 && Date.now() - lastCheck > cooldown) { lastCheck = Date.now(); loudFrames = 0; setTimeout(() => sendClip(db), 2000); }  // keep 2 s after the shout so the words that follow are in the clip
         };
         listening = true;
         $('#listenRow').classList.replace('hidden', 'flex');
