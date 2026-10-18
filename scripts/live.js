@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import WebSocket from 'ws';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const base = (process.env.LIVE_URL || 'https://155-138-145-175.sslip.io').replace(/\/$/, '');
@@ -60,7 +61,50 @@ console.log('\n  Audio (spoken clips through Whisper):');
 await clip('Help! Help me! Get away from me!', true);
 await clip("Hey, I'm heading home now, see you tomorrow.", false);
 
-// 3. Hardware
+// 3. Live voice (the stage): stream speech the way Maya's phone does and time the alert from Vosk on Vultr.
+function speech(text, gainDb) {
+  const wav = path.join(os.tmpdir(), `tenshi-live-${Date.now()}.wav`);
+  if (spawnSync('say', ['-o', wav, '--data-format=LEI16@16000', text]).status !== 0) return null;
+  const buf = fs.readFileSync(wav); fs.rmSync(wav, { force: true });
+  const at = buf.indexOf('data') + 8;  // say adds extra header chunks, so find the samples
+  const pcm = new Int16Array(buf.buffer.slice(buf.byteOffset + at, buf.byteOffset + buf.length - ((buf.length - at) % 2)));
+  const g = 10 ** (gainDb / 20);
+  return pcm.map((v) => Math.max(-32768, Math.min(32767, v * g)));
+}
+async function stream(id, pcm) {
+  const ws = new WebSocket(`${base.replace(/^http/, 'ws')}/api/sessions/${id}/stream`);
+  await new Promise((resolve, reject) => { ws.on('open', resolve); ws.on('error', reject); });
+  ws.send(JSON.stringify({ room: -48 }));
+  const send = async (a) => { for (let i = 0; i < a.length; i += 1365) { ws.send(Buffer.from(a.slice(i, i + 1365).buffer)); await new Promise((r) => setTimeout(r, 85)); } };
+  const started = Date.now();
+  await send(pcm);
+  await send(new Int16Array(16000));  // a second of quiet ends the utterance
+  ws.close();
+  return started;
+}
+async function levelWithin(id, ms) {
+  for (const end = Date.now() + ms; Date.now() < end; await new Promise((r) => setTimeout(r, 150))) {
+    const { data } = await call('GET', `/api/sessions/${id}`);
+    if (data.danger) return { level: data.level, at: data.danger.at };
+  }
+  return null;
+}
+console.log('\n  Live voice on stage (Vosk streaming on Vultr):');
+try {
+  const calm = speech("Can you stop by the store on the way home?", -18), shout = speech('Get away from me! Somebody help!', 0);
+  if (!calm || !shout) bad('Live voice test skipped (needs macOS "say")');
+  else {
+    const { data: night } = await call('POST', '/api/demo');
+    await stream(night.id, calm);
+    (await levelWithin(night.id, 800)) ? (bad('Talking volume alerted Jordan (should not)'), failures++) : ok('Talking volume → no alert');
+    const t0 = await stream(night.id, shout);
+    const hit = await levelWithin(night.id, 3000);
+    hit ? ok(`Shouted "Somebody help!" → Jordan alerted ${((hit.at - t0) / 1000).toFixed(1)}s after the shout began`) : (bad('Shout did not alert Jordan'), failures++);
+    await call('POST', `/api/sessions/${night.id}/disarm`, { pin: '1234' }).catch(() => {});
+  }
+} catch (e) { bad(`Live voice test failed (${e.message})`); failures++; }
+
+// 4. Hardware
 console.log();
 const board = fs.readdirSync('/dev').find((f) => f.startsWith('cu.usbmodem'));
 let bridge;
@@ -71,7 +115,7 @@ if (board) {
   console.log('  · No Switch plugged in (that\'s fine, the stage works without it)');
 }
 
-// 4. Stage
+// 5. Stage
 const stage = `${base}/stage.html`;
 if (!process.argv.includes('--no-open')) spawnSync('open', [stage]);
 console.log(`
