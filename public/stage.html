@@ -93,7 +93,7 @@
     @media (prefers-reduced-motion: reduce) { .stage .device, .stage .wire, .stage > section { opacity: 1; transform: none; transition: none; } }
     @media (prefers-reduced-motion: reduce) { .wire { animation: none; } }
     /* Under the hood: what the phone hears, and where her night goes (Vultr, then Tiger Data) */
-    .under { position: fixed; left: 0; right: 0; bottom: 0; height: var(--under); display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: 16px; padding: 0 32px 20px 32px; opacity: 0; transition: opacity .8s ease .8s; }
+    .under { position: fixed; left: 0; right: 0; bottom: 0; height: var(--under); display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 14fr); gap: 16px; padding: 0 32px 20px 32px; opacity: 0; transition: opacity .8s ease .8s; }
     .stage.live ~ .under { opacity: 1; }
     .panel { position: relative; display: flex; flex-direction: column; min-width: 0; border-radius: 16px; background: rgb(var(--dusk-rgb) / .55); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .08); padding: 14px 18px; }
     .panel h2 { font-size: 14px; font-weight: 600; color: var(--mist); display: flex; align-items: center; gap: 10px; }
@@ -105,6 +105,8 @@
     #captions li { display: flex; align-items: baseline; gap: 12px; min-width: 0; animation: feed-in .35s var(--ease-out) both; }
     #captions li .q { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 16px; color: rgb(var(--paper-rgb) / .5); }
     #captions li:last-child .q { font-size: 22px; font-weight: 500; color: var(--paper); }
+    #captions li:last-child { flex-wrap: wrap; row-gap: 2px; }
+    #captions li:last-child .q { flex-basis: 100%; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
     #captions li .m { flex: none; font-size: 13px; color: var(--mist); font-variant-numeric: tabular-nums; }
     #captions li.wait .q { color: var(--mist); font-style: italic; }
     #captions mark { background: none; color: rgb(var(--tone, var(--signal-rgb))); font-weight: 700; }
@@ -114,7 +116,7 @@
     .hear-empty { flex: 1; margin-top: 10px; font-size: 16px; line-height: 1.45; color: var(--mist); max-width: 46ch; }
     .fine { margin-top: 8px; font-size: 12px; color: rgb(var(--mist-rgb) / .8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .flow { display: grid; grid-template-columns: minmax(0, 1fr) 60px minmax(0, 1.2fr) 60px minmax(0, 1.2fr); align-items: stretch; padding: 14px; }
+    .flow { display: grid; grid-template-columns: minmax(0, 1fr) 52px minmax(0, 1.2fr) 52px minmax(0, 1.1fr); align-items: stretch; padding: 14px; }
     .node { border-radius: 12px; padding: 12px 14px; background: rgb(var(--ink-rgb) / .6); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .1); transition: box-shadow .3s ease; min-width: 0; }
     .node.hot { box-shadow: inset 0 0 0 1.5px rgb(var(--node, var(--sodium-rgb))); }
     .node .name { display: flex; align-items: baseline; gap: 8px; font-family: var(--font-display); font-size: 19px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
@@ -210,7 +212,7 @@
         <ul>
           <li id="rowMic"><i class="dot"></i><b>Mic</b><span>listening</span></li>
           <li id="rowBeat"><i class="dot"></i><b>Heartbeat</b><span>every 10s</span></li>
-          <li id="rowGps"><i class="dot"></i><b>Sends</b><span>GPS, battery, sound</span></li>
+          <li id="rowGps"><i class="dot"></i><b>Sends</b><span>GPS, battery</span></li>
         </ul>
       </div>
       <div class="link" id="linkIn"><small>HTTPS</small></div>
@@ -460,7 +462,7 @@
       if (e.kind === 'tiger') {
         const what = e.table === 'events' ? String(e.what).replace(/_/g, ' ') : e.table === 'metrics' ? `${e.rows} metrics` : 'night state';
         row('#rowWrite', `${e.ms} ms · ${what}`, animate);
-        if (animate && e.what === 'heartbeat') { packet($('#linkIn'), { color: C.mint, ms: 650 }); row('#rowBeat', `in at ${clock(e.at)}`); }
+        if (animate && e.what === 'heartbeat') { packet($('#linkIn'), { color: C.mint, ms: 650 }); row('#rowBeat', clock(e.at).replace(/\s?[AP]M$/i, '')); }
         if (animate) setTimeout(() => packet($('#linkDb'), { color: C.gold, ms: 600 }), e.what === 'heartbeat' ? 500 : 0);
       }
     }
@@ -469,8 +471,8 @@
       try {
         const p = await fetch(`/api/sessions/${id}/pipeline?after=${pseq}`).then((r) => r.json());
         const first = pseq === 0;
-        $('#hostLabel').textContent = p.host || '';
-        $('#dbLabel').textContent = p.db?.kind === 'tiger' ? `Tiger Cloud · ${p.db.region}` : p.db?.kind === 'timescale' ? 'TimescaleDB' : 'in memory';
+        $('#hostLabel').textContent = (p.host || '').replace(/^Vultr\s*·\s*/, '');
+        $('#dbLabel').textContent = p.db?.kind === 'tiger' ? p.db.region : p.db?.kind === 'timescale' ? 'TimescaleDB' : 'in memory';
         if (p.whisper && !pseq) $('#whisperName').textContent = `${p.whisper.replace(/^faster-whisper-/, '')} · speech to text`;
         if (p.llm) $('#llamaName').textContent = p.llm.replace(/^llama/i, 'Llama ').replace(':', ' ').replace(/\b(\d+)b\b/i, '$1B');
         // Stagger a burst of writes so each one is visible.
