@@ -1,6 +1,7 @@
 // Materials and lighting for the necklace (owner: 3D DEV).
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { gemEnv } from './gem.js';
 
 export const COLORS = {
   gold: 0xd8c08a,
@@ -27,6 +28,20 @@ function addEnvStrips(envScene) {
   strip(3.2, 0.3, [1.0, 1.0, 1.0], 7, 0.0, 2.9, 1.2);     // overhead bar
   strip(2.4, 0.25, [1.0, 0.85, 0.6], 4, 0.0, -1.8, 2.2);  // low warm bounce
   strip(0.3, 3.5, [1, 1, 1], 5, 0.0, 0.5, -2.8);          // rim strip behind
+}
+
+function addGemStrips(envScene) {
+  const bar = (w, h, rgb, k, x, y, z) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(rgb[0] * k, rgb[1] * k, rgb[2] * k), side: THREE.DoubleSide, toneMapped: false }));
+    m.position.set(x, y, z); m.lookAt(0, 0, 0); envScene.add(m);
+  };
+  bar(0.35, 4.0, [1, 1, 1], 14, -1.6, 0.4, 2.2);
+  bar(0.35, 4.0, [1, 0.95, 0.85], 12, 1.7, 0.2, 2.0);
+  bar(2.6, 0.22, [1, 1, 1], 16, 0, 2.5, 1.0);
+  bar(2.2, 0.2, [0.85, 0.93, 1], 10, 0, -2.2, 1.6);
+  bar(0.3, 3.0, [1, 1, 1], 10, -2.6, 0.2, -1.0);
+  bar(0.3, 3.0, [1, 1, 1], 10, 2.6, 0.2, -1.0);
+  bar(1.6, 0.25, [1, 1, 1], 12, 0, 0.0, -2.8);
 }
 
 // Procedural fine brushed-line map (grey, lines run along +u). Returns a CanvasTexture.
@@ -64,6 +79,13 @@ export function setupLighting(scene, renderer) {
   addEnvStrips(envScene);
   const envTex = pmrem.fromScene(envScene, 0.04).texture;
   scene.environment = envTex;
+  // Environment cube for the diamond shader: same room + brighter, more numerous strips so facets flash.
+  try {
+    addGemStrips(envScene);
+    const cubeRT = new THREE.WebGLCubeRenderTarget(256, { type: THREE.HalfFloatType, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+    new THREE.CubeCamera(0.1, 100, cubeRT).update(renderer, envScene);
+    gemEnv.texture = cubeRT.texture;
+  } catch (e) { console.error('[necklace] gem environment failed', e); }
   envScene.traverse((o) => {
     if (o.geometry) o.geometry.dispose();
     if (o.material) o.material.dispose();
@@ -146,10 +168,10 @@ export function createMaterials({ lowPower = false } = {}) {
     chain: phys({ color: GOLD, roughness: 0.13, env: 1.35 }),
     feather,
     pave: std({ color: 0xffffff, roughness: 0.06, metalness: 0, emissive: 0xffffff, emissiveIntensity: 0.18, envMapIntensity: 2.2, flatShading: true }),
-    centerStone: std({ color: 0xffffff, roughness: 0.04, metalness: 0.05, emissive: 0xeaf1ff, emissiveIntensity: 0.55, envMapIntensity: 1.4, flatShading: true }),
+    centerStone: std({ color: 0xffffff, roughness: 0.04, metalness: 0.05, emissive: 0xeaf1ff, emissiveIntensity: 0.85, envMapIntensity: 2.4, flatShading: true }),
     engrave: phys({ color: 0xb0914f, roughness: 0.38, env: 0.9 }),
     gem: lowPower
-      ? new THREE.MeshPhysicalMaterial({ color: 0xe6f4ff, roughness: 0.04, metalness: 0, transparent: true, opacity: 0.62, envMapIntensity: 2.2, flatShading: true, clearcoat: 1 })
+      ? new THREE.MeshPhysicalMaterial({ color: 0xf6faff, roughness: 0.04, metalness: 0, emissive: 0xe4eeff, emissiveIntensity: 0.28, transparent: true, opacity: 0.92, envMapIntensity: 3.0, flatShading: true, clearcoat: 1 })
       : new THREE.MeshPhysicalMaterial({
           color: 0xffffff, roughness: 0.02, metalness: 0, transmission: 0.75, thickness: 1.5, ior: 1.5,
           emissive: 0xcfe0ff, emissiveIntensity: 0.0, envMapIntensity: 1.3, side: THREE.DoubleSide, flatShading: true, clearcoat: 1, clearcoatRoughness: 0.03,

@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { createMaterials, makeTextMaterial, COLORS } from './materials.js';
+import { pearGemGeometry, roundStoneGeometry, createDiamondMesh } from './gem.js';
 
 const PI = Math.PI;
 const BZ = -0.15; // back surface of the PCB plate (root z)
@@ -572,10 +573,9 @@ function buildNeck(M, lowPower) {
 
 function buildCenterStone(M, lowPower = false) {
   const g = new THREE.Group();
-  // round brilliant: table, crown, girdle, pavilion (8 flat-shaded facet columns)
-  const prof = [[0, 0.1], [0.15, 0.1], [0.28, 0.01], [0.28, -0.01], [0.14, -0.14], [0, -0.22]].map(([r, y]) => new THREE.Vector2(r, y));
-  const stone = new THREE.Mesh(new THREE.LatheGeometry(prof, 8), M.centerStone);
-  stone.rotation.x = PI / 2; // table faces +Z
+  // round brilliant (8 star, 8 kite, 16 upper-girdle, girdle, 16 lower-girdle, 8 pavilion, culet), flat shaded
+  const sg = roundStoneGeometry(lowPower);
+  const stone = lowPower ? new THREE.Mesh(sg, M.centerStone) : createDiamondMesh(sg, { bounces: 4, boost: 2.6, floorLevel: 0.28 });
   stone.position.z = 0.06;
   g.add(stone);
   // flared cast cup (lathe, concave blend) with four tapered prongs that curve out of it and hook over the girdle
@@ -609,33 +609,10 @@ function pearPt(hw, h, s) {
   return [side * hw * Math.pow(Math.sin(PI * Math.pow(u, 1.45)), 0.7), h / 2 - u * h];
 }
 
-// Cut-stone geometry: table + star/crown facets (zig-zag rings) above the girdle, culet fan below.
-function pearGemGeo(M_, low) {
-  const m = low ? 8 : 14; // facets per half
-  const N = m * 2;
-  const ring = (hw, h, z, phase) => Array.from({ length: N }, (_, i) => { const [x, y] = pearPt(hw, h, (i + phase) / N); return new THREE.Vector3(x, y, z); });
-  const G = ring(0.74, 2.2, 0, 0), C = ring(0.6, 1.75, 0.17, 0.5), T = ring(0.4, 1.3, 0.27, 0);
-  const tri = [];
-  const add = (a, b, c) => tri.push(a, b, c);
-  const tc = new THREE.Vector3(0, -0.02, 0.27), cul = new THREE.Vector3(0, -0.05, -0.25);
-  for (let i = 0; i < N; i++) {
-    const j = (i + 1) % N;
-    add(G[j], G[i], C[i]); add(C[i], C[j], G[j]); // kite between girdle and crown ring
-    add(C[i], T[j], T[i]); add(C[i], C[j], T[j]); // crown to table
-    add(T[j], T[i], tc); // table
-    add(G[i], G[j], cul); // pavilion
-  }
-  const pos = [];
-  tri.forEach((v) => pos.push(v.x, v.y, v.z));
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.computeVertexNormals();
-  return geo;
-}
-
 function buildPear(M, lowPower) {
   const g = new THREE.Group();
-  const gem = new THREE.Mesh(pearGemGeo(M, lowPower), M.gem);
+  const pg = pearGemGeometry(lowPower);
+  const gem = lowPower ? new THREE.Mesh(pg, M.gem) : createDiamondMesh(pg, { bounces: 4, boost: 2.4, floorLevel: 0.28 });
   g.add(gem);
   // thin smooth bezel hugging the girdle
   const o = Array.from({ length: lowPower ? 40 : 72 }, (_, i) => { const [x, y] = pearPt(0.78, 2.3, i / (lowPower ? 40 : 72)); return new THREE.Vector3(x, y, 0); });
