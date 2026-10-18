@@ -34,7 +34,7 @@ The smoke test runs the whole ladder against the API (about 80 s) and prints `SM
 
 ## Where it runs
 
-The app, our own AI model and the Tiger Data database all run on Vultr, so Maya's night never goes to a third-party AI company. Tiger Data stores events as a hypertable with compression, 7-day retention (location deletes itself) and a continuous aggregate behind the signal trace. Step-by-step: [docs/DEPLOY-VULTR.md](docs/DEPLOY-VULTR.md).
+The app and our own AI models (Llama for the summary, Whisper for distress audio) run on Vultr in Toronto, so Maya's night never goes to a third-party AI company. Her data lives in a managed **Tiger Cloud** service next door in Canada (Central). Tiger Data stores events as a hypertable with compression, 7-day retention (location deletes itself) and a continuous aggregate behind the signal trace. Step-by-step: [docs/DEPLOY-VULTR.md](docs/DEPLOY-VULTR.md).
 
 ## Her dashboard and Grafana
 
@@ -59,7 +59,8 @@ Copy `.env.example` to `.env`. Every variable is optional.
 | `PORT` | HTTP port (default 3000) |
 | `PUBLIC_URL` | Base URL used in SMS links and the QR code. Set it to a LAN IP or tunnel URL so a real phone can scan the QR. |
 | `DEMO` | `1` (default) uses second-long demo timings; `0` uses real timings (20 min check-ins, 2 min nudge, 1 min alarm, 5 min before widening) |
-| `DATABASE_URL` | Postgres connection string (Tiger Data in production). Unset means an in-memory store. On Timescale/Tiger Data, `events` becomes a hypertable. |
+| `DATABASE_URL` | Postgres connection string. Unset means an in-memory store. On Timescale/Tiger Data, `events` and `metrics` become hypertables. |
+| `TIGER_DATABASE_URL` | Tiger Cloud connection string. On the Vultr box it overrides `DATABASE_URL` for the app and Grafana; `node deploy/vultr.mjs tiger` copies it there. |
 | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` | Our own model, OpenAI-compatible (Ollama or vLLM on Vultr, or Vultr Serverless Inference). Tried first for the summary |
 | `GEMINI_API_KEY` | Fallback summary model if the self-hosted one is unset or down |
 | `GEMINI_MODEL` | Default `gemini-2.5-flash` |
