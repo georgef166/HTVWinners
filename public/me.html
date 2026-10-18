@@ -463,7 +463,10 @@
     // ---- Listening: a rolling 30 s of audio in memory. Only a sudden loud spike sends a clip. ----
     const RATE = 16000, SECONDS = 30;
     const ring = new Float32Array(RATE * SECONDS);
-    let ringAt = 0, ringFull = false, baseline = null, loudFrames = 0, lastCheck = 0, listening = false;
+    let ringAt = 0, ringFull = false, baseline = null, loudFrames = 0, lastCheck = 0, listening = false, total = 0;
+    // On stage only, each phrase goes to Whisper as it's spoken so the audience sees the captions.
+    let phrase = null, phraseBusy = false, phraseNext = null, lastLevel = 0;
+    const tell = (msg) => { if (STAGE) try { window.parent.postMessage({ nos: 'mic', ...msg }, location.origin); } catch {} };
     async function startListening() {
       if (listening || !navigator.mediaDevices?.getUserMedia) return;
       try {
@@ -480,10 +483,26 @@
           for (let i = 0; i < x.length; i++) sum += x[i] * x[i];
           const db = 20 * Math.log10(Math.sqrt(sum / x.length) + 1e-9);
           sig.db += db; sig.dbN++; if (db > sig.peak) sig.peak = db;
-          for (let i = 0; i < x.length; i += step) { ring[ringAt] = x[Math.floor(i)]; ringAt = (ringAt + 1) % ring.length; if (ringAt === 0) ringFull = true; }
+          for (let i = 0; i < x.length; i += step) { ring[ringAt] = x[Math.floor(i)]; ringAt = (ringAt + 1) % ring.length; if (ringAt === 0) ringFull = true; total++; }
           // A spike is 18 dB over the room's usual level, held for about half a second.
           if (baseline == null) baseline = db;
-          if (db > baseline + 18 && db > -30) loudFrames++; else { loudFrames = 0; baseline = baseline * 0.995 + db * 0.005; }
+          if (db > baseline + 18 && db > -30) loudFrames++; else { loudFrames = 0; if (!phrase) baseline = baseline * 0.995 + db * 0.005; }
+          if (STAGE) {
+            if (Date.now() - lastLevel > 80) { lastLevel = Date.now(); tell({ db, baseline }); }
+            // A phrase: speech 8 dB over the room, until ~0.8 s of quiet or 6 s long.
+            const speaking = db > baseline + 8 && db > -55;
+            if (!phrase && speaking) phrase = { start: Math.max(0, total - Math.round(RATE * 0.6)), peak: db, base: baseline, quiet: 0, loud: 0 };
+            if (phrase) {
+              phrase.peak = Math.max(phrase.peak, db);
+              phrase.loud += speaking ? 1 : 0;
+              phrase.quiet = speaking ? 0 : phrase.quiet + 1;
+              if (phrase.quiet >= 9 || total - phrase.start >= RATE * 6) {
+                if (phrase.loud >= 3) sendPhrase({ ...phrase, end: total });
+                phrase = null;
+              }
+            }
+            return;  // on stage the phrase captions do the listening
+          }
           const cooldown = state?.demo ? 12000 : 60000;
           if (loudFrames >= 6 && Date.now() - lastCheck > cooldown) { lastCheck = Date.now(); loudFrames = 0; setTimeout(() => sendClip(db), 2000); }  // keep 2 s after the shout so the words that follow are in the clip
         };
@@ -493,9 +512,10 @@
         showErr('Microphone access was declined, so listening is off. Check-ins still work.');
       }
     }
-    function clipWav() {
-      const len = ringFull ? ring.length : ringAt;
-      const start = ringFull ? ringAt : 0;
+    function clipWav(from, to) {
+      const have = ringFull ? ring.length : ringAt;
+      let len = have, start = ringFull ? ringAt : 0;
+      if (from != null) { len = Math.min(to - from, have, total - from); start = ((to - len) % ring.length + ring.length) % ring.length; }
       const buf = new ArrayBuffer(44 + len * 2);
       const v = new DataView(buf);
       const str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
@@ -504,6 +524,22 @@
       v.setUint32(28, RATE * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, len * 2, true);
       for (let i = 0; i < len; i++) { const s = Math.max(-1, Math.min(1, ring[(start + i) % ring.length])); v.setInt16(44 + i * 2, s * 0x7fff, true); }
       return buf;
+    }
+    async function sendPhrase(p) {
+      if (phraseBusy) { phraseNext = p; return; }  // keep only the newest phrase while one is in flight
+      phraseBusy = true;
+      const wav = clipWav(p.start, p.end);
+      tell({ sent: true, seconds: +((p.end - p.start) / RATE).toFixed(1) });
+      try {
+        const r = await fetch(`/api/sessions/${encodeURIComponent(id)}/listen?peak_db=${p.peak.toFixed(1)}&baseline_db=${p.base.toFixed(1)}`, {
+          method: 'POST', headers: { 'Content-Type': 'audio/wav' }, body: wav,
+        });
+        const res = await r.json();
+        tell({ done: true });
+        if (res.alerted) poll();
+      } catch { tell({ done: true }); }
+      phraseBusy = false;
+      if (phraseNext) { const n = phraseNext; phraseNext = null; sendPhrase(n); }
     }
     async function sendClip(peakDb) {
       try {
