@@ -6,7 +6,7 @@ import { assess } from './src/predict.js';
 import { analyzeClip } from './src/distress.js';
 import {
   DEMO, TIMINGS, LadderError, startTicker, contactLink, lastResponseAt, secondsLeft,
-  checkinAck, standDown, disarm, contactAck, resolve, promptCheckin,
+  checkinAck, standDown, disarm, contactAck, resolve, promptCheckin, alertContact,
 } from './src/ladder.js';
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -117,6 +117,7 @@ const links = (s) => ({
 
 app.get('/api/health', (req, res) => res.json({
   app: 'night-out-switch', demo: DEMO, store: store.kind, timescale: !!store.timescale,
+  tiger_cloud: /tsdb\.cloud\.timescale\.com|tigerdata\.(com|cloud)/.test(process.env.DATABASE_URL || ''),
   model: process.env.LLM_BASE_URL ? 'self-hosted' : process.env.GEMINI_API_KEY ? 'gemini' : 'template',
   audio: process.env.WHISPER_URL ? 'self-hosted whisper' : 'loudness only',
   grafana: !!process.env.GRAFANA_URL,
@@ -177,9 +178,14 @@ app.get('/api/sessions/:id', wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
   const outlook = assess(s, await store.listEvents(s.id));
   const sinceResponse = await lastResponseAt(store, s);
+  const deadline = s.level === 'ARMED' ? s.next_checkin_at : s.level_deadline;
   res.json({
     level: s.level,
     seconds_left: secondsLeft(s),
+    // Exact deadline plus the server's clock, so every screen counts down to the same second.
+    deadline_ms: deadline ? new Date(deadline).getTime() : null,
+    danger: await dangerFor(s),
+    now_ms: Date.now(),
     contact_acked: s.contact_acked,
     user_name: s.user_name,
     contact_name: s.contact_name,
@@ -201,7 +207,7 @@ app.get('/api/sessions/:id', wrap(async (req, res) => {
 // The signal trace: her night as a time series (responses, phone heartbeats, level changes).
 // No location in here, just timing.
 const TRACE_WINDOW_S = DEMO ? 60 : 45 * 60;
-const TRACE_KINDS = ['heartbeat', 'checkin_sent', 'checkin_ack', 'level_change', 'contact_ack', 'stand_down', 'resolved', 'device', 'distress_check'];
+const TRACE_KINDS = ['heartbeat', 'checkin_sent', 'checkin_ack', 'level_change', 'contact_ack', 'stand_down', 'resolved', 'device', 'distress_check', 'danger_alert'];
 async function traceFor(s) {
   const now = new Date();
   const since = now.getTime() - TRACE_WINDOW_S * 1000;
@@ -216,7 +222,7 @@ async function traceFor(s) {
     }
     if (!TRACE_KINDS.includes(e.kind) || (e.kind === 'device' && e.detail?.type === 'reading')) continue;
     const d = e.detail || {};
-    events.push({ t: new Date(t).toISOString(), kind: e.kind, detail: d.from || d.to || d.type || d.score != null || d.reason ? { from: d.from, to: d.to, type: d.type, score: d.score, cues: d.cues, reason: d.reason } : null });
+    events.push({ t: new Date(t).toISOString(), kind: e.kind, detail: d.from || d.to || d.type || d.score != null || d.reason ? { from: d.from, to: d.to, type: d.type, score: d.score, cues: d.cues, reason: d.reason, danger: d.danger } : null });
   }
   // Over a real night (45 min), phone heartbeats come from the per-minute continuous aggregate
   // instead of every raw row. The demo's 2-minute window keeps raw heartbeats.
@@ -240,16 +246,31 @@ app.get('/api/sessions/:id/trace', wrap(async (req, res) => {
 // The phone keeps a rolling 30 s of audio in memory and sends it only after a sudden loud spike.
 // The clip is analyzed in memory on our server and wiped; only the score and cues are kept.
 const lastAudioCheck = new Map();
+// A heard plea for help or aggression alerts the contact at once; a vaguer signal asks the person first.
 async function recordDistress(s, result, extra = {}) {
-  await store.addEvent({ session_id: s.id, kind: 'distress_check', detail: { score: result.score, cues: result.cues, transcribed: result.transcribed, ...extra } });
+  await store.addEvent({ session_id: s.id, kind: 'distress_check', detail: { score: result.score, cues: result.cues, spoken: result.spoken || [], danger: result.danger || null, transcribed: result.transcribed, ...extra } });
   await store.addMetrics(s.id, [{ metric: 'distress_score', value: result.score, source: extra.simulated ? 'demo' : 'phone' }]);
+  const fresh = await store.getSession(s.id);
+  if (result.danger && ['ARMED', 'NUDGE', 'ALARM'].includes(fresh.level)) {
+    const cues = [...result.cues].sort((x, y) => /loud noise/.test(x) - /loud noise/.test(y));  // what was said first
+    await alertContact(store, fresh, new Date(), { cues, danger: result.danger });
+    return { prompted: false, alerted: true };
+  }
   let prompted = false;
   if (result.score >= 0.5) {
-    const fresh = await store.getSession(s.id);
     prompted = fresh.level === 'ARMED';
     await promptCheckin(store, fresh, 'distress');
   }
-  return prompted;
+  return { prompted, alerted: false };
+}
+
+// What made the contact get alerted, if it was something the phone heard (since the last stand-down).
+async function dangerFor(s) {
+  if (!['CONTACT', 'WIDER'].includes(s.level)) return null;
+  const d = await store.lastEvent(s.id, ['danger_alert']);
+  const stood = await store.lastEvent(s.id, ['stand_down']);
+  if (!d || (stood && new Date(stood.time) > new Date(d.time))) return null;
+  return { level: d.detail.danger, cues: d.detail.cues, at: new Date(d.time).getTime() };
 }
 app.post('/api/sessions/:id/audio-check', express.raw({ type: ['audio/wav', 'application/octet-stream'], limit: '2mb' }), wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
@@ -259,18 +280,18 @@ app.post('/api/sessions/:id/audio-check', express.raw({ type: ['audio/wav', 'app
   lastAudioCheck.set(s.id, Date.now());
   const wav = Buffer.isBuffer(req.body) ? req.body : null;
   const result = await analyzeClip(wav, { peakDb: num(req.query.peak_db, -120, 0), baselineDb: num(req.query.baseline_db, -120, 0) });
-  const prompted = await recordDistress(s, result);
-  console.log(`[distress] session ${s.id.slice(0, 8)} score=${result.score} cues=${result.cues.length} transcribed=${result.transcribed}`);
-  res.json({ ...result, prompted });
+  const outcome = await recordDistress(s, result);
+  console.log(`[distress] session ${s.id.slice(0, 8)} score=${result.score} danger=${result.danger} transcribed=${result.transcribed} alerted=${outcome.alerted}`);
+  res.json({ ...result, ...outcome });
 }));
 
 // Demo only: pretend the phone just heard someone asking for help.
 app.post('/api/demo/:id/distress', wrap(async (req, res) => {
   if (!DEMO) throw new LadderError(404, 'Not found');
   const s = await loadSession(req.params.id);
-  const result = { score: 0.8, cues: ['a sudden loud noise or shouting', 'someone asking for help'], transcribed: false };
-  const prompted = await recordDistress(s, result, { simulated: true });
-  res.json({ ...result, prompted });
+  const result = { score: 0.7, cues: ['a sudden loud noise or shouting', 'someone shouting for help'], spoken: ['help'], danger: 'high', transcribed: false };
+  const outcome = await recordDistress(s, result, { simulated: true });
+  res.json({ ...result, ...outcome });
 }));
 
 // Her own dashboard: signals over the last stretch of the night.
@@ -284,7 +305,7 @@ app.get('/api/sessions/:id/metrics', wrap(async (req, res) => {
   const events = (await store.listEvents(s.id))
     .filter((e) => new Date(e.time) >= since && ['checkin_sent', 'checkin_ack', 'stand_down', 'level_change', 'distress_check', 'contact_ack'].includes(e.kind))
     .map((e) => ({ t: new Date(e.time).getTime(), kind: e.kind, detail: e.detail || null }));
-  res.json({ now: Date.now(), minutes, user_name: s.user_name, level: s.level, armed_at: s.armed_at, series, events });
+  res.json({ now: Date.now(), minutes, user_name: s.user_name, contact_name: s.contact_name, level: s.level, armed_at: s.armed_at, series, events });
 }));
 
 app.post('/api/sessions/:id/heartbeat', wrap(async (req, res) => {
@@ -347,6 +368,9 @@ app.get('/api/contact/:token', wrap(async (req, res) => {
     stood_down: !alerting && !!s.summary && !!standDownEvt,
     // Countdown until the backup contact is alerted, so the contact knows to confirm.
     seconds_to_wider: s.level === 'CONTACT' && !s.contact_acked && s.backup_phone ? secondsLeft(s, now) : null,
+    wider_deadline_ms: s.level === 'CONTACT' && !s.contact_acked && s.backup_phone && s.level_deadline ? new Date(s.level_deadline).getTime() : null,
+    now_ms: now.getTime(),
+    danger: await dangerFor(s),
     summary: null,
     last_heartbeat: null,
   };
@@ -387,7 +411,7 @@ app.post('/api/contact/:token/resolve', wrap(async (req, res) => {
 // One Switch per server, authenticated with SWITCH_KEY. It controls the night it was linked to.
 const SWITCH_KEY = process.env.SWITCH_KEY || (DEMO ? 'demo-switch' : null);
 const HOME_TAGS = (process.env.SWITCH_HOME_TAG || '').split(',').map((t) => t.trim().toUpperCase()).filter(Boolean);
-const sw = { sessionId: null, lastSeen: 0, tempC: null, pressureHpa: null, coldDemo: false };
+const sw = { sessionId: null, owner: null, linkedAt: 0, lastSeen: 0, tempC: null, pressureHpa: null, coldDemo: false };
 const switchConnected = () => Date.now() - sw.lastSeen < 10_000;
 const switchInfo = (s) => (sw.sessionId === s.id
   ? { linked: true, connected: switchConnected(), temp_c: sw.tempC }
@@ -478,9 +502,16 @@ app.post('/api/switch/event', wrap(async (req, res) => {
 }));
 
 // Link the Switch to one night explicitly, so other people's sessions on other phones can't take it over.
+// The screen that linked it keeps it for 30 minutes, so someone else opening the public stage can't grab it
+// mid-demo; the links page's "Use the Switch for this night" button forces it.
+const SWITCH_HOLD_MS = 30 * 60_000;
 app.post('/api/sessions/:id/link-switch', wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
-  sw.sessionId = s.id;
+  const owner = String(req.body?.owner || '').slice(0, 64) || null;
+  const heldElsewhere = sw.sessionId && sw.owner && owner !== sw.owner && Date.now() - sw.linkedAt < SWITCH_HOLD_MS;
+  // Not an error for the page: it just keeps running without the hardware.
+  if (heldElsewhere && req.body?.force !== true) return res.json({ linked: false, reason: 'The Switch is in use on another screen' });
+  Object.assign(sw, { sessionId: s.id, owner, linkedAt: Date.now() });
   res.json({ linked: true });
 }));
 
@@ -494,5 +525,5 @@ app.post('/api/demo/:id/cold', wrap(async (req, res) => {
 
 startTicker(store);
 app.listen(PORT, () => {
-  console.log(`Night Out Switch on ${PUBLIC_URL} (store: ${store.kind}, demo: ${DEMO ? 'on' : 'off'})`);
+  console.log(`tenshi on ${PUBLIC_URL} (store: ${store.kind}, demo: ${DEMO ? 'on' : 'off'})`);
 });

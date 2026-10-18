@@ -1,6 +1,6 @@
-# Night Out Switch
+# tenshi
 
-**It's a dead man's switch, but for a night out.**
+**It's a dead man's switch, but for a night out.** (Formerly Night Out Switch; the hardware is still called the Switch.)
 
 **Live demo:** https://155-138-145-175.sslip.io (tap **Start the demo**, then scan the QR codes to be Maya or Jordan on your own phone)
 

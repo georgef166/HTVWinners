@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1220" />
   <title>tenshi · Trusted contact</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="/theme.js"></script>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/motion.css" />
@@ -15,7 +16,6 @@
   <script src="/sound.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/trace.js"></script>
   <style>
     body { transition: background-color .35s ease; }
     .pin {
@@ -24,7 +24,9 @@
     }
     .pin-pulse { position: absolute; left: -12px; top: -12px; width: 50px; height: 50px; border-radius: 50%; background: rgb(var(--signal-rgb) / .35); animation: pulse 1.8s ease-out infinite; }
     @keyframes pulse { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
-    .leaflet-container { font-family: var(--font-text); background: #0f1a30; }
+    .leaflet-container { font-family: var(--font-text); background: #1b2236; }
+    /* OpenStreetMap tiles, darkened to sit in the night theme (no tile API key needed) */
+    .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.6); }
     .radar { position: relative; width: 26px; height: 26px; }
     .radar .ring { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 2px solid rgb(var(--signal-rgb) / .9); background: rgb(var(--signal-rgb) / .12); transform: scale(0); opacity: 0; animation: radar 2.4s cubic-bezier(.2,.6,.3,1) infinite; }
     .radar .ring:nth-child(2) { animation-delay: .8s; }
@@ -38,7 +40,7 @@
   </style>
   <link rel="stylesheet" href="/tw.css" />
 </head>
-<body class="app streetlight min-h-[100dvh]">
+<body class="app min-h-[100dvh]">
 
   <!-- Connect scene: finding her Switch, then standing by (the tap also lets this page make sound) -->
   <div id="unlock" class="streetlight fixed inset-0 z-[1000] flex flex-col items-center justify-center overflow-hidden px-8 text-center transition-opacity duration-500">
@@ -58,59 +60,62 @@
   <div class="mx-auto max-w-md px-5 pb-10 pt-5">
     <header class="flex items-center gap-2" id="brand">
       <span id="logo"></span>
-      <span class="text-[22px] font-light tracking-[0.08em] text-gold" id="brandName">tenshi</span>
+      <span class="wordmark text-[20px]" id="brandName">tenshi</span>
     </header>
 
     <!-- Waiting: before CONTACT -->
     <section data-view="waiting" class="view hidden pt-14">
       <h1 class="display text-[2.4rem] font-bold leading-[1.08]">You're <span class="name"></span>'s trusted contact tonight.</h1>
       <p class="mt-5 text-xl leading-relaxed text-mist">You'll only see <span class="name"></span>'s location if <span class="name"></span> stops responding.</p>
-      <div class="glass-card mt-10 flex items-center gap-4 p-5">
+      <div class="mt-10 flex items-center gap-4 rounded-[16px] border border-line bg-dusk/70 p-5">
         <span class="relative flex h-3.5 w-3.5 shrink-0"><span class="breathe absolute inset-0 rounded-full bg-mint/60"></span><span class="relative h-3.5 w-3.5 rounded-full bg-mint"></span></span>
         <p class="text-[17px]"><b class="name"></b> is responding normally. Keep this page open.</p>
       </div>
       <h2 class="display mt-14 text-lg font-semibold">If <span class="name"></span> goes quiet</h2>
-      <div id="route" class="glass-card mt-6 p-5"></div>
+      <div id="route" class="mt-6"></div>
     </section>
 
     <!-- Alert: CONTACT / WIDER -->
     <section data-view="alert" class="view hidden flex-col pb-44 pt-8 text-white">
-      <h1 id="alertHeadline" class="display text-[2.15rem] font-extrabold leading-[1.08]">
-        <span class="name"></span> hasn't responded for <span id="since" class="tnum"></span>
+      <h1 id="alertHeadline" class="display text-[2.15rem] font-extrabold leading-[1.08]" style="text-wrap: balance">
+        <span id="headQuiet"><span class="name"></span> hasn't answered since <span id="since" class="tnum whitespace-nowrap"></span></span>
+        <span id="headDanger" class="hidden"><span class="name"></span> may be in danger</span>
       </h1>
+      <!-- What the phone heard: only what was detected, never the audio -->
+      <div id="dangerBox" class="mt-5 hidden rounded-[16px] bg-white p-5 text-[#2a1119]" role="alert">
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-[15px] font-semibold">Heard at <span id="dangerAt" class="tnum"></span></p>
+          <span id="dangerLevel" class="rounded-full bg-[#b3261e] px-3 py-1 text-[13px] font-bold text-white">High danger</span>
+        </div>
+        <ul id="dangerCues" class="mt-3 space-y-1.5 text-[19px] font-semibold leading-snug"></ul>
+        <p class="mt-3 text-[13px] text-[#2a1119]/70">Detected on our own server from a 30-second clip. The audio was never saved.</p>
+      </div>
       <p id="widerNote" class="mt-4 hidden rounded-2xl bg-black/20 px-4 py-3 text-[15px] font-bold leading-snug"></p>
       <p id="ackNote" class="mt-4 hidden rounded-2xl bg-white/15 px-4 py-3 text-[15px] font-bold leading-snug">You said you're on it. <span class="name"></span>'s phone now shows that you're coming.</p>
 
-      <div class="glass-card relative isolate mt-7 overflow-hidden">
+      <div class="relative isolate mt-6 overflow-hidden rounded-[16px] border border-white/25 bg-[#2a1018]">
         <div id="map" class="h-64 w-full"></div>
-        <a id="directions" target="_blank" rel="noopener" class="btn btn-sodium absolute right-3 top-3 z-[500] hidden items-center gap-2 !min-h-0 !px-4 !py-2.5 text-[15px]">
+        <a id="directions" target="_blank" rel="noopener" class="absolute right-3 top-3 z-[500] hidden min-h-[44px] items-center gap-2 rounded-full bg-white px-4 text-[15px] font-semibold text-[#2a1119]">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 19-9-9 19-2-8-8-2Z"/></svg>
           Directions
         </a>
         <p id="noLoc" class="hidden p-6 text-lg font-semibold">No location has been shared.</p>
       </div>
 
-      <dl class="mt-4 grid grid-cols-2 gap-2.5">
-        <div class="glass-card p-3.5">
+      <dl class="mt-6 grid grid-cols-2 divide-x divide-white/25 border-y border-white/25 py-4">
+        <div class="pr-4">
           <dt class="text-[15px] text-white/90">Last location</dt>
           <dd id="lastSeen" class="display tnum mt-1 text-2xl font-semibold">–</dd>
           <dd id="lastSeenAgo" class="mt-0.5 text-[15px] text-white/90"></dd>
         </div>
-        <div class="glass-card p-3.5">
+        <div class="pl-5">
           <dt class="text-[15px] text-white/90">Battery</dt>
-          <dd class="mt-1 flex items-center gap-2"><span id="battery" class="display tnum text-2xl font-semibold">–</span><span id="lowBattery" class="mono hidden rounded-full bg-signal/25 px-2 py-0.5 text-[11px] font-bold uppercase text-signal">Low</span></dd>
+          <dd class="mt-1 flex items-center gap-2"><span id="battery" class="display tnum text-2xl font-semibold">–</span><span id="lowBattery" class="hidden rounded-full bg-white px-2 py-0.5 text-[13px] font-bold text-[#b3261e]">Low</span></dd>
         </div>
       </dl>
 
-      <div class="glass-card mt-4 px-4 pb-2 pt-3">
-        <div class="flex items-center justify-between text-[13px] font-semibold text-white/90">
-          <span><span class="name"></span>'s signal</span>
-          <span>line: <span class="name"></span> &nbsp;dots: her phone</span>
-        </div>
-        <canvas id="trace" class="mt-1 h-20 w-full"></canvas>
-      </div>
 
-      <div class="glass-card mt-4 p-5">
+      <div class="mt-6 rounded-[16px] border border-white/10 bg-white/[.06] p-5">
         <h2 class="display text-lg font-semibold">What to do now</h2>
         <ol id="nextStep" class="mt-3 space-y-2.5 text-[17px] font-semibold leading-snug"></ol>
       </div>
@@ -123,30 +128,25 @@
 
       <h2 class="display mt-8 text-lg font-semibold">What we know</h2>
       <p id="facts" class="mt-2 text-[17px] leading-relaxed text-white/90"></p>
-      <p id="aiSource" class="mt-3 hidden items-start gap-2 text-[14px] font-semibold leading-snug text-white/90">
-        <svg class="mt-0.5 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-        <span id="aiSourceText"></span>
-      </p>
 
-      <button id="resolve" class="mt-8 min-h-[3rem] self-start text-[15px] font-bold text-white/90 underline underline-offset-4">False alarm / resolved</button>
-      <p class="mt-2 text-[15px] text-white/90">If you believe <span class="name"></span> is in danger, call 911.</p>
+      <button id="resolve" class="mt-8 min-h-[44px] self-start rounded-full border border-white/25 px-5 text-[15px] font-semibold text-white/90 hover:bg-white/10">It was a false alarm</button>
     </section>
 
     <!-- Always-reachable actions while alerting -->
-    <div id="actionBar" class="fixed inset-x-0 bottom-0 z-[900] hidden bg-gradient-to-t from-[#12080d] via-[#12080d]/85 to-transparent px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-10">
-      <div class="mx-auto grid max-w-md grid-cols-2 gap-3">
-        <a id="call" class="btn btn-sodium whitespace-nowrap px-4 text-lg">
+    <div id="actionBar" class="fixed inset-x-0 bottom-0 z-[900] hidden border-t border-white/10 bg-[#2a1119] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
+      <div class="mx-auto grid max-w-md grid-cols-[1.5fr_1fr] gap-3">
+        <a id="call" class="btn min-h-[3.25rem] whitespace-nowrap bg-white px-4 text-lg font-semibold text-[#b3261e]">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>
           <span>Call <span class="name"></span></span>
         </a>
-        <button id="ack" class="btn btn-danger whitespace-nowrap px-4 text-lg">I'm on it</button>
-        <a id="barDirections" target="_blank" rel="noopener" class="btn btn-sodium hidden whitespace-nowrap px-4 text-lg">Directions</a>
+        <button id="ack" class="btn min-h-[3.25rem] whitespace-nowrap border border-white/50 px-4 text-lg text-white hover:bg-white/10">I'm on it</button>
+        <a id="barDirections" target="_blank" rel="noopener" class="btn hidden min-h-[3.25rem] whitespace-nowrap border border-white/50 px-4 text-lg text-white hover:bg-white/10">Directions</a>
       </div>
     </div>
 
     <!-- OK: stood down after an alert -->
     <section data-view="ok" class="view hidden pt-16">
-      <span class="flex h-20 w-20 items-center justify-center rounded-full bg-[rgb(143_166_214/.18)] text-[#8fa6d6]">
+      <span class="flex h-20 w-20 items-center justify-center rounded-full bg-white text-mint">
         <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
       </span>
       <h1 class="display mt-8 text-[2.6rem] font-extrabold leading-[1.05]"><span class="name"></span> says: "I'm OK."</h1>
@@ -202,6 +202,11 @@
       $('#unlock').style.opacity = '0';
       setTimeout(() => $('#unlock') && $('#unlock').remove(), 500);
     });
+    // The first tap anywhere turns sound on (browsers need a gesture), then plays the alert once.
+    function skipGate() {
+      $('#unlock')?.remove();
+      document.addEventListener('pointerdown', () => { try { NOS_SOUND.unlock(); NOS_SOUND.alert(); } catch {} }, { once: true });
+    }
     const STAGE = new URLSearchParams(location.search).has('stage');
     if (STAGE) { try { NOS_SOUND.attach(window.parent.NOS_AUDIO); } catch {} $('#unlock').remove(); }
     const alertSound = () => NOS_SOUND.alert();
@@ -214,9 +219,9 @@
       if (!map) {
         // Start at city level and fly down to her street: you see where she is, fast.
         map = L.map('map', { zoomControl: false, attributionControl: true, scrollWheelZoom: false }).setView([lat, lng], reduced ? 17 : 11);
-        // CARTO dark tiles over OpenStreetMap data (no API key needed).
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          maxZoom: 19, subdomains: 'abcd', attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        // OpenStreetMap tiles (no API key needed).
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19, attribution: '&copy; OpenStreetMap contributors',
         }).addTo(map);
         marker = L.marker([lat, lng], { icon: pinIcon }).addTo(map);
         setTimeout(() => { map.invalidateSize(); if (!reduced) map.flyTo([lat, lng], 17, { duration: 2.6, easeLinearity: 0.15 }); }, 350);
@@ -248,8 +253,8 @@
       const el = $('#widerNote');
       const name = $('.name').textContent;
       if (widerState === 'pending') {
-        const left = Math.max(0, Math.ceil((widerDeadline - Date.now()) / 1000));
-        el.textContent = `Tap “I'm on it” within ${mmss(left)}, or ${name}'s backup contact gets this alert too.`;
+        const left = NOS.clock.left(widerDeadline);
+        el.textContent = left ? `Tap “I'm on it” within ${mmss(left)}, or ${name}'s backup contact gets this alert too.` : `Alerting ${name}'s backup contact now…`;
       } else if (widerState === 'sent') {
         el.textContent = `${name}'s backup contact has been alerted too.`;
       }
@@ -285,33 +290,38 @@
 
       $('#actionBar').classList.toggle('hidden', !alerting);
       if (alerting) {
-        $('#since').textContent = ago(s.seconds_since_response);
+        // An absolute time doesn't tick or re-wrap the headline every second
+        $('#since').textContent = clock(s.now_ms - s.seconds_since_response * 1000);
+        // Alerted because of something the phone heard: say what, when and how serious
+        const d = s.danger;
+        $('#headQuiet').classList.toggle('hidden', !!d); $('#headDanger').classList.toggle('hidden', !d);
+        $('#dangerBox').classList.toggle('hidden', !d);
+        if (d) {
+          $('#dangerAt').textContent = clock(d.at);
+          $('#dangerLevel').textContent = d.level === 'high' ? 'High danger' : 'Possible danger';
+          $('#dangerLevel').style.background = d.level === 'high' ? '#b3261e' : '#a15c00';
+          $('#dangerCues').innerHTML = d.cues.map((c) => `<li class="flex gap-2.5"><span class="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-[#b3261e]"></span><span>${esc(c.charAt(0).toUpperCase() + c.slice(1))}</span></li>`).join('');
+        }
         const { facts, step } = splitSummary(s.summary || '', s.user_name);
         $('#facts').textContent = facts;
-        const SOURCE = {
-          vultr: `Written by our own AI model, running on our servers. ${s.user_name}'s night is never sent to an AI company.`,
-          gemini: 'Summary written with Google Gemini from the facts above.',
-        };
-        $('#aiSource').classList.toggle('hidden', !SOURCE[s.summary_source]);
-        $('#aiSource').classList.toggle('flex', !!SOURCE[s.summary_source]);
-        $('#aiSourceText').textContent = SOURCE[s.summary_source] || '';
         // The step escalates (call, go there, 911), so show it as an ordered list.
         const steps = step.split(/;\s*|\.\s+(?=[A-Z])/).map((t) => t.trim().replace(/\.$/, '')).filter(Boolean);
-        $('#nextStep').innerHTML = steps.map((t, i) => `<li class="flex gap-3"><span class="display flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-signal text-[13px] font-semibold text-white">${i + 1}</span><span class="pt-0.5">${esc(t.charAt(0).toUpperCase() + t.slice(1))}.</span></li>`).join('');
+        $('#nextStep').innerHTML = steps.map((t, i) => `<li class="flex gap-3"><span class="display flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[13px] font-semibold text-[#2a1119]">${i + 1}</span><span class="pt-0.5">${esc(t.charAt(0).toUpperCase() + t.slice(1))}.</span></li>`).join('');
         $('#call').href = `tel:${s.user_phone}`;
         $('#ackNote').classList.toggle('hidden', !s.contact_acked);
 
         const o = s.outlook || { signals: [], phone_reporting: null };
-        $('#phoneDot').className = `mt-1.5 h-3 w-3 shrink-0 rounded-full ${o.phone_reporting ? 'bg-white breathe' : 'bg-black/60'}`;
+        $('#phoneDot').className = `mt-1.5 h-3 w-3 shrink-0 rounded-full ${o.phone_reporting ? 'bg-white breathe' : 'bg-white/35'}`;
         $('#phoneText').textContent = o.phone_reporting == null
           ? `${s.user_name}'s phone hasn't reported in yet.`
           : o.phone_reporting
             ? `${s.user_name}'s phone is still on and has signal, so ${s.user_name} isn't answering it.`
-            : `${s.user_name}'s phone has gone dark. Not answering may mean the phone is off or out of battery.`;
+            : `${s.user_name}'s phone stopped reporting${o.phone_last_seen ? ` at ${clock(o.phone_last_seen)}` : ''}${s.last_heartbeat?.battery != null ? ` with ${Math.round(s.last_heartbeat.battery * 100)}% battery` : ''}. It may be switched off or out of signal.`;
         $('#signals').innerHTML = o.signals.filter((x) => x.key !== 'phone_offline' || !o.phone_reporting)
           .map((x) => `<li class="flex gap-3"><span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-white/80"></span><span>${esc(x.text)}</span></li>`).join('');
 
-        widerDeadline = s.seconds_to_wider == null ? null : Date.now() + s.seconds_to_wider * 1000;
+        NOS.clock.sync(s.now_ms);
+        widerDeadline = s.wider_deadline_ms ?? null;
         widerState = s.contact_acked ? null : s.level === 'WIDER' ? 'sent' : widerDeadline ? 'pending' : null;
         renderWider();
 
@@ -334,10 +344,6 @@
         $('#battery').textContent = pct != null ? `${pct}%` : '–';
         $('#lowBattery').classList.toggle('hidden', pct == null || pct > 20);
         if (prevView !== 'alert') takeover();
-        if (s.trace) {
-          if (!signal) signal = new SignalTrace(document.getElementById('trace'), { tone: 'alert', showLabels: false });
-          signal.update(s.trace);
-        }
         if (prevView !== 'alert' && prevView !== null) {
           alertSound();
           navigator.vibrate && navigator.vibrate([500, 200, 500]);
@@ -349,7 +355,12 @@
     }
 
     async function poll() {
-      try { const s = await api(); lastName = s.user_name; render(s); showErr(''); setTimeout(linkUp, 900); }
+      try {
+        const s = await api(); lastName = s.user_name; render(s); showErr('');
+        // Already escalated: never hide the alert behind the calm "stand by" screen.
+        if ((s.level === 'CONTACT' || s.level === 'WIDER') && $('#unlock')) skipGate();
+        else setTimeout(linkUp, 900);
+      }
       catch (err) { showErr(err.status === 404 ? 'This link isn’t valid. Ask your friend to send it again.' : 'Lost the connection. Retrying…'); }
     }
     $('#ack').addEventListener('click', async () => { try { await api('/ack', true); poll(); } catch (e) { showErr(e.message); } });

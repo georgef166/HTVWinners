@@ -4,3 +4,5 @@ node_modules/
 .claude/
 hardware/night-out-switch/arduino_secrets.h
 deploy/.vultr-state.json*
+screenshots/
+.playwright-mcp/

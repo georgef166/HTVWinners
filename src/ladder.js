@@ -9,7 +9,7 @@ import { assess } from './predict.js';
 export const DEMO = process.env.DEMO !== '0';
 
 export const TIMINGS = DEMO
-  ? { interval: 8, nudge: 6, alarm: 8, contact: 15 } // fast enough to demo in under 30 s
+  ? { interval: 10, nudge: 10, alarm: 10, contact: 15 } // each phase holds long enough to read; Jordan is alerted at about 30 s
   : { interval: 20 * 60, nudge: 2 * 60, alarm: 60, contact: 5 * 60 };
 
 const ALERTING = ['ALARM', 'CONTACT', 'WIDER'];
@@ -60,30 +60,35 @@ async function stepSession(store, s, now) {
       if (past(s.level_deadline)) await setLevel(store, s, 'ALARM', now);
       break;
     case 'ALARM':
-      if (past(s.level_deadline)) {
-        // The alert never waits for AI: send it now with the factual summary,
-        // then let the model's version replace it when it's ready.
-        const events = await store.listEvents(s.id);
-        const summary = templateSummary(s, events, now);
-        await store.addEvent({ session_id: s.id, kind: 'summary', detail: { source: 'template' } });
-        await setLevel(store, s, 'CONTACT', now, { summary });
-        await sendSms(
-          s.contact_phone,
-          `Night Out Switch: ${s.user_name} hasn't responded to check-ins. ${summary}\nDetails: ${contactLink(s)}`,
-        );
-        upgradeSummary(store, s, events, now);
-      }
+      if (past(s.level_deadline)) await alertContact(store, s, now);
       break;
     case 'CONTACT':
       if (past(s.level_deadline) && !s.contact_acked) {
         await setLevel(store, s, 'WIDER', now);
         await sendSms(
           s.backup_phone,
-          `Night Out Switch: ${s.user_name} hasn't responded and ${s.contact_name} hasn't confirmed they're on it. Details: ${contactLink(s)}`,
+          `tenshi: ${s.user_name} hasn't responded and ${s.contact_name} hasn't confirmed they're on it. Details: ${contactLink(s)}`,
         );
       }
       break;
   }
+}
+
+// Alert the trusted contact. The alert never waits for AI: it goes out now with the factual summary,
+// and the model's version replaces it when it's ready. `heard` (from a distress check) skips the
+// rest of the ladder: a plea for help or aggression goes straight to the contact.
+export async function alertContact(store, s, now = new Date(), heard = null) {
+  if (heard) await store.addEvent({ session_id: s.id, kind: 'danger_alert', detail: heard });
+  const events = await store.listEvents(s.id);
+  const summary = templateSummary(s, events, now);
+  await store.addEvent({ session_id: s.id, kind: 'summary', detail: { source: 'template' } });
+  const updated = await setLevel(store, s, 'CONTACT', now, { summary });
+  const lead = heard
+    ? `${s.user_name} may be in danger. ${s.user_name}'s phone heard ${heard.cues.join(' and ')}.`
+    : `${s.user_name} hasn't responded to check-ins.`;
+  await sendSms(s.contact_phone, `tenshi: ${lead} ${summary}\nDetails: ${contactLink(s)}`);
+  upgradeSummary(store, s, events, now);
+  return updated;
 }
 
 // Background: ask the model for a better-written summary and swap it in if it answers.

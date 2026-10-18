@@ -2,40 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0b1220" />
-  <title>Night Out Switch · Your links</title>
+  <meta name="theme-color" content="#ffffff" />
+  <title>tenshi · Your links</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="/theme.js"></script>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/tw.css" />
 </head>
-<body class="app streetlight min-h-screen">
+<body class="streetlight min-h-screen">
   <div class="mx-auto max-w-6xl px-5 sm:px-8">
     <header class="flex items-center justify-between py-6">
       <a href="/" class="flex items-center gap-3 text-sodium">
         <span id="logo"></span>
-        <span class="display text-[15px] font-semibold text-paper">Night Out Switch</span>
+        <span class="wordmark text-[22px]">tenshi</span>
       </a>
     </header>
 
     <main class="grid items-center gap-12 pb-16 pt-8 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
       <section>
-        <h1 class="display text-4xl font-extrabold leading-[1.05] sm:text-6xl"><span class="who">Maya</span> is armed.</h1>
+        <h1 id="headline" class="display text-4xl font-extrabold leading-[1.05] sm:text-6xl" style="text-wrap: balance"><span class="who">Maya</span> is out tonight.</h1>
         <p class="mt-5 max-w-lg text-xl leading-relaxed text-mist">One link is <span class="who">Maya</span>'s phone. The other is for <span class="contact">Jordan</span>, the friend who gets alerted. Open both side by side, then leave <span class="who">Maya</span>'s phone alone.</p>
 
         <div class="mt-10 space-y-4">
-          <a id="me" target="_blank" rel="noopener" class="group flex items-center gap-5 rounded-[26px] bg-sodium p-5 text-white transition hover:bg-sodium/90 sm:p-6">
-            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-sodium" id="meIcon"></span>
+          <a id="me" target="_blank" rel="noopener" class="flex items-center gap-5 rounded-[16px] border border-line p-5 transition hover:border-mist sm:p-6">
+            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-line" id="meIcon"></span>
             <span>
               <span class="display block text-xl font-semibold">Open <span class="who">Maya</span>'s phone</span>
-              <span class="mt-1 block text-[15px] font-semibold opacity-75">Check-ins, the alarm and the PIN pad</span>
+              <span class="mt-1 block text-[15px] text-mist">Check-ins, the alarm and the PIN pad</span>
             </span>
           </a>
-          <a id="contact" target="_blank" rel="noopener" class="flex items-center gap-5 rounded-[26px] border-[1.5px] border-line p-5 transition hover:border-mist sm:p-6">
-            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-[1.5px] border-line">
+          <a id="contact" target="_blank" rel="noopener" class="flex items-center gap-5 rounded-[16px] border border-line p-5 transition hover:border-mist sm:p-6">
+            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-line">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg>
             </span>
             <span>
@@ -47,23 +48,25 @@
         <a id="stageLink" class="btn btn-sodium mt-6">Open the live stage</a>
         <p class="mt-6 text-[15px] text-mist">Sound needs a tap on each page first. The demo PIN is <b class="text-paper">1234</b>.</p>
 
-        <div class="mt-8 rounded-[24px] border border-line bg-dusk/60 p-5">
+        <div class="mt-8 rounded-[16px] border border-line bg-dusk/60 p-5">
           <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
             <h2 class="display text-lg font-semibold">The hardware Switch</h2>
             <span id="switchStatus" class="flex items-center gap-2 whitespace-nowrap text-[13px] font-semibold text-mist"><span id="switchDot" class="h-2 w-2 rounded-full bg-line"></span><span id="switchLabel">Not connected</span></span>
           </div>
           <ul class="mt-3 space-y-1.5 text-[15px] leading-relaxed text-mist">
             <li><b class="text-paper">Touch</b> the pad to check in.</li>
-            <li><b class="text-paper">Joystick</b> up, right, down, left, then press, to cancel an alarm (that's PIN 1234).</li>
-            <li><b class="text-paper">Tap the NFC tag</b> to end the night.</li>
+            <li><b class="text-paper">Tap your phone</b> on its NFC tag to open <span class="who">Maya</span>'s page.</li>
           </ul>
           <button id="linkSwitch" class="btn btn-ghost mt-4 min-h-[2.75rem] text-[14px]">Use the Switch for this night</button>
-          <p class="mt-3 text-[13px] text-mist">No board handy? Run <code class="whitespace-nowrap rounded bg-dusk px-1.5 py-0.5 text-paper">npm run switch-sim</code> for a keyboard stand-in.</p>
+          <details class="mt-4 text-[13px] text-mist">
+            <summary class="cursor-pointer font-medium hover:text-paper">Hardware setup</summary>
+            <p class="mt-2">No board handy? Run <code class="whitespace-nowrap rounded bg-dusk px-1.5 py-0.5 text-paper">npm run switch-sim</code> for a keyboard stand-in. With the board on USB and no WiFi, run <code class="whitespace-nowrap rounded bg-dusk px-1.5 py-0.5 text-paper">npm run switch-bridge</code>.</p>
+          </details>
         </div>
 
-        <div class="mt-4 rounded-[24px] border border-line bg-dusk/60 p-5">
+        <div class="mt-4 rounded-[16px] border border-line bg-dusk/60 p-5">
           <h2 class="display text-lg font-semibold">See it predict trouble</h2>
-          <p class="mt-2 text-[15px] leading-relaxed text-mist">Drain the battery and <span class="who">Maya</span>'s phone warns her before it dies. Or wait a few seconds before tapping “I'm OK” and the check-ins tighten.</p>
+          <p class="mt-2 text-[15px] leading-relaxed text-mist">Drain the battery and <span class="who">Maya</span>'s phone warns her before it dies. Or wait a few seconds before tapping “Check-In” and the check-ins tighten.</p>
           <div class="mt-4 flex flex-wrap gap-3">
             <button id="drain" class="btn btn-ghost min-h-[3rem] text-[15px]"><span>Drain <span class="who">Maya</span>'s battery fast</span></button>
             <button id="cold" class="btn btn-ghost min-h-[3rem] text-[15px]">Make the Switch read −2°C</button>
@@ -73,7 +76,7 @@
       </section>
 
       <figure class="mx-auto w-full max-w-sm">
-        <div class="rounded-[32px] bg-white p-6 shadow-[0_4px_40px_rgba(0,0,0,.08)]">
+        <div class="rounded-[16px] border border-line bg-white p-6">
           <img id="qr" alt="QR code that opens the trusted contact's link" class="aspect-square w-full" />
         </div>
         <figcaption class="mt-5 text-center">
@@ -91,7 +94,7 @@
     const id = new URLSearchParams(location.search).get('id');
     document.getElementById('stageLink').href = `/stage.html?id=${encodeURIComponent(id)}`;
     document.getElementById('linkSwitch').addEventListener('click', async (e) => {
-      const r = await fetch(`/api/sessions/${encodeURIComponent(id)}/link-switch`, { method: 'POST' });
+      const r = await fetch(`/api/sessions/${encodeURIComponent(id)}/link-switch`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ force: true }) });
       e.currentTarget.textContent = r.ok ? 'Switch linked to this night' : 'Couldn’t link the Switch';
     });
     document.getElementById('cold').addEventListener('click', async (e) => {
@@ -130,6 +133,12 @@
       document.getElementById('qr').src = links.qr;
       document.querySelectorAll('.who').forEach((el) => { el.textContent = state.user_name; });
       document.querySelectorAll('.contact').forEach((el) => { el.textContent = state.contact_name; });
+      // The headline follows the night, so it never says "out" when help is already on the way.
+      const n = state.user_name, c = state.contact_name;
+      document.getElementById('headline').textContent = ({
+        ARMED: `${n} is out tonight.`, NUDGE: `Waiting for ${n} to check in.`, ALARM: `${n}'s alarm is sounding.`,
+        CONTACT: `${c} has been alerted.`, WIDER: `${c} and the backup were alerted.`, RESOLVED: `${n}'s night is over.`,
+      })[state.level] || `${n} is out tonight.`;
     }).catch((err) => {
       const el = document.getElementById('err');
       el.textContent = err.message;

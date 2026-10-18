@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0b1220" />
   <title>tenshi · Your night</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="/theme.js"></script>
   <script src="/motion.js"></script>
   <link rel="stylesheet" href="/styles.css" />
@@ -22,13 +23,12 @@
   </style>
   <link rel="stylesheet" href="/tw.css" />
 </head>
-<body class="app streetlight min-h-screen">
-  <nav class="glass sticky top-0 z-40 !rounded-none !border-x-0 !border-t-0 border-line/60">
-    <div class="mx-auto flex h-12 max-w-[1100px] items-center justify-between px-5">
-      <a href="/" class="flex items-center gap-2 text-paper"><span id="logo"></span><span class="text-[22px] font-light tracking-[0.08em] text-gold">tenshi</span></a>
+<body class="app min-h-screen">
+  <nav class="glass sticky top-0 z-40 border-b border-line/60">
+    <div class="mx-auto flex h-16 max-w-[1100px] items-center justify-between px-5">
+      <a href="/" class="flex items-center gap-2"><span id="logo"></span><span class="wordmark text-[20px]">tenshi</span></a>
       <div class="flex items-center gap-4">
         <span class="flex items-center gap-2 text-[13px] font-medium text-mist"><span class="breathe h-2 w-2 rounded-full bg-mint"></span>Live</span>
-        <a id="grafana" target="_blank" rel="noopener" class="btn btn-ghost hidden min-h-[30px] px-3.5 text-[13px]">Open in Grafana</a>
       </div>
     </div>
   </nav>
@@ -40,31 +40,32 @@
       <p class="mt-3 max-w-[56ch] text-[17px] text-mist">Everything your phone and Switch have noticed tonight, in one place. It's yours, and it deletes itself after a week.</p>
     </header>
 
-    <section class="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4" data-reveal style="--i:1">
-      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Out for</p><p class="mono tnum mt-1 text-[28px] font-bold tracking-tight" id="kOut">–</p></div>
-      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Check-ins answered</p><p class="mono tnum mt-1 text-[28px] font-bold tracking-tight" id="kChecks">–</p></div>
-      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Average reply</p><p class="mono tnum mt-1 text-[28px] font-bold tracking-tight" id="kReply">–</p></div>
-      <div class="glass-card p-5"><p class="text-[13px] font-medium text-mist">Battery</p><p class="mono tnum mt-1 text-[28px] font-bold tracking-tight" id="kBattery">–</p></div>
+    <!-- What matters most right now, before any numbers -->
+    <div id="banner" class="mt-8 hidden items-center justify-between gap-4 rounded-[16px] border px-5 py-4" role="status">
+      <p id="bannerText" class="text-[17px] font-semibold"></p>
+      <a id="bannerLink" class="shrink-0 text-[15px] font-medium underline underline-offset-4"></a>
+    </div>
+
+    <section class="mt-8 grid gap-4 lg:grid-cols-[1.5fr_1fr]" data-reveal style="--i:1">
+      <div class="glass-card p-6">
+        <h2 class="display text-[20px] font-semibold">Tonight's timeline</h2>
+        <ol id="timeline" class="mt-4 space-y-3 text-[16px]"></ol>
+      </div>
+      <div class="grid grid-cols-2 content-start gap-4">
+        <div class="glass-card p-5"><p class="text-[14px] font-medium text-mist">Out for</p><p class="display tnum mt-1 text-[28px] font-semibold" id="kOut">–</p></div>
+        <div class="glass-card p-5"><p class="text-[14px] font-medium text-mist">Check-ins answered</p><p class="display tnum mt-1 text-[28px] font-semibold" id="kChecks">–</p></div>
+        <div class="glass-card p-5"><p class="text-[14px] font-medium text-mist">Average reply</p><p class="display tnum mt-1 text-[28px] font-semibold" id="kReply">–</p></div>
+        <div class="glass-card p-5"><p class="text-[14px] font-medium text-mist">Battery</p><p class="display tnum mt-1 text-[28px] font-semibold" id="kBattery">–</p></div>
+      </div>
     </section>
 
     <section class="mt-4 grid gap-4 md:grid-cols-2" id="charts" data-reveal style="--i:2"></section>
-
-    <section class="mt-4 grid gap-4 lg:grid-cols-[1.4fr_1fr]" data-reveal style="--i:3">
-      <div class="glass-card p-6">
-        <h2 class="display text-[20px] font-semibold">Tonight's timeline</h2>
-        <ol id="timeline" class="mt-4 space-y-3 text-[15px]"></ol>
-      </div>
-      <div class="glass-card p-6">
-        <h2 class="display text-[20px] font-semibold">How your data is handled</h2>
-        <ul class="mt-4 space-y-3 text-[15px] leading-snug text-mist">
-          <li><b class="font-semibold text-paper">Stored in Tiger Data</b> as a time series, compressed after a day.</li>
-          <li><b class="font-semibold text-paper">Deleted after 7 days</b>, automatically, including location.</li>
-          <li><b class="font-semibold text-paper">Audio is never saved.</b> A 30-second clip is checked in memory after a sudden loud sound, then wiped. Only the score is kept.</li>
-          <li><b class="font-semibold text-paper">No outside AI.</b> Our own models run on our own server.</li>
-        </ul>
-      </div>
-    </section>
   </main>
+
+  <footer class="mx-auto max-w-[1100px] border-t border-line px-5 py-6 text-[13px] leading-relaxed text-mist">
+    Stored in Tiger Data as a time series, compressed after a day and deleted after 7 days. Audio is never saved: a 30-second clip is checked in memory after a sudden loud sound, then wiped. The models run on our own server.
+    <a id="grafana" target="_blank" rel="noopener" class="hidden underline underline-offset-4 hover:text-paper">Open this night in Grafana</a>
+  </footer>
 
   <script>
     const $ = (s) => document.querySelector(s);
@@ -122,11 +123,11 @@
     function timeline(events) {
       const LABEL = {
         checkin_sent: (e) => [e.detail?.reason === 'distress' ? 'Something sounded wrong, so we checked on you' : 'Check-in sent', 'text-mist'],
-        checkin_ack: () => ['You answered “I’m OK”', 'text-mint'],
+        checkin_ack: () => ['You checked in', 'text-mint'],
         stand_down: () => ['You cancelled the alarm with your PIN', 'text-mint'],
         contact_ack: () => ['Your contact said they’re on it', 'text-mint'],
         distress_check: (e) => [e.detail?.score >= 0.5 ? `Heard ${(e.detail.cues || []).join(' and ')}` : '30-second check: nothing worrying', e.detail?.score >= 0.5 ? 'text-signal' : 'text-mist'],
-        level_change: (e) => ({ ALARM: ['No answer, so your phone sounded the alarm', 'text-signal'], CONTACT: ['Your contact was alerted', 'text-signal'], WIDER: ['Your backup contact was alerted', 'text-signal'], RESOLVED: ['Night ended', 'text-mist'] })[e.detail?.to] || (e.detail?.from == null && e.detail?.to === 'ARMED' ? ['You armed tenshi', 'text-sodium'] : null),
+        level_change: (e) => ({ ALARM: ['No answer, so your phone sounded the alarm', 'text-signal'], CONTACT: ['Your contact was alerted', 'text-signal'], WIDER: ['Your backup contact was alerted', 'text-signal'], RESOLVED: ['Night ended', 'text-mist'] })[e.detail?.to] || (e.detail?.from == null && e.detail?.to === 'ARMED' ? ['You turned on tenshi', 'text-sodium'] : null),
       };
       const rows = events.slice().reverse().map((e) => { const l = LABEL[e.kind]?.(e); return l ? `<li class="flex gap-4"><span class="tnum w-24 shrink-0 text-[13px] text-mist">${clock(e.t)}</span><span class="font-medium ${l[1]}">${l[0]}</span></li>` : ''; }).filter(Boolean).slice(0, 12);
       $('#timeline').innerHTML = rows.join('') || '<li class="text-mist">Nothing yet tonight.</li>';
@@ -137,12 +138,13 @@
       if (!r.ok) { $('#title').textContent = 'This night doesn’t exist'; return; }
       const m = await r.json();
       $('#title').textContent = `${m.user_name}'s night so far`;
-      $('#subtitle').textContent = m.level === 'RESOLVED' ? 'Night ended' : 'Armed and watching';
+      $('#subtitle').textContent = ({ ARMED: 'Out tonight, all quiet', NUDGE: 'A check-in is waiting', ALARM: 'Your alarm is sounding',
+        CONTACT: 'Your contact was alerted', WIDER: 'Your contact and backup were alerted', RESOLVED: 'Night ended' })[m.level] || 'Out tonight';
       const t1 = m.now, t0 = Math.max(new Date(m.armed_at).getTime(), m.now - m.minutes * 60000);
       const marks = m.events.filter((e) => e.kind === 'distress_check' && e.detail?.score >= 0.5).map((e) => e.t);
       for (const c of CHARTS) {
         const pts = m.series[c.key] || [];
-        if (c.optional && !pts.length) { cards[c.key]?.remove(); delete cards[c.key]; continue; }
+        if (!pts.length) { cards[c.key]?.remove(); delete cards[c.key]; continue; }  // empty charts stay hidden until there's data
         if (!cards[c.key]) { cards[c.key] = chartCard(c); $('#charts').appendChild(cards[c.key]); }
         draw(cards[c.key], c, pts, c.peak ? m.series[c.peak] || [] : null, t0, t1, c.key === 'sound_db' ? marks : []);
       }
@@ -155,6 +157,24 @@
       const bat = m.series.battery_pct?.at(-1)?.[1];
       $('#kBattery').textContent = bat != null ? `${Math.round(bat)}%` : '–';
       timeline(m.events);
+      banner(m);
+    }
+    // A plain sentence about the most important thing tonight, in that state's colour
+    function banner(m) {
+      const at = (to) => { const e = [...m.events].reverse().find((x) => x.kind === 'level_change' && x.detail?.to === to); return e ? new Date(e.t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''; };
+      const c = m.contact_name || 'Your contact';
+      const B = {
+        NUDGE: ['amber', 'A check-in is waiting. Answer it on your phone.'],
+        ALARM: ['signal', `No answer, so your alarm is sounding. ${c} is next.`],
+        CONTACT: ['signal', `${c} was alerted at ${at('CONTACT')} with your last location.`],
+        WIDER: ['signal', `${c} and your backup were alerted at ${at('WIDER')}.`],
+      }[m.level];
+      $('#banner').classList.toggle('hidden', !B); $('#banner').classList.toggle('flex', !!B);
+      if (!B) return;
+      const [tone, text] = B;
+      $('#banner').style.cssText = `background: rgb(var(--${tone}-rgb) / .12); border-color: rgb(var(--${tone}-rgb) / .35); color: rgb(var(--${tone}-rgb))`;
+      $('#bannerText').textContent = text;
+      const link = $('#bannerLink'); link.textContent = 'Open your phone'; link.href = `/me.html?id=${encodeURIComponent(id)}`;
     }
     load();
     setInterval(load, 3000);
@@ -163,7 +183,7 @@
       if (!h.grafana) return;
       const g = $('#grafana');
       g.href = `/grafana/d/nos-night/night-out-switch?var-session=${encodeURIComponent(id)}&from=now-30m&to=now&refresh=5s`;
-      g.classList.remove('hidden');
+      g.classList.remove('hidden'); g.classList.add('inline');
     }).catch(() => {});
   </script>
 </body>

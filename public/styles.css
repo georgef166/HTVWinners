@@ -1,27 +1,39 @@
-/* Tenshi: dark "Midnight" theme with liquid-glass surfaces. Tokens are RGB triplets so Tailwind can apply alpha.
-   Palette: navy #36476F, teal #3E868E (bright aqua for actions), sand #D1B896, slate #6F6F6F. */
+/* tenshi. Light theme for the landing page; the demo (stage, phones, dashboard) runs on the dark "Midnight"
+   theme from the Figma design: navy, teal, sand. Tokens are RGB triplets so Tailwind can apply alpha. */
 :root {
-  --ink-rgb: 11 18 32;           /* page background, #0B1220 */
-  --dusk-rgb: 23 34 58;          /* secondary surface, #17223A */
-  --line-rgb: 54 71 111;         /* hairlines and tracks, navy #36476F */
-  --paper-rgb: 242 239 232;      /* primary text, warm pearl */
-  --mist-rgb: 163 171 186;       /* secondary text */
-  --sodium-rgb: 95 208 216;      /* action: bright aqua */
-  --signal-rgb: 255 59 59;       /* alert red */
-  --mint-rgb: 95 179 187;        /* safe / armed teal */
-  --amber-rgb: 240 176 74;       /* check-in due */
-  --gold-rgb: 209 184 150;       /* brand sand */
+  --ink-rgb: 255 255 255;        /* page background */
+  --dusk-rgb: 243 245 248;       /* secondary surface */
+  --line-rgb: 226 230 237;       /* hairlines */
+  --paper-rgb: 15 26 48;         /* primary text: navy ink */
+  --mist-rgb: 91 100 120;        /* secondary text */
+  --sodium-rgb: 47 115 122;      /* action: deep teal (white text on it passes AA) */
+  --signal-rgb: 217 45 32;       /* alert red */
+  --mint-rgb: 31 122 112;        /* OK / armed */
+  --amber-rgb: 178 107 0;        /* check-in due */
+  --gold-rgb: 150 116 72;        /* brand sand, deepened for white */
+  --on-sodium: #fff;             /* text on an action button */
   --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-text: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --radius: 24px;                /* one corner radius for every box, button and pill */
   --ink: rgb(var(--ink-rgb)); --dusk: rgb(var(--dusk-rgb)); --line: rgb(var(--line-rgb));
   --paper: rgb(var(--paper-rgb)); --mist: rgb(var(--mist-rgb));
   --sodium: rgb(var(--sodium-rgb)); --signal: rgb(var(--signal-rgb)); --mint: rgb(var(--mint-rgb));
   --amber: rgb(var(--amber-rgb)); --gold: rgb(var(--gold-rgb));
 }
-/* The live stage keeps its own class name; it uses the same dark tokens. */
-.theme-dark { color: var(--paper); background-color: var(--ink); }
+/* Midnight: the live stage (.theme-dark) and the app pages (body.app) */
+.theme-dark, body.app {
+  --ink-rgb: 11 18 32; --dusk-rgb: 23 34 58; --line-rgb: 54 71 111;
+  --paper-rgb: 242 239 232; --mist-rgb: 163 171 186;
+  --sodium-rgb: 95 208 216; --signal-rgb: 255 79 74; --mint-rgb: 95 179 187;
+  --amber-rgb: 240 176 74; --gold-rgb: 209 184 150;
+  --on-sodium: #0b1220;
+  /* derived colors resolve where they're declared, so restate them here */
+  --ink: rgb(var(--ink-rgb)); --dusk: rgb(var(--dusk-rgb)); --line: rgb(var(--line-rgb));
+  --paper: rgb(var(--paper-rgb)); --mist: rgb(var(--mist-rgb));
+  --sodium: rgb(var(--sodium-rgb)); --signal: rgb(var(--signal-rgb)); --mint: rgb(var(--mint-rgb));
+  --amber: rgb(var(--amber-rgb)); --gold: rgb(var(--gold-rgb));
+  color: var(--paper); background-color: var(--ink);
+}
+html:has(body.app) { background: #0b1220; }
 
 html { background: var(--ink); }
 body {
@@ -34,90 +46,49 @@ body {
   -webkit-tap-highlight-color: transparent;
   letter-spacing: -0.011em;
 }
-/* Titles: one weight, tight tracking. App screens share a single size. */
-.display { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.04em; }
-.display.font-extrabold, .display.font-bold { font-weight: 600; }
-.app h1.display { font-size: 2rem; line-height: 2.25rem; }
-.app h2.display { font-size: 1.0625rem; line-height: 1.375rem; letter-spacing: -0.02em; }
-.mono { font-family: var(--font-mono); }
-.eyebrow { font-family: var(--font-mono); font-size: .75rem; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--mist); }
-.timer { font-family: var(--font-mono); font-weight: 700; font-size: 4.25rem; line-height: 1; letter-spacing: -0.06em; font-variant-numeric: tabular-nums; }
+.display { font-family: var(--font-display); letter-spacing: -0.035em; }
+.display.font-extrabold { font-weight: 700; }
 .tnum { font-variant-numeric: tabular-nums; }
 
-/* Page background: deep navy with a teal wash from the top and two soft silk arcs (assets from the design). */
-.streetlight, body.app { background: linear-gradient(180deg, #0a1222 0%, #050911 100%) fixed; }
-body.app { position: relative; }
-body.app::before {
-  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background:
-    linear-gradient(180deg, rgb(62 134 142 / .28), rgb(62 134 142 / 0) 360px) top / 100% 360px no-repeat,
-    url(/assets/silk-arc-b.svg) calc(50% + 25px) -210px / 572px no-repeat,
-    url(/assets/silk-arc-a.svg) calc(50% - 55px) -350px / 772px no-repeat;
-  opacity: .9;
-}
-body.app.state-contact::before, body.app.alerting::before, body.app.flash::before { filter: hue-rotate(155deg) saturate(1.8); }
-body.app.state-nudge { background: linear-gradient(180deg, #0a1222, #050911) fixed; }
-body.app.flash { background: linear-gradient(180deg, #3c1621 0%, #1e0c12 60%, #12080d 100%) fixed; }
-body.app.state-contact, body.app.alerting { background: linear-gradient(180deg, #3c1621 0%, #1e0c12 60%, #12080d 100%) fixed; }
+/* The wordmark: lowercase, tracked, in the text colour like the mark. */
+.wordmark { font-weight: 500; letter-spacing: .06em; color: var(--paper); line-height: 1; }
+
+/* Plain page background (kept as a class name the pages already use). */
+.streetlight { background: var(--ink); }
+
+/* App pages: flat navy. Alerts turn the whole page deep red, a stand-down turns it deep teal. */
+body.app { background: #0b1220; }
+body.app.state-contact, body.app.alerting { background: #2a1119; }
+body.app.flash { background: #2a1119; animation: alarmBg 1.2s ease-in-out infinite; }
+@keyframes alarmBg { 50% { background-color: #3d1520; } }
+body.app.ok { background: #0f2f32; }
 
 :focus-visible { outline: 3px solid rgb(var(--sodium-rgb) / .5); outline-offset: 2px; border-radius: 12px; }
 
-/* ---------- Liquid glass ---------- */
-.glass-card, .glass {
-  position: relative; border-radius: var(--radius);
-  border: 1.2px solid rgb(182 221 230 / .38);
-  background: linear-gradient(180deg, rgb(156 195 228 / .17), rgb(54 71 111 / .16));
-  -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%);
-  box-shadow: inset 0 1px 1px rgb(191 229 255 / .15), inset 0 -1px 2px rgb(191 229 255 / .03), 0 14px 34px -6px rgb(0 0 0 / .38);
-}
-.icon-btn {
-  display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: var(--radius); flex: none;
-  border: 1.2px solid rgb(182 221 230 / .38);
-  background: linear-gradient(180deg, rgb(156 195 228 / .17), rgb(54 71 111 / .16));
-  -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
-  box-shadow: inset 0 1px 1px rgb(191 229 255 / .15);
-}
-.icon-btn img { width: 20px; height: 20px; }
-.pill {
-  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--radius);
-  font: 700 .6875rem var(--font-mono); letter-spacing: .04em; text-transform: uppercase;
-}
+/* Frosted bar for navigation */
+.glass { background: rgb(var(--ink-rgb) / .72); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
 
-/* ---------- Buttons: glass, no drop shadow ---------- */
+/* Cards: a flat tinted panel; on dark pages, a faint fill with a hairline. */
+.glass-card { position: relative; border-radius: 16px; background: var(--dusk); }
+.theme-dark .glass-card, body.app .glass-card { background: rgb(255 255 255 / .04); border: 1px solid rgb(255 255 255 / .08); }
+
+/* ---------- Buttons ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
-  min-height: 3.375rem; padding: 0 1.4rem; border-radius: var(--radius);
-  font-weight: 600; font-size: 1.0625rem; letter-spacing: -0.01em; color: var(--paper);
-  border: 1.2px solid rgb(182 221 230 / .38);
-  background: linear-gradient(180deg, rgb(156 195 228 / .17), rgb(54 71 111 / .16));
-  -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
-  box-shadow: inset 0 1.5px 1px rgb(191 229 255 / .22), inset 0 -2px 4px rgb(0 0 0 / .1);
-  transition: transform .12s ease, filter .2s ease, opacity .2s ease;
+  min-height: 2.9rem; padding: 0 1.4rem; border-radius: 980px;
+  font-weight: 500; font-size: 1.0625rem; letter-spacing: -0.01em;
+  transition: transform .12s ease, background-color .2s ease, opacity .2s ease;
   cursor: pointer;
 }
 .btn:active { transform: scale(.98); }
-.btn-sodium {
-  color: #0b1220; border-color: rgb(212 246 249 / .75);
-  background: linear-gradient(180deg, rgb(134 234 240 / .82), rgb(69 187 203 / .68));
-  box-shadow: inset 0 1.5px 1px rgb(212 246 249 / .4), inset 0 0 16px rgb(95 208 216 / .38);
-}
-.btn-sodium:hover { filter: brightness(1.08); }
-.btn-danger {
-  color: #fff; border-color: rgb(255 214 210 / .7);
-  background: linear-gradient(180deg, rgb(255 92 80 / .96), rgb(238 34 34 / .9));
-  box-shadow: inset 0 1.5px 1px rgb(255 224 220 / .45), inset 0 0 16px rgb(255 106 96 / .5);
-}
-.btn-ghost:hover { filter: brightness(1.15); }
+.btn-sodium { background: var(--sodium); color: var(--on-sodium); }
+.btn-sodium:hover { background: rgb(var(--sodium-rgb) / .88); }
+.btn-ghost { color: var(--sodium); border: 1px solid rgb(var(--sodium-rgb) / .9); }
+.btn-ghost:hover { background: rgb(var(--sodium-rgb) / .08); }
 .btn:disabled { opacity: .5; cursor: progress; }
 .link-arrow { color: var(--sodium); font-weight: 500; }
 .link-arrow::after { content: ' ›'; }
 .link-arrow:hover { text-decoration: underline; }
-
-/* Quick actions on the armed screen: label left, round icon right. */
-.action { white-space: nowrap; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 60px; padding: 0 16px; font-weight: 500; font-size: 1rem; }
-.action .dot { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: rgb(255 255 255 / .12); }
-.action .dot img { width: 16px; height: 16px; }
-.action-icon { width: 60px; padding: 0; justify-content: center; }
 
 /* Signature: the main button is a switch. A white knob that nudges over when you're about to flip it. */
 .btn-switch { padding-left: .4rem; gap: .75rem; }
@@ -141,7 +112,7 @@ body.app.state-contact, body.app.alerting { background: linear-gradient(180deg, 
 .field input {
   display: block; width: 100%; margin-top: .4rem; padding: .85rem 1rem;
   font: 400 1.0625rem var(--font-text); color: var(--paper);
-  background: rgb(var(--ink-rgb) / .5); border: 1px solid rgb(182 221 230 / .3); border-radius: 16px;
+  background: var(--ink); border: 1px solid var(--line); border-radius: 8px;
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 .field input::placeholder { color: rgb(var(--mist-rgb) / .7); }
@@ -155,13 +126,13 @@ body.app.state-contact, body.app.alerting { background: linear-gradient(180deg, 
   content: ''; position: absolute; top: var(--dot-mid); left: 50%; width: 100%; height: var(--track);
   transform: translateY(-50%); background: var(--line); z-index: 0;
 }
-.route .stop.is-past::after { background: var(--sodium); }
+.route .stop.is-past::after { background: rgb(var(--t-next)); }
 .route .stop-dot {
   position: relative; z-index: 1; width: var(--dot); height: var(--dot); border-radius: 50%;
   background: var(--ink); border: var(--track) solid var(--line); box-sizing: border-box;
 }
-.route .stop.is-past .stop-dot { background: var(--sodium); border-color: var(--sodium); }
-.route .stop.is-here .stop-dot { background: var(--ink); border-color: var(--sodium); box-shadow: 0 0 0 6px rgb(var(--sodium-rgb) / .18); }
+.route .stop.is-past .stop-dot { background: rgb(var(--t)); border-color: rgb(var(--t)); }
+.route .stop.is-here .stop-dot { background: var(--ink); border-color: rgb(var(--t)); box-shadow: 0 0 0 6px rgb(var(--t) / .2); }
 .route .stop-name { margin-top: .55rem; font-weight: 600; color: var(--mist); }
 .route .is-here .stop-name, .route .is-past .stop-name { color: var(--paper); }
 
@@ -173,11 +144,8 @@ body.app.state-contact, body.app.alerting { background: linear-gradient(180deg, 
 .route-full .stop:not(:last-child)::after { left: 0; width: 100%; }
 .route-full .stop-name { font-family: var(--font-display); font-weight: 600; font-size: 1.2rem; letter-spacing: -0.02em; margin-top: 1rem; color: var(--paper); }
 .route-full .stop-desc { margin-top: .4rem; color: var(--mist); font-size: .975rem; line-height: 1.5; max-width: 22ch; }
-.route-full .stop-dot { border-color: var(--sodium); }
-.route-full .stop:nth-child(1)::after { background: var(--sodium); }
-.route-full .stop:nth-child(2)::after { background: linear-gradient(90deg, var(--sodium), var(--signal)); }
-.route-full .stop:nth-child(n+3)::after { background: var(--signal); }
-.route-full .stop:nth-child(n+3) .stop-dot { border-color: var(--signal); }
+.route-full .stop-dot { border-color: rgb(var(--t)); }
+.route-full .stop:not(:last-child)::after { background: rgb(var(--t-next)); }
 .route-draw .stop:not(:last-child)::after { transform-origin: left center; transform: translateY(-50%) scaleX(0); }
 .route-draw.in .stop:not(:last-child)::after { animation: draw .55s cubic-bezier(.3, .7, .2, 1) both; animation-delay: calc(var(--n, 0) * .28s + .2s); }
 .route-draw .stop-dot { transform: scale(0); }
@@ -198,63 +166,42 @@ body.app.state-contact, body.app.alerting { background: linear-gradient(180deg, 
     top: var(--dot); left: calc(var(--dot) / 2); width: var(--track); height: calc(100% + 1.6rem - var(--dot));
     transform: translateX(-50%);
   }
-  .route-full .stop:nth-child(2)::after { background: linear-gradient(180deg, var(--sodium), var(--signal)); }
   .route-draw .stop:not(:last-child)::after, .route-draw.in .stop:not(:last-child)::after { animation: none; transform: translateX(-50%); }
 }
 
 /* ---------- Countdown ring ---------- */
 .ring-track { stroke: var(--line); }
-.ring-fill { stroke: var(--mint); stroke-linecap: round; transition: stroke-dashoffset .25s linear; filter: drop-shadow(0 0 8px rgb(var(--mint-rgb) / .6)); }
-.ring-amber { stroke: var(--amber); filter: drop-shadow(0 0 10px rgb(var(--amber-rgb) / .6)); }
+.ring-fill { stroke: var(--mint); stroke-linecap: round; transition: stroke-dashoffset .25s linear; }
+.ring-amber { stroke: var(--signal); }  /* the check-in ring, red to match the I'm OK button */
 
-/* The big "I'm OK" orb: amber glass, no drop shadow, compact sans. */
-.ok-button {
-  font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em; color: #0b1220;
-  background: linear-gradient(180deg, #ffcf7a, #e8962a);
-  border: 2px solid rgb(255 255 255 / .55);
-  box-shadow: inset 0 4px 8px rgb(255 255 255 / .6), inset 0 -8px 14px rgb(160 80 0 / .2);
-}
+/* The big "I'm OK" button: flat red, the same red as the alarm and alert steps. */
+.ok-button { color: #fff; background: var(--signal); font-weight: 700; letter-spacing: -0.02em; word-spacing: .12em; }
+.ok-button:hover { background: rgb(var(--signal-rgb) / .92); }
 
 /* ---------- Keypad ---------- */
-.keypad-grid { display: grid; grid-template-columns: repeat(3, 72px); justify-content: center; gap: 14px 22px; }
+/* iOS-style keypad: 72px circles, a backspace key and a confirm key that wakes up at 4 digits */
+.keypad-grid { display: grid; grid-template-columns: repeat(3, 72px); justify-content: center; gap: 14px 26px; }
 .key {
-  width: 72px; height: 72px; border-radius: 50%; font-family: var(--font-mono); font-weight: 500; font-size: 1.75rem;
-  color: inherit; border: 1.2px solid rgb(182 221 230 / .38);
-  background: linear-gradient(180deg, rgb(156 195 228 / .17), rgb(54 71 111 / .16));
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  box-shadow: inset 0 1px 1px rgb(191 229 255 / .2);
-  transition: background-color .12s ease, transform .1s ease, filter .12s ease;
+  width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 400; font-size: 28px;
+  color: inherit; background: rgb(var(--paper-rgb) / .1); border: 0;
+  transition: background-color .12s ease, transform .1s ease, opacity .15s ease;
 }
-.key:active { transform: scale(.95); filter: brightness(1.4); }
-.key-text { font-family: var(--font-text); font-size: .9375rem; font-weight: 500; background: transparent; border-color: transparent; box-shadow: none; }
+.key:hover { background: rgb(var(--paper-rgb) / .16); }
+.key:active { transform: scale(.94); background: rgb(var(--paper-rgb) / .26); }
+.key-text { background: transparent; }
+.key-ok { background: var(--paper); color: var(--ink); }
+.key-ok:hover { background: rgb(var(--paper-rgb) / .9); }
+.key:disabled { opacity: .35; cursor: default; transform: none; }
+.key-ok:disabled { background: rgb(var(--paper-rgb) / .1); color: var(--paper); }
 .pin-dots { display: flex; justify-content: center; gap: .9rem; height: 1rem; }
-.pin-dots span { width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid currentColor; opacity: .6; }
+.pin-dots span { width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid currentColor; opacity: .5; }
 .pin-dots span.on { background: currentColor; opacity: 1; }
 .shake { animation: shake .35s ease; }
 @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
 
-/* ---------- Alarm: deep red, a slow pulse (no white flashing) ---------- */
-@keyframes alarmPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.22) saturate(1.15); } }
-.flash::before { animation: alarmPulse 1.2s ease-in-out infinite; }
-.flash .key { background: linear-gradient(180deg, rgb(255 120 110 / .16), rgb(120 20 30 / .3)); border-color: rgb(255 190 185 / .35); }
-
-/* ---------- Tab bar (floating glass pill) ---------- */
-.tabbar {
-  position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30;
-  display: flex; align-items: center; justify-content: space-between; width: min(342px, calc(100vw - 48px)); height: 64px; padding: 0 6px;
-  border-radius: var(--radius); border: 1.2px solid rgb(182 221 230 / .55);
-  background: linear-gradient(180deg, rgb(54 71 111 / .4), rgb(10 16 30 / .55));
-  -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px); box-shadow: inset 0 1px 1px rgb(191 227 234 / .18);
-}
-.tab { display: flex; align-items: center; justify-content: center; gap: 8px; width: 52px; height: 52px; border-radius: var(--radius); color: var(--paper); font-weight: 600; font-size: .9375rem; letter-spacing: -0.01em; }
-.tab img { width: 24px; height: 24px; }
-.tab.is-active {
-  width: auto; padding: 0 20px; color: #0b1220; border: 1.2px solid rgb(212 246 249 / .75);
-  background: linear-gradient(180deg, rgb(134 234 240 / .85), rgb(69 187 203 / .7));
-  box-shadow: inset 0 0 16px rgb(95 208 216 / .38), inset 0 1.5px 1px rgb(212 246 249 / .4);
-}
-.tab.is-active img { width: 22px; height: 22px; }
-.tab[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+/* ---------- Alarm keys on the red page ---------- */
+.flash .key { background: rgb(255 140 130 / .14); }
 
 /* Breathing pilot light while armed */
 @keyframes breathe { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }

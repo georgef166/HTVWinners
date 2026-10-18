@@ -4,8 +4,8 @@
 //  - The line goes flat and red when she goes quiet
 //  - Dots underneath for her phone's heartbeats (the phone can be fine while she isn't)
 (function () {
-  // Levels where she's silent: orange while a check-in waits, red once the alarm is up.
-  const SILENT = { NUDGE: 'orange', ALARM: 'signal', CONTACT: 'signal', WIDER: 'signal' };
+  // Levels where she's silent: amber while a check-in waits, red once the alarm is up.
+  const SILENT = { NUDGE: 'amber', ALARM: 'signal', CONTACT: 'signal', WIDER: 'signal' };
   const LABELS = {
     NUDGE: 'Check-in', ALARM: 'No answer', CONTACT: 'Contact alerted', WIDER: 'Backup alerted', RESOLVED: 'Night ended',
   };
@@ -63,7 +63,7 @@
       if (this._pal && now - this._palAt < 1000) return this._pal;
       const cs = getComputedStyle(this.canvas);
       const v = (n) => cs.getPropertyValue(`--${n}-rgb`).trim().split(/\s+/).join(',');
-      const tokens = { sodium: v('sodium'), signal: v('signal'), mint: v('mint'), mist: v('mist'), line: v('line'), orange: '255,149,0' };
+      const tokens = { sodium: v('sodium'), signal: v('signal'), mint: v('mint'), mist: v('mist'), line: v('line'), amber: v('amber') };
       this._pal = (name, a = 1) => `rgba(${tokens[name] || name},${a})`;
       this._palAt = now;
       return this._pal;
@@ -147,14 +147,11 @@
         prev = { px, y };
       }
 
-      // Leading edge: a glowing dot where "now" is
+      // Leading edge: a dot where "now" is
       const nowLevel = levelAt(now);
       const edge = alertTone ? '#fff' : SILENT[nowLevel] ? P(SILENT[nowLevel]) : nowLevel === 'RESOLVED' ? P('mist') : P('sodium');
-      const pulse = this.reduced ? 1 : 0.6 + 0.4 * Math.sin(now / 180);
       ctx.fillStyle = edge;
-      ctx.shadowColor = edge; ctx.shadowBlur = 14 * pulse;
       ctx.beginPath(); ctx.arc(w - 3, prev ? prev.y : base, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0;
 
       // Phone heartbeats lane
       ctx.fillStyle = alertTone ? 'rgba(255,255,255,.75)' : P('mint', 0.85);

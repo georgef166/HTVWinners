@@ -7,6 +7,7 @@
 //   node deploy/vultr.mjs ssh [command]    shell into the server (or run one command)
 //   node deploy/vultr.mjs logs             app logs
 //   node deploy/vultr.mjs update           pull the latest code from GitHub and restart
+//   node deploy/vultr.mjs tiger            move the data to Tiger Cloud (TIGER_DATABASE_URL in .env), reseed the week
 //   node deploy/vultr.mjs destroy --yes    delete the server (stops billing)
 //
 // Needs VULTR_API_KEY in .env or the environment (Vultr → Account → API, and allow your IP).
@@ -165,6 +166,29 @@ async function destroy(flag) {
   console.log(`✓ Deleted ${s.id}. Billing for it stops now.`);
 }
 
+// Point the live server at Tiger Cloud. The connection string goes from your local .env to the server's
+// .env over ssh stdin, so the password never appears in a command line, a log or this terminal.
+function tiger(ip) {
+  const url = process.env.TIGER_DATABASE_URL;
+  if (!url) die('Add TIGER_DATABASE_URL=postgres://... to .env (Tiger Cloud console → your service → Connect).');
+  const u = new URL(url);
+  const vars = {
+    TIGER_DATABASE_URL: url, TIGER_HOST: u.hostname, TIGER_PORT: u.port || '5432', TIGER_USER: decodeURIComponent(u.username),
+    TIGER_PASSWORD: decodeURIComponent(u.password), TIGER_DB: u.pathname.slice(1) || 'tsdb', TIGER_SSLMODE: 'require',
+  };
+  const lines = Object.entries(vars).map(([k, v]) => `${k}='${v.replaceAll("'", "")}'`).join('\n') + '\n';
+  const sshArgs = ['-i', KEY_PATH, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ConnectTimeout=10', `root@${ip}`];
+  console.log(`Pointing the server at Tiger Cloud (${u.hostname})…`);
+  let r = spawnSync('ssh', [...sshArgs, 'cd /opt/nos && grep -v "^TIGER_" .env > .env.new; cat >> .env.new && mv .env.new .env && chmod 600 .env && docker compose --profile model up -d'],
+    { input: lines, stdio: ['pipe', 'inherit', 'inherit'] });
+  if (r.status !== 0) die('Could not update the server.');
+  console.log('Waiting for the app to set up the hypertables on Tiger Cloud…');
+  r = spawnSync('ssh', [...sshArgs, 'cd /opt/nos && for i in $(seq 1 30); do curl -sf localhost:3000/api/health >/dev/null 2>&1 || docker compose exec -T app wget -qO- localhost:3000/api/health >/dev/null 2>&1 && break; sleep 2; done; docker compose exec -T app node --input-type=module - < scripts/seed-week.js'],
+    { stdio: 'inherit' });
+  if (r.status !== 0) die('Seeding the sample week failed.');
+  console.log('✓ On Tiger Cloud. Check: node deploy/vultr.mjs status');
+}
+
 const [cmd, ...rest] = process.argv.slice(2);
 const s = state();
 switch (cmd) {
@@ -174,6 +198,7 @@ switch (cmd) {
   case 'ssh': if (!s) die('No server yet.'); process.exit(ssh(s.ip, rest.join(' ') || undefined).status ?? 0);
   case 'logs': if (!s) die('No server yet.'); ssh(s.ip, 'cd /opt/nos && docker compose logs --tail 80 app'); break;
   case 'update': if (!s) die('No server yet.'); ssh(s.ip, 'cd /opt/nos && git pull && docker compose --profile model up -d --build'); break;
+  case 'tiger': if (!s) die('No server yet.'); tiger(s.ip); break;
   case 'destroy': await destroy(rest[0]); break;
   default: console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 12).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
 }

@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0b1220" />
-  <title>Night Out Switch</title>
+  <meta name="theme-color" content="#ffffff" />
+  <title>tenshi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="/theme.js"></script>
   <script src="/motion.js"></script>
   <link rel="stylesheet" href="/styles.css" />
@@ -21,7 +22,8 @@
     .phone-screen { position: relative; height: 100%; border-radius: 38px; overflow: hidden; }
     .phone-back { left: 0; top: 0; transform: rotate(-6deg); }
     .phone-front { right: 0; bottom: 0; transform: rotate(4deg); }
-    .alert-screen { background: var(--signal); }
+    .mock-app { background: #0b1220; }
+    .alert-screen { background: #2a1119; }
     .intro-done .alert-screen { animation: turn-red 1s ease 1.2s both; }
     .intro-done .phone-front { animation: lift .9s cubic-bezier(.2, .7, .2, 1) .35s both; }
     .hero-rise { opacity: 0; transform: translateY(22px); }
@@ -29,6 +31,15 @@
     .intro-done .hero-rise:nth-child(2) { animation-delay: .12s; }
     .intro-done .hero-rise:nth-child(3) { animation-delay: .24s; }
     @keyframes rise { to { opacity: 1; transform: none; } }
+    .ecg-ok { stroke-dasharray: 700; stroke-dashoffset: 700; }
+    .ecg-quiet { stroke-dasharray: 160; stroke-dashoffset: 160; }
+    .ecg-dot { opacity: 0; }
+    .intro-done .ecg-ok { animation: ecg-draw 1.6s ease-out .3s forwards; }
+    .intro-done .ecg-quiet { animation: ecg-draw .9s linear 1.9s forwards; }
+    .intro-done .ecg-dot { animation: ecg-dot .3s ease-out 2.8s forwards; }
+    @keyframes ecg-draw { to { stroke-dashoffset: 0; } }
+    @keyframes ecg-dot { to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .ecg-ok, .ecg-quiet { stroke-dashoffset: 0; } .ecg-dot { opacity: 1; } }
 
     /* Intro: a keynote slide. Her night as a heartbeat line, then silence, then help. */
     #intro { position: fixed; inset: 0; z-index: 2000; background: #05060D; color: #f5f5f7; overflow: hidden; cursor: pointer; }
@@ -50,7 +61,6 @@
     @keyframes lift { from { transform: translateY(24px) rotate(4deg); opacity: 0; } }
     .phone .route-mini { --dot: 9px; --track: 2px; --dot-mid: 4.5px; }
     .phone .route-mini .stop-name { font-size: 7.5px; margin-top: .35rem; }
-    .phone .route-mini .is-here .stop-dot { box-shadow: 0 0 0 3px rgb(var(--sodium-rgb) / .25); }
     @media (max-width: 480px) {
       .phones { height: 430px; }
       .phone { transform-origin: top left; }
@@ -72,10 +82,10 @@
   </div>
 
   <nav class="glass sticky top-0 z-40 border-b border-line/60">
-    <div class="mx-auto flex h-12 max-w-[1024px] items-center justify-between px-5">
+    <div class="mx-auto flex h-16 max-w-[1064px] items-center justify-between px-5">
       <a href="/" class="flex items-center gap-2 text-paper">
         <span id="logo" class="text-sodium"></span>
-        <span class="text-[15px] font-semibold tracking-tight">Night Out Switch</span>
+        <span class="wordmark text-[22px]">tenshi</span>
       </a>
       <div class="flex items-center gap-6 text-[13px] text-paper/80">
         <a href="#how" class="hidden hover:text-paper sm:inline">How it works</a>
@@ -87,108 +97,102 @@
   </nav>
 
   <main>
-    <section class="px-5 pt-16 text-center sm:pt-24">
-      <h1 id="heroTitle" class="display mx-auto mt-2 max-w-[13ch] text-[46px] font-semibold leading-[1.02] sm:text-[84px]">Help starts when you stop answering.</h1>
-      <p class="hero-rise mx-auto mt-6 max-w-[32ch] text-[21px] leading-snug text-mist sm:text-[25px]">A dead man's switch for a night out. If you go quiet, the people you trust find out, with your last location.</p>
-      <div class="hero-rise mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
-        <button id="demo" class="btn btn-sodium btn-switch pr-6"><span class="knob" aria-hidden="true"></span>Start the demo</button>
-        <a href="#how" class="link-arrow text-[17px]">See how it works</a>
+    <section class="mx-auto grid max-w-[1064px] items-center gap-12 px-5 pb-20 pt-12 lg:min-h-[calc(100vh-64px)] lg:grid-cols-[1.05fr_1fr] lg:py-0">
+      <div>
+        <h1 id="heroTitle" class="display max-w-[11ch] text-[46px] font-semibold leading-[1.02] sm:text-[76px]" style="text-wrap: balance">Help starts when you stop answering.</h1>
+        <!-- Her night as a heartbeat: three check-ins, then the line goes flat and red -->
+        <svg class="ecg hero-rise mt-8 block h-14 w-full max-w-[520px]" viewBox="0 0 520 64" fill="none" aria-hidden="true">
+          <path class="ecg-ok" d="M0 34 H60 l9 -18 l11 36 l10 -44 l9 34 l6 -8 H160 l9 -18 l11 36 l10 -44 l9 34 l6 -8 H260 l9 -18 l11 36 l10 -44 l9 34 l6 -8 H350" stroke="var(--mint)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+          <path class="ecg-quiet" d="M350 34 H504" stroke="var(--signal)" stroke-width="3" stroke-linecap="round"/>
+          <circle class="ecg-dot" cx="508" cy="34" r="6" fill="var(--signal)"/>
+        </svg>
+        <p class="hero-rise mt-8 max-w-[34ch] text-[20px] leading-snug text-mist sm:text-[22px]" style="text-wrap: balance">A dead man's switch for a night out. If you go quiet, the people you trust find out, with your last location.</p>
+        <div class="hero-rise mt-9 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <button id="demo" class="btn btn-sodium btn-switch pr-6"><span class="knob" aria-hidden="true"></span>Start the demo</button>
+          <span class="text-[15px] text-mist">Maya goes quiet. Jordan is alerted in about 30 seconds.</span>
+        </div>
+        <p id="demoErr" class="mt-3 hidden text-[15px] font-medium text-signal" role="alert"></p>
       </div>
-      <p class="hero-rise mt-4 text-[14px] text-mist">Maya goes quiet. Jordan gets alerted. About 25 seconds.</p>
-      <p id="demoErr" class="mt-3 hidden text-[15px] font-medium text-signal" role="alert"></p>
-    </section>
-
-    <section class="px-5 pb-24 pt-16">
-        <div class="phones relative mx-auto h-[470px] w-full max-w-[480px] sm:h-[560px]" aria-label="Maya's phone shows a check-in countdown. Jordan's phone shows a red alert with her last location." role="img">
+        <div class="phones relative mx-auto h-[470px] w-full max-w-[480px] sm:h-[560px] lg:mx-0 lg:ml-auto" aria-label="Maya's phone shows a check-in countdown. Jordan's phone shows a red alert with her last location." role="img">
           <div class="phone phone-back">
-            <div class="phone-screen streetlight flex flex-col items-center px-4 pt-9">
-              <div class="flex w-full items-center gap-1.5 text-sodium"><span class="mini-logo"></span><span class="display text-[9px] font-semibold text-paper">Night Out Switch</span></div>
+            <div class="phone-screen theme-dark mock-app flex flex-col items-center px-4 pt-9">
+              <div class="flex w-full items-center gap-1.5 text-sodium"><span class="mini-logo"></span><span class="wordmark text-[11px]">tenshi</span></div>
               <div class="relative mt-7 h-[150px] w-[150px]">
                 <svg viewBox="0 0 160 160" class="absolute inset-0 -rotate-90" aria-hidden="true">
                   <circle cx="80" cy="80" r="72" fill="none" stroke-width="6" class="ring-track"/>
                   <circle cx="80" cy="80" r="72" fill="none" stroke-width="6" class="ring-fill" stroke-dasharray="452" stroke-dashoffset="150"/>
                 </svg>
                 <div class="absolute inset-0 flex flex-col items-center justify-center">
-                  <span class="breathe h-2 w-2 rounded-full bg-sodium shadow-[0_0_10px_2px_rgb(var(--sodium-rgb) / .6)]"></span>
+                  <span class="breathe h-2 w-2 rounded-full bg-mint"></span>
                   <span class="display tnum mt-2 text-[34px] font-semibold leading-none">12:40</span>
-                  <span class="mt-1.5 text-[9px] font-semibold text-mist">until your next check-in</span>
+                  <span class="mt-1.5 text-[11px] font-semibold text-mist">until check-in</span>
                 </div>
               </div>
               <span class="display mt-6 text-[17px] font-bold">You're armed</span>
-              <span class="mt-1 text-center text-[10px] text-mist">If you go quiet, Jordan hears about it.</span>
-              <div class="mini-route mt-auto mb-8 w-full"></div>
+              <span class="mt-1 text-center text-[11px] text-mist">If you go quiet, Jordan hears about it.</span>
+              <span class="mb-8 mt-auto flex h-9 w-full items-center justify-center rounded-full border border-sodium/70 text-[11px] font-semibold text-sodium">I'm home, turn it off</span>
             </div>
           </div>
 
           <div class="phone phone-front">
-            <div class="phone-screen alert-screen flex flex-col px-4 pt-9 text-white">
-              <div class="flex items-center gap-1.5"><span class="mini-logo"></span><span class="display text-[9px] font-semibold">Night Out Switch</span></div>
+            <div class="phone-screen theme-dark alert-screen flex flex-col px-4 pt-9 text-white">
+              <div class="flex items-center gap-1.5"><span class="mini-logo"></span><span class="wordmark text-[11px]">tenshi</span></div>
               <span class="display mt-4 text-[19px] font-extrabold leading-[1.1]">Maya hasn't responded for 4 minutes</span>
-              <span class="mt-2.5 rounded-lg bg-black/20 px-2.5 py-1.5 text-[9px] font-bold leading-snug">Tap “I'm on it” within 0:52, or Maya's backup contact gets this alert too.</span>
+              <span class="mt-2.5 rounded-lg bg-black/20 px-2.5 py-1.5 text-[11px] font-bold leading-snug">Tap “I'm on it” or her backup gets this too.</span>
               <div class="relative mt-3 h-[124px] overflow-hidden rounded-2xl border-[3px] border-white/90">
                 <svg viewBox="0 0 220 124" class="h-full w-full" aria-hidden="true">
-                  <rect width="220" height="124" fill="#EDE8E1"/>
-                  <path d="M0 30 L220 18 M0 78 L220 92 M40 0 L58 124 M120 0 L132 124 M180 0 L168 124" stroke="#fff" stroke-width="9"/>
-                  <path d="M0 30 L220 18 M0 78 L220 92 M40 0 L58 124 M120 0 L132 124 M180 0 L168 124" stroke="#D9D2C7" stroke-width="1"/>
-                  <rect x="66" y="38" width="44" height="30" rx="3" fill="#C8E6C0"/>
-                  <rect x="140" y="98" width="22" height="22" rx="3" fill="#C8E6C0"/>
-                  <path d="M0 108 Q60 96 110 110 T220 104" stroke="#F4C77B" stroke-width="7" fill="none"/>
+                  <rect width="220" height="124" fill="#1d2436"/>
+                  <path d="M0 30 L220 18 M0 78 L220 92 M40 0 L58 124 M120 0 L132 124 M180 0 L168 124" stroke="#2c3550" stroke-width="9"/>
+                  <path d="M0 30 L220 18 M0 78 L220 92 M40 0 L58 124 M120 0 L132 124 M180 0 L168 124" stroke="#39435f" stroke-width="1"/>
+                  <rect x="66" y="38" width="44" height="30" rx="3" fill="#1f3b3c"/>
+                  <rect x="140" y="98" width="22" height="22" rx="3" fill="#1f3b3c"/>
+                  <path d="M0 108 Q60 96 110 110 T220 104" stroke="#2c4a6b" stroke-width="7" fill="none"/>
                 </svg>
                 <span class="absolute left-[118px] top-[44px] block h-[18px] w-[18px] -rotate-45 rounded-[50%_50%_50%_0] border-[3px] border-white bg-signal shadow"></span>
               </div>
-              <div class="mt-3 grid grid-cols-2 border-y border-white/25 py-2 text-[9px]">
+              <div class="mt-3 grid grid-cols-2 border-y border-white/25 py-2 text-[11px]">
                 <span><span class="block text-white/80">Last location</span><span class="display text-[13px] font-semibold">1:47 AM</span></span>
-                <span class="border-l border-white/25 pl-3"><span class="block text-white/80">Battery</span><span class="display text-[13px] font-semibold">18%</span></span>
+                <span class="border-l border-white/25 pl-3"><span class="block text-white/80">Battery</span><span class="display text-[13px] font-semibold">92%</span></span>
               </div>
               <div class="mt-auto mb-6 grid grid-cols-2 gap-2">
-                <span class="flex h-9 items-center justify-center rounded-full bg-white text-[11px] font-bold text-signal">Call Maya</span>
-                <span class="flex h-9 items-center justify-center rounded-full bg-black text-[11px] font-bold">I'm on it</span>
+                <span class="flex h-9 items-center justify-center rounded-full bg-white text-[11px] font-bold text-[#b3261e]">Call Maya</span>
+                <span class="flex h-9 items-center justify-center rounded-full bg-sodium text-[11px] font-bold text-[#0b1220]">I'm on it</span>
               </div>
             </div>
           </div>
         </div>
     </section>
 
+
     <section id="how" class="bg-dusk px-5 py-24 sm:py-32">
       <div class="mx-auto max-w-[1024px]">
-        <div class="pulse" data-reveal aria-hidden="true"><span class="ln"></span><svg viewBox="0 0 46 36"><path d="M0 18 H12 L17 9 L22 30 L27 4 L32 22 L35 18 H46"/></svg><span class="ln"></span></div>
-        <h2 id="route-h" data-reveal class="display mx-auto max-w-[18ch] text-center text-[40px] font-semibold leading-[1.08] sm:text-[56px]">If you go quiet, here's what happens.</h2>
-        <p data-reveal style="--i:1" class="mx-auto mt-5 max-w-[40ch] text-center text-[19px] leading-snug text-mist sm:text-[21px]">Every step has a timer, and the timers run on our server. A dead phone can't stop the climb. Your PIN can.</p>
-        <div id="route" class="mt-16 rounded-[28px] bg-ink p-8 sm:p-12"></div>
+        <h2 id="route-h" data-reveal class="display max-w-[16ch] text-[40px] font-semibold leading-[1.08] sm:text-[52px]" style="text-wrap: balance">If you go quiet, here's what happens.</h2>
+        <p data-reveal style="--i:1" class="mt-5 max-w-[44ch] text-[19px] leading-snug text-mist sm:text-[21px]">Every step has a timer, and the timers run on our server. A dead phone can't stop the climb. Your PIN can.</p>
+        <div id="route" class="mt-12 rounded-[16px] bg-ink p-8 sm:p-12"></div>
       </div>
     </section>
 
     <section id="predict" class="px-5 py-24 sm:py-32">
-      <div class="mx-auto max-w-[1024px] text-center">
-        <div class="pulse" data-reveal aria-hidden="true"><span class="ln"></span><svg viewBox="0 0 46 36"><path d="M0 18 H12 L17 9 L22 30 L27 4 L32 22 L35 18 H46"/></svg><span class="ln"></span></div>
-        <h2 id="predict-h" data-reveal class="display text-[40px] font-semibold leading-[1.08] sm:text-[56px]">It sees trouble coming.</h2>
-        <p data-reveal style="--i:1" class="mx-auto mt-5 max-w-[42ch] text-[19px] leading-snug text-mist sm:text-[21px]">The best alert is the one you never need. Your phone watches for signs you're about to go quiet, and never guesses why.</p>
-        <div class="mt-14 grid gap-5 sm:grid-cols-3">
-          <div class="rounded-[28px] bg-dusk p-8 text-left" data-reveal style="--i:0">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--sodium)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M6 10v4"/></svg>
-            <h3 class="display mt-5 text-[21px] font-semibold">Battery forecast</h3>
-            <p class="mt-2 text-[17px] leading-relaxed text-mist">It tracks how fast your battery is falling and warns you before it dies. A dead phone looks like silence.</p>
-          </div>
-          <div class="rounded-[28px] bg-dusk p-8 text-left" data-reveal style="--i:1">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--sodium)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
-            <h3 class="display mt-5 text-[21px] font-semibold">Check-ins that adapt</h3>
-            <p class="mt-2 text-[17px] leading-relaxed text-mist">Answer quickly and it asks less often. Slow replies or a missed check-in, and it asks more.</p>
-          </div>
-          <div class="rounded-[28px] bg-dusk p-8 text-left" data-reveal style="--i:2">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--sodium)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0"/><circle cx="12" cy="19.5" r="1"/></svg>
-            <h3 class="display mt-5 text-[21px] font-semibold">Phone status for your friend</h3>
-            <p class="mt-2 text-[17px] leading-relaxed text-mist">If you go quiet, your contact learns whether your phone is still on, or went dark with a low battery.</p>
-          </div>
+      <div class="mx-auto grid max-w-[1024px] gap-12 lg:grid-cols-[1fr_1.2fr]">
+        <div>
+          <h2 id="predict-h" data-reveal class="display max-w-[12ch] text-[40px] font-semibold leading-[1.08] sm:text-[52px]" style="text-wrap: balance">It sees trouble coming.</h2>
+          <p data-reveal style="--i:1" class="mt-5 max-w-[34ch] text-[19px] leading-snug text-mist sm:text-[21px]">The best alert is the one you never need. Your phone watches for signs you're about to go quiet, and never guesses why.</p>
         </div>
+        <dl class="divide-y divide-line border-y border-line" data-reveal style="--i:1">
+          <div class="py-6"><dt class="display text-[22px] font-semibold">Battery forecast</dt><dd class="mt-1.5 text-[17px] leading-relaxed text-mist">It tracks how fast your battery is falling and warns you before it dies. A dead phone looks like silence.</dd></div>
+          <div class="py-6"><dt class="display text-[22px] font-semibold">Check-ins that adapt</dt><dd class="mt-1.5 text-[17px] leading-relaxed text-mist">Answer quickly and it asks less often. Slow replies or a missed check-in, and it asks more.</dd></div>
+          <div class="py-6"><dt class="display text-[22px] font-semibold">Phone status for your friend</dt><dd class="mt-1.5 text-[17px] leading-relaxed text-mist">If you go quiet, your contact learns whether your phone is still on, or went dark with a low battery.</dd></div>
+        </dl>
       </div>
     </section>
 
     <section id="arm" class="bg-dusk px-5 py-24 sm:py-32">
-      <div class="mx-auto max-w-[1024px] text-center">
-        <div class="pulse" data-reveal aria-hidden="true"><span class="ln"></span><svg viewBox="0 0 46 36"><path d="M0 18 H12 L17 9 L22 30 L27 4 L32 22 L35 18 H46"/></svg><span class="ln"></span></div>
-        <h2 id="arm-h" data-reveal class="display text-[40px] font-semibold leading-[1.08] sm:text-[56px]">Arm a real night.</h2>
-        <p data-reveal style="--i:1" class="mx-auto mt-5 max-w-[40ch] text-[19px] leading-snug text-mist sm:text-[21px]">Pick who gets alerted, how often you'll check in, and a PIN only you know. You'll get a link to send them.</p>
-        <form id="armForm" data-reveal style="--i:1" class="mx-auto mt-12 grid max-w-[720px] gap-5 rounded-[28px] bg-ink p-6 text-left shadow-[0_2px_24px_rgba(0,0,0,.06)] sm:grid-cols-2 sm:p-10">
+      <div class="mx-auto grid max-w-[1024px] items-start gap-12 lg:grid-cols-[1fr_1.4fr]">
+        <div>
+        <h2 id="arm-h" data-reveal class="display text-[40px] font-semibold leading-[1.08] sm:text-[52px]">Arm a real night.</h2>
+        <p data-reveal style="--i:1" class="mt-5 max-w-[30ch] text-[19px] leading-snug text-mist sm:text-[21px]">Pick who gets alerted, how often you'll check in, and a PIN only you know. You'll get a link to send them.</p>
+        </div>
+        <form id="armForm" data-reveal style="--i:1" class="grid gap-5 rounded-[16px] border border-line bg-ink p-6 text-left sm:grid-cols-2 sm:p-8">
           <label class="field">Your name
             <input name="user_name" required maxlength="40" autocomplete="given-name" />
           </label>
@@ -211,7 +215,7 @@
             <input name="home_by" type="time" />
           </label>
           <label class="field sm:col-span-2">PIN to cancel an alarm
-            <input name="pin" required inputmode="numeric" pattern="\d{4,8}" type="password" placeholder="4 to 8 digits" class="tracking-[0.3em]" />
+            <input name="pin" required inputmode="numeric" pattern="\d{4,8}" type="password" autocomplete="new-password" placeholder="4 to 8 digits" />
           </label>
           <div class="sm:col-span-2">
             <button class="btn btn-sodium w-full">Arm it</button>
@@ -224,7 +228,7 @@
 
   <footer class="border-t border-line bg-dusk px-5 py-6 text-[12px] text-mist">
     <div class="mx-auto flex max-w-[1024px] flex-wrap items-center justify-between gap-3">
-      <span>Night Out Switch doesn't replace 911. If someone is in danger, call for help.</span>
+      <span>tenshi doesn't replace 911. If someone is in danger, call for help.</span>
       <button id="replayIntro" class="hover:text-paper hover:underline">Replay the intro</button>
     </div>
   </footer>
@@ -257,9 +261,9 @@
       const svg = document.getElementById('introSvg');
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
       svg.innerHTML = `
-        <defs><filter id="glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-        <path id="lineOk" d="${d}" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round" filter="url(#glow)"/>
-        <path id="lineQuiet" d="M ${flatX} ${y0} L ${nodeX - 14} ${y0}" fill="none" stroke="#ff453a" stroke-width="2.5" filter="url(#glow)"/>`;
+        
+        <path id="lineOk" d="${d}" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linejoin="round"/>
+        <path id="lineQuiet" d="M ${flatX} ${y0} L ${nodeX - 14} ${y0}" fill="none" stroke="#ff453a" stroke-width="2.5"/>`;
       const ok = svg.querySelector('#lineOk'), quiet = svg.querySelector('#lineQuiet');
       const prep = (path) => { const len = path.getTotalLength(); path.style.strokeDasharray = len; path.style.strokeDashoffset = len; return len; };
       const okLen = prep(ok), quietLen = prep(quiet);
@@ -277,7 +281,7 @@
       const cues = [];
       const cue = (at, fn) => cues.push({ at, fn });
       ['10:14 PM', '10:34 PM', '10:54 PM'].forEach((time, i) => {
-        const l = label(blips[i], `<small>${time}</small>I'm OK`, '#30d158');
+        const l = label(blips[i], `<small>${time}</small>Checked in`, '#5FD0D8');
         cue(T_OK[0] + (T_OK[1] - T_OK[0]) * (blips[i] / flatX), () => l.classList.add('on'));
       });
       const noAnswer = label(flatX + (nodeX - flatX) * 0.3, '<small>11:14 PM</small>No answer', '#ff453a');
@@ -325,8 +329,7 @@
     });
 
     document.getElementById('logo').innerHTML = NOS.logo();
-    document.querySelectorAll('.mini-logo').forEach((el) => { el.innerHTML = NOS.logo('sm', 24); });
-    NOS.route(document.querySelector('.mini-route'), { level: 'ARMED', variant: 'mini' });
+    document.querySelectorAll('.mini-logo').forEach((el) => { el.innerHTML = NOS.logo('sm', 32); });
     const routeEl = document.getElementById('route');
     NOS.route(routeEl, { variant: 'full', level: null });
     routeEl.classList.add('route-draw');
