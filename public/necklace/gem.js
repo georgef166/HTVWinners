@@ -83,15 +83,6 @@ export function roundStoneGeometry(low) {
   });
 }
 
-// Tiny round brilliant for the pave stones (8-fold, flat shaded, +Z up, girdle at z=0).
-export function paveStoneGeometry() {
-  const r = 0.06;
-  return cutGeometry({
-    outline: (s) => [r * Math.cos(2 * PI * s), r * Math.sin(2 * PI * s)], M: 8, center: [0, 0],
-    tableK: 0.56, starK: 0.8, crownH: 0.03, girdleH: 0.008, pavD: 0.05, lowerK: 0.45,
-  });
-}
-
 // ---------------------------------------------------------------------------------------------
 const VERT = /* glsl */ `
   varying vec3 vPos;
