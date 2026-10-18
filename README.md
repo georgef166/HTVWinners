@@ -56,7 +56,7 @@ Since the phone is checking in anyway, Maya gets her night back as data: **Your 
 
 ## The hardware Switch
 
-An Arduino Uno R4 WiFi Switch lets Maya check in with a touch, cancel an alarm with a joystick gesture (up, right, down, left = PIN 1234), and end the night by tapping an NFC tag by her door. Its LED and buzzer still work if her phone is dead, and its temperature sensor feeds the prediction engine. Wiring, flashing and the protocol are in [hardware/README.md](hardware/README.md). No board? `npm run switch-sim` stands in for it.
+An Arduino Uno R4 WiFi Switch lets Maya check in with a touch and cancel an alarm with a joystick gesture (up, right, down, left = PIN 1234). Its LED and buzzer still work if her phone is dead, and its temperature sensor feeds the prediction engine. Wiring, flashing and the protocol are in [hardware/README.md](hardware/README.md). No board? `npm run switch-sim` stands in for it.
 
 ## Environment
 
@@ -74,7 +74,6 @@ Copy `.env.example` to `.env`. Every variable is optional.
 | `GEMINI_MODEL` | Default `gemini-2.5-flash` |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Send real SMS. Unset means messages are logged to the console. |
 | `SWITCH_KEY` | Shared key the hardware Switch sends. Unset in demo mode means `demo-switch` |
-| `SWITCH_HOME_TAG` | NFC tag UID(s) that end the night. Unset in demo mode means any tag |
 
 ## How it's built
 

@@ -1,6 +1,6 @@
 # The hardware Switch
 
-A clip-on Switch built on an **Arduino Uno R4 WiFi**. Maya can check in, cancel an alarm and end the night without touching her phone. It also feeds a temperature reading into the prediction engine.
+A clip-on Switch built on an **Arduino Uno R4 WiFi**. Maya can check in and cancel an alarm without touching her phone, and it keeps signalling even if her phone dies. It also feeds a temperature reading into the prediction engine.
 
 | Part | What it does |
 |---|---|
@@ -10,8 +10,6 @@ A clip-on Switch built on an **Arduino Uno R4 WiFi**. Maya can check in, cancel 
 | Barometer (DPS310, or a BMP280/BME280) | Temperature and pressure every 10 s. At 5°C or below the server adds a "likely outside in the cold" signal |
 | Built-in LED matrix | A fuse that burns down to the next check-in, `?` on a nudge, `!` on alarm, an arrow once the contact is on the way, a check when cancelled |
 | Joystick (optional, `USE_JOYSTICK 1`) | Gesture PIN: up = 1, right = 2, down = 3, left = 4, then press. 1234 cancels the demo alarm |
-| Grove NFC Tag (M24LR64E), any I2C port | Holds the current night's link (Maya's page), rewritten whenever a new night starts, so tapping a phone on the Switch opens it. Needs the module's coil antenna plugged in; without it phones can't read the tag. iPhones may need an NFC reader app for this tag type, while Android reads it natively |
-| NFC reader (optional) | Tap the home tag to end the night. Needs a reader: a Grove NFC (PN532) or an RC522 (`NFC_RC522 1`). A Grove **NFC Tag** (M24LR64E) is a tag, not a reader, so it can't do this |
 
 ## Wiring: Grove Base Shield (what we built with)
 
@@ -23,10 +21,9 @@ Plug each module into the shield port with the same name as the pin in the sketc
 | LED | D6 |
 | Buzzer | D8 |
 | Grove High Precision Barometer (DPS310) | any I2C port |
-| Grove NFC reader (PN532), if you have one | UART |
 | Grove thumb joystick, if used | A0 |
 
-On boot the Serial Monitor (115200) shows what it found: the I2C devices, `DPS310 ready: 23.7 C, 1011.1 hPa`, and whether an NFC reader answered.
+On boot the Serial Monitor (115200) shows what it found: the I2C devices, `DPS310 ready: 23.7 C, 1011.1 hPa`.
 
 ## Wiring: loose parts on a breadboard
 
@@ -36,14 +33,13 @@ On boot the Serial Monitor (115200) shows what it found: the I2C devices, `DPS31
 | LED | anode → 220 Ω → | D6 (cathode to GND) |
 | Buzzer (passive) | + / − | D8 / GND |
 | Joystick (KY-023) | VRx / VRy / SW / +5V / GND | A0 / A1 / D2 / 5V / GND |
-| NFC (RC522) | SDA(SS) / SCK / MOSI / MISO / RST / 3.3V / GND | D10 / D13 / D11 / D12 / D9 / **3.3V** / GND |
 | Barometer (BMP280) | SDA / SCL / VCC / GND | SDA / SCL / **3.3V** / GND |
 
-The RC522 and BMP280 are 3.3 V parts, so power them from the 3.3V pin.
+The BMP280 is a 3.3 V part, so power it from the 3.3V pin.
 
 ## Flash it
 
-1. In the Arduino IDE, install the **Arduino UNO R4 Boards** core (Boards Manager), then the **MFRC522**, **Adafruit BMP280 Library** and **Adafruit PN532** libraries (Library Manager; accept the dependencies). The DPS310 driver is included in the sketch.
+1. In the Arduino IDE, install the **Arduino UNO R4 Boards** core (Boards Manager), then the **Adafruit BMP280 Library** (Library Manager; accept the dependencies). The DPS310 driver is included in the sketch.
 2. Copy `night-out-switch/arduino_secrets.example.h` to `night-out-switch/arduino_secrets.h` and fill in:
    - your WiFi name and password (the laptop and board must be on the same network; a phone hotspot works well at hackathons)
    - `SERVER_HOST` and `SERVER_PORT`: the live server (`155-138-145-175.sslip.io`, port `80`; the server allows plain HTTP for `/api/switch/*` only), or the laptop's IP and port when running locally
@@ -78,7 +74,6 @@ The Switch controls the **night it's linked to** (one Switch per server). The li
 - `POST /api/switch/event` with JSON:
   - `{"type":"touch"}` → check-in (409 `ERR;NEEDCODE` during an alarm)
   - `{"type":"code","code":"1234"}` → stand down (403 `ERR;WRONGCODE` if wrong)
-  - `{"type":"nfc","tag":"04A1B2C3"}` → ends the night if the tag is in `SWITCH_HOME_TAG` (in demo mode with none set, any tag)
   - `{"type":"reading","temp_c":21.5,"pressure_hpa":1013.2}` → sensor reading for prediction
 
 ## No board? Use the simulator
@@ -87,4 +82,4 @@ The Switch controls the **night it's linked to** (one Switch per server). The li
 npm run switch-sim
 ```
 
-Keys: `t` touch, arrows or `w a s d` for the joystick, `enter` to send the code, `n` taps the NFC home tag, `c` toggles a freezing reading. Point it at another server with `SWITCH_URL=http://host:port`.
+Keys: `t` touch, arrows or `w a s d` for the joystick, `enter` to send the code, `c` toggles a freezing reading. Point it at another server with `SWITCH_URL=http://host:port`.
