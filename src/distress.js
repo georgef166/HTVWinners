@@ -21,6 +21,8 @@ async function transcribe(wav) {
   form.append('model', process.env.WHISPER_MODEL || 'Systran/faster-whisper-small.en');
   form.append('language', 'en');
   form.append('response_format', 'json');
+  // A vocabulary hint: shouted words clip the mic, and a small model guesses better when it expects them.
+  form.append('prompt', 'Help! Help me! Somebody help! Stop! Get off me! Get away from me! Leave me alone! Call the police!');
   const res = await fetch(`${base}/v1/audio/transcriptions`, { method: 'POST', body: form, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) throw new Error(`whisper ${res.status}`);
   return (await res.json()).text || '';
