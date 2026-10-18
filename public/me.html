@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1220" />
   <title>tenshi</title>
@@ -111,7 +112,7 @@
       <!-- NUDGE -->
       <section data-view="NUDGE" class="view hidden flex-1 flex-col items-center justify-center pt-10 text-center">
         <h1 class="display text-5xl font-extrabold">Still good?</h1>
-        <p class="mt-4 text-lg text-mist">Tap within <b class="tnum text-paper" data-secs>10</b> <span data-secs-word>seconds</span> or your phone sounds an alarm.</p>
+        <p class="mt-4 text-lg text-mist" data-countdown><span data-live>Tap within <b class="tnum text-paper" data-secs>10</b> <span data-secs-word>seconds</span> or your phone sounds an alarm.</span><span data-zero hidden>No answer. Sounding the alarm…</span></p>
         <div class="relative mt-10 aspect-square w-full max-w-[300px]">
           <svg viewBox="0 0 320 320" class="absolute inset-0 -rotate-90" aria-hidden="true">
             <circle cx="160" cy="160" r="152" fill="none" stroke-width="6" class="ring-track" />
@@ -126,7 +127,7 @@
       <section data-view="ALARM" class="view hidden flex-1 flex-col items-center justify-center text-center">
         <div class="fixed inset-x-0 top-0 h-2 opacity-30" style="background:currentColor" aria-hidden="true"></div><div class="fixed inset-x-0 top-0 h-2" aria-hidden="true"><div class="h-full bg-current" data-bar></div></div>
         <h1 class="display text-[2.6rem] font-extrabold leading-[1.05]">Tap your PIN if you're OK</h1>
-        <p class="mt-4 text-lg font-bold"><span class="contact-name">Your contact</span> is alerted in <span class="tnum" data-secs>15</span>s</p>
+        <p class="mt-4 text-lg font-bold" data-countdown><span data-live><span class="contact-name">Your contact</span> is alerted in <span class="tnum" data-secs>15</span>s</span><span data-zero hidden>Alerting <span class="contact-name">your contact</span> now…</span></p>
         <div class="keypad mt-8 w-full max-w-[300px]"></div>
       </section>
 
@@ -315,7 +316,8 @@
     function applyState(next) {
       const prev = state?.level;
       state = next;
-      deadline = next.seconds_left == null ? null : Date.now() + next.seconds_left * 1000;
+      NOS.clock.sync(next.now_ms);
+      deadline = next.deadline_ms ?? null;
       $$('.contact-name').forEach((el) => { el.textContent = next.contact_name; });
 
       const view = next.level === 'WIDER' ? 'CONTACT' : next.level;
@@ -388,9 +390,11 @@
 
     function renderClock() {
       if (!state) return;
-      const leftMs = deadline == null ? 0 : Math.max(0, deadline - Date.now());
-      const left = Math.ceil(leftMs / 1000);
-      $$('[data-clock]').forEach((el) => { el.textContent = fmt(left); });
+      const leftMs = deadline == null ? 0 : Math.max(0, deadline - NOS.clock.now());
+      const left = NOS.clock.left(deadline) ?? 0;
+      // A countdown at zero changes its words instead of showing "0 seconds"
+      $$('[data-countdown]').forEach((el) => { el.querySelector('[data-live]').hidden = left === 0; el.querySelector('[data-zero]').hidden = left !== 0; });
+      $$('[data-clock]').forEach((el) => { el.textContent = left ? fmt(left) : 'Now'; });
       $$('[data-secs]').forEach((el) => { el.textContent = left; });
       $$('[data-secs-word]').forEach((el) => { el.textContent = left === 1 ? 'second' : 'seconds'; });
       const frac = state.window_s ? Math.min(1, leftMs / 1000 / state.window_s) : 0;
@@ -418,7 +422,7 @@
       setAlarmSound(false);
       document.body.classList.remove('flash');
       clearInterval(pollTimer); clearInterval(beatTimer);
-      applyState({ ...(state || {}), level: 'RESOLVED', seconds_left: null, contact_name: state?.contact_name || 'your contact' });
+      applyState({ ...(state || {}), level: 'RESOLVED', seconds_left: null, deadline_ms: null, contact_name: state?.contact_name || 'your contact' });
       showErr('This night has ended. Start a new one from the home page.');
     }
     // The alarm is local so it still sounds if the server blips, but never forever.

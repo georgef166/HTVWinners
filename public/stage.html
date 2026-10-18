@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#000000" />
   <title>tenshi · Live</title>
@@ -242,12 +243,12 @@
     const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s) % 60).padStart(2, '0')}`;
     function renderStatus() {
       if (!state) return;
-      const left = deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : 0;
+      const left = NOS.clock.left(deadline) ?? 0;
       const quiet = silentSince ? Math.floor((Date.now() - silentSince) / 1000) : 0;
       const S = {
-        ARMED: ['Out tonight', 'text-sodium', `Maya is out. Next check-in in ${fmt(left)}`],
-        NUDGE: ['Check-in', 'text-sodium', `“Still good?” Waiting for Maya… ${left}s`],
-        ALARM: ['No answer', 'text-signal', `Maya’s phone is sounding the alarm. Jordan in ${left}s`],
+        ARMED: ['Out tonight', 'text-sodium', left ? `Maya is out. Next check-in in ${fmt(left)}` : 'Check-in going out now…'],
+        NUDGE: ['Check-in', 'text-sodium', left ? `“Still good?” Waiting for Maya… ${left}s` : 'No answer. Sounding the alarm…'],
+        ALARM: ['No answer', 'text-signal', left ? `Maya’s phone is sounding the alarm. Jordan in ${left}s` : 'Alerting Jordan now…'],
         CONTACT: ['Help is moving', 'text-signal', state.contact_acked ? 'Jordan is on the way.' : `Jordan alerted. Maya silent for ${fmt(quiet)}`],
         WIDER: ['Help is moving', 'text-signal', state.contact_acked ? 'Jordan is on the way.' : 'Backup contact alerted too.'],
         RESOLVED: ['Home', 'text-mint', 'Night over. Everyone’s home.'],
@@ -267,7 +268,8 @@
         ]);
         trace.update(t);
         state = s;
-        deadline = s.seconds_left == null ? null : Date.now() + s.seconds_left * 1000;
+        NOS.clock.sync(s.now_ms);
+        deadline = s.deadline_ms;
         const first = seen.size === 0;
         for (const e of t.events) {
           const key = `${e.t}|${e.kind}|${e.detail?.to || e.detail?.type || ''}`;
@@ -319,6 +321,8 @@
     requestAnimationFrame(() => $('#start').classList.add('open'));
     NOS_MOTION.reveal($('#start'));
     NOS_MOTION.slideSwitch($('#startSwitch'), async () => {
+      // Always a fresh night, even if the URL still holds an old one.
+      id = null;
       // This gesture lets both embedded phones make sound.
       try { window.NOS_AUDIO = new (window.AudioContext || window.webkitAudioContext)(); window.NOS_AUDIO.resume(); } catch {}
       $('#startRings').classList.add('go');

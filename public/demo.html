@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ffffff" />
   <title>tenshi · Your links</title>
@@ -23,7 +24,7 @@
 
     <main class="grid items-center gap-12 pb-16 pt-8 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
       <section>
-        <h1 class="display text-4xl font-extrabold leading-[1.05] sm:text-6xl"><span class="who">Maya</span> is armed.</h1>
+        <h1 id="headline" class="display text-4xl font-extrabold leading-[1.05] sm:text-6xl" style="text-wrap: balance"><span class="who">Maya</span> is out tonight.</h1>
         <p class="mt-5 max-w-lg text-xl leading-relaxed text-mist">One link is <span class="who">Maya</span>'s phone. The other is for <span class="contact">Jordan</span>, the friend who gets alerted. Open both side by side, then leave <span class="who">Maya</span>'s phone alone.</p>
 
         <div class="mt-10 space-y-4">
@@ -130,6 +131,12 @@
       document.getElementById('qr').src = links.qr;
       document.querySelectorAll('.who').forEach((el) => { el.textContent = state.user_name; });
       document.querySelectorAll('.contact').forEach((el) => { el.textContent = state.contact_name; });
+      // The headline follows the night, so it never says "out" when help is already on the way.
+      const n = state.user_name, c = state.contact_name;
+      document.getElementById('headline').textContent = ({
+        ARMED: `${n} is out tonight.`, NUDGE: `Waiting for ${n} to check in.`, ALARM: `${n}'s alarm is sounding.`,
+        CONTACT: `${c} has been alerted.`, WIDER: `${c} and the backup were alerted.`, RESOLVED: `${n}'s night is over.`,
+      })[state.level] || `${n} is out tonight.`;
     }).catch((err) => {
       const el = document.getElementById('err');
       el.textContent = err.message;

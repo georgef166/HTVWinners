@@ -1,6 +1,15 @@
 // Small shared UI helpers. The Tailwind theme lives in tailwind.config.cjs (compiled to /tw.css).
 
 window.NOS = {
+  // One clock for every screen: the server sends its time with each response, deadlines are absolute,
+  // and every countdown rounds the same way, so the stage and both phones always show the same second.
+  clock: {
+    offset: 0,
+    sync(serverNow) { if (serverNow) this.offset = serverNow - Date.now(); },
+    now() { return Date.now() + this.offset; },
+    left(deadlineMs) { return deadlineMs == null ? null : Math.max(0, Math.ceil((deadlineMs - this.now()) / 1000)); },
+  },
+
   STOPS: [
     { level: 'ARMED', name: 'Armed', desc: 'Your phone checks in on a timer you choose.' },
     { level: 'NUDGE', name: 'Nudge', desc: 'A check-in comes due. One tap says you’re fine.' },

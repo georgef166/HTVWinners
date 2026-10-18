@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0b1220" />
   <title>tenshi · Your night</title>
@@ -137,7 +138,8 @@
       if (!r.ok) { $('#title').textContent = 'This night doesn’t exist'; return; }
       const m = await r.json();
       $('#title').textContent = `${m.user_name}'s night so far`;
-      $('#subtitle').textContent = m.level === 'RESOLVED' ? 'Night ended' : 'Armed and watching';
+      $('#subtitle').textContent = ({ ARMED: 'Out tonight, all quiet', NUDGE: 'A check-in is waiting', ALARM: 'Your alarm is sounding',
+        CONTACT: 'Your contact was alerted', WIDER: 'Your contact and backup were alerted', RESOLVED: 'Night ended' })[m.level] || 'Out tonight';
       const t1 = m.now, t0 = Math.max(new Date(m.armed_at).getTime(), m.now - m.minutes * 60000);
       const marks = m.events.filter((e) => e.kind === 'distress_check' && e.detail?.score >= 0.5).map((e) => e.t);
       for (const c of CHARTS) {

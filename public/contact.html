@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1220" />
   <title>tenshi · Trusted contact</title>
@@ -204,6 +205,11 @@
       $('#unlock').style.opacity = '0';
       setTimeout(() => $('#unlock') && $('#unlock').remove(), 500);
     });
+    // The first tap anywhere turns sound on (browsers need a gesture), then plays the alert once.
+    function skipGate() {
+      $('#unlock')?.remove();
+      document.addEventListener('pointerdown', () => { try { NOS_SOUND.unlock(); NOS_SOUND.alert(); } catch {} }, { once: true });
+    }
     const STAGE = new URLSearchParams(location.search).has('stage');
     if (STAGE) { try { NOS_SOUND.attach(window.parent.NOS_AUDIO); } catch {} $('#unlock').remove(); }
     const alertSound = () => NOS_SOUND.alert();
@@ -250,8 +256,8 @@
       const el = $('#widerNote');
       const name = $('.name').textContent;
       if (widerState === 'pending') {
-        const left = Math.max(0, Math.ceil((widerDeadline - Date.now()) / 1000));
-        el.textContent = `Tap “I'm on it” within ${mmss(left)}, or ${name}'s backup contact gets this alert too.`;
+        const left = NOS.clock.left(widerDeadline);
+        el.textContent = left ? `Tap “I'm on it” within ${mmss(left)}, or ${name}'s backup contact gets this alert too.` : `Alerting ${name}'s backup contact now…`;
       } else if (widerState === 'sent') {
         el.textContent = `${name}'s backup contact has been alerted too.`;
       }
@@ -309,11 +315,12 @@
           ? `${s.user_name}'s phone hasn't reported in yet.`
           : o.phone_reporting
             ? `${s.user_name}'s phone is still on and has signal, so ${s.user_name} isn't answering it.`
-            : `${s.user_name}'s phone has gone dark. Not answering may mean the phone is off or out of battery.`;
+            : `${s.user_name}'s phone stopped reporting${o.phone_last_seen ? ` at ${clock(o.phone_last_seen)}` : ''}${s.last_heartbeat?.battery != null ? ` with ${Math.round(s.last_heartbeat.battery * 100)}% battery` : ''}. It may be switched off or out of signal.`;
         $('#signals').innerHTML = o.signals.filter((x) => x.key !== 'phone_offline' || !o.phone_reporting)
           .map((x) => `<li class="flex gap-3"><span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-white/80"></span><span>${esc(x.text)}</span></li>`).join('');
 
-        widerDeadline = s.seconds_to_wider == null ? null : Date.now() + s.seconds_to_wider * 1000;
+        NOS.clock.sync(s.now_ms);
+        widerDeadline = s.wider_deadline_ms ?? null;
         widerState = s.contact_acked ? null : s.level === 'WIDER' ? 'sent' : widerDeadline ? 'pending' : null;
         renderWider();
 
@@ -351,7 +358,12 @@
     }
 
     async function poll() {
-      try { const s = await api(); lastName = s.user_name; render(s); showErr(''); setTimeout(linkUp, 900); }
+      try {
+        const s = await api(); lastName = s.user_name; render(s); showErr('');
+        // Already escalated: never hide the alert behind the calm "stand by" screen.
+        if ((s.level === 'CONTACT' || s.level === 'WIDER') && $('#unlock')) skipGate();
+        else setTimeout(linkUp, 900);
+      }
       catch (err) { showErr(err.status === 404 ? 'This link isn’t valid. Ask your friend to send it again.' : 'Lost the connection. Retrying…'); }
     }
     $('#ack').addEventListener('click', async () => { try { await api('/ack', true); poll(); } catch (e) { showErr(e.message); } });

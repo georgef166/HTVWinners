@@ -177,9 +177,13 @@ app.get('/api/sessions/:id', wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
   const outlook = assess(s, await store.listEvents(s.id));
   const sinceResponse = await lastResponseAt(store, s);
+  const deadline = s.level === 'ARMED' ? s.next_checkin_at : s.level_deadline;
   res.json({
     level: s.level,
     seconds_left: secondsLeft(s),
+    // Exact deadline plus the server's clock, so every screen counts down to the same second.
+    deadline_ms: deadline ? new Date(deadline).getTime() : null,
+    now_ms: Date.now(),
     contact_acked: s.contact_acked,
     user_name: s.user_name,
     contact_name: s.contact_name,
@@ -347,6 +351,8 @@ app.get('/api/contact/:token', wrap(async (req, res) => {
     stood_down: !alerting && !!s.summary && !!standDownEvt,
     // Countdown until the backup contact is alerted, so the contact knows to confirm.
     seconds_to_wider: s.level === 'CONTACT' && !s.contact_acked && s.backup_phone ? secondsLeft(s, now) : null,
+    wider_deadline_ms: s.level === 'CONTACT' && !s.contact_acked && s.backup_phone && s.level_deadline ? new Date(s.level_deadline).getTime() : null,
+    now_ms: now.getTime(),
     summary: null,
     last_heartbeat: null,
   };
@@ -485,7 +491,8 @@ app.post('/api/sessions/:id/link-switch', wrap(async (req, res) => {
   const s = await loadSession(req.params.id);
   const owner = String(req.body?.owner || '').slice(0, 64) || null;
   const heldElsewhere = sw.sessionId && sw.owner && owner !== sw.owner && Date.now() - sw.linkedAt < SWITCH_HOLD_MS;
-  if (heldElsewhere && req.body?.force !== true) return res.status(409).json({ linked: false, error: 'The Switch is in use on another screen' });
+  // Not an error for the page: it just keeps running without the hardware.
+  if (heldElsewhere && req.body?.force !== true) return res.json({ linked: false, reason: 'The Switch is in use on another screen' });
   Object.assign(sw, { sessionId: s.id, owner, linkedAt: Date.now() });
   res.json({ linked: true });
 }));

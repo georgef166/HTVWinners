@@ -2,7 +2,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { assess } from './predict.js';
 
-const INSTRUCTION = `Write 2–3 short factual sentences for a trusted friend about this person's night, using ONLY the facts below: when they turned on tenshi, the last time they responded, how long since, the phone's status and battery, and whether a location is on the map. Then one line starting "Suggested next step:" (call them; if no answer and you are nearby, go to the last location; if you believe they are in danger, call 911). Never guess at causes, substances, intoxication or intent. Never say "drugged" or "drunk". Say "hasn't responded". Do not add facts that are not listed. Do not include coordinates. Never say "armed". Reply with only the sentences, no introduction.`;
+const INSTRUCTION = `Write 2–3 short factual sentences for a trusted friend about this person's night, using ONLY the facts below: when they turned on tenshi, the last time they responded, how long since, the battery, and whether a location is on the map. Then one line starting "Suggested next step:" (call them; if no answer and you are nearby, go to the last location; if you believe they are in danger, call 911). Never guess at causes, substances, intoxication or intent. Never say "drugged" or "drunk". Say "hasn't responded". Do not add facts that are not listed. Do not include coordinates. Never say "armed". Reply with only the sentences, no introduction.`;
 
 const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 3000;
 
@@ -34,9 +34,8 @@ export function templateSummary(session, events, now = new Date()) {
     f.lastLocationAt
       ? `The last known location was recorded at ${fmtTime(f.lastLocationAt)}${f.battery != null ? ` with battery at ${f.battery}%` : ''}.`
       : `No location has been shared${f.battery != null ? `; battery was last at ${f.battery}%` : ''}.`,
-    f.outlook.phone.offline
-      ? `The phone stopped reporting at ${fmtTime(f.outlook.phone.lastSeenAt)}${f.battery != null && f.battery <= 10 ? `, with ${f.battery}% battery, so it may have run out of power` : ''}.`
-      : f.outlook.phone.lastSeenAt ? 'The phone is still reporting, so it has power and signal.' : '',
+    // Phone status is left out on purpose: the summary is written once, but the contact page shows the
+    // phone's status live, and a snapshot here would contradict it a minute later.
     `Suggested next step: call ${f.name}; if there is no answer and you are nearby, go to the last location; if you believe ${f.name} is in danger, call 911.`,
   ];
   return parts.filter(Boolean).join(' ');
@@ -53,7 +52,6 @@ function factsForModel(session, events, now) {
     `Person: ${f.name}`,
     `Turned on tenshi at: ${fmtTime(f.armedAt)}`,
     `Last responded at: ${fmtTime(f.lastResponse)} (${mins(f.lastResponse)} minutes ago)`,
-    `Phone: ${!o.phone.lastSeenAt ? 'has not reported' : o.phone.offline ? `stopped reporting at ${fmtTime(o.phone.lastSeenAt)}` : 'still reporting, so it has power and signal'}`,
     `Battery: ${f.battery != null ? `${f.battery}%` : 'unknown'}${o.battery.diesAt ? `, on track to run out around ${fmtTime(o.battery.diesAt)}` : ''}`,
     `Location: ${located ? `shown on the map, last updated ${fmtTime(located.time)}` : 'not shared'}`,
   ];
