@@ -19,25 +19,27 @@ export function attachListening(server, { loadSession, recordDistress, enabled }
   server.on('upgrade', (req, socket, head) => {
     const m = /^\/api\/sessions\/([\w-]+)\/stream$/.exec(new URL(req.url, 'http://local').pathname);
     if (!m || !enabled || !process.env.VOSK_URL || wss.clients.size >= MAX_STREAMS) return socket.destroy();
-    wss.handleUpgrade(req, socket, head, (phone) => stream(phone, m[1]).catch(() => phone.close()));
+    wss.handleUpgrade(req, socket, head, (phone) => stream(phone, m[1]));
   });
 
-  async function stream(phone, id) {
-    let s = await loadSession(id);
+  // Listeners go on before anything async, so the phone's first messages (its room level) aren't lost.
+  function stream(phone, id) {
     const src = ++streams;
     const asr = new WebSocket(process.env.VOSK_URL);
     const sentAt = [];  // Vosk answers every chunk in order, so this gives its delay behind live audio
     // The phone only streams while someone talks, so it also reports the room's usual level for "was it shouted?".
     let lag = 0, room = null, baseline = null, peak = -120, partial = '', fired = false, alertedNow = false;
 
+    const queued = [];  // audio that arrives before the recognizer connects
     const close = () => { try { asr.readyState === WebSocket.OPEN && asr.send('{"eof": 1}'); asr.close(); } catch {} try { phone.close(); } catch {} };
     phone.on('close', close);
     asr.on('error', close);
     asr.on('close', close);
+    asr.on('open', () => { for (const b of queued.splice(0)) { sentAt.push(Date.now()); asr.send(b); } });
+    loadSession(id).catch(close);
 
     phone.on('message', (data, isBinary) => {
       if (!isBinary) { try { const r = JSON.parse(data).room; if (Number.isFinite(r)) room = r; } catch {} return; }
-      if (asr.readyState !== WebSocket.OPEN) return;
       const buf = Buffer.from(data);
       const pcm = new Int16Array(buf.buffer, buf.byteOffset, buf.length >> 1);
       const db = dbOf(pcm);
@@ -46,6 +48,7 @@ export function attachListening(server, { loadSession, recordDistress, enabled }
         if (db < baseline + 8) baseline = baseline * 0.98 + db * 0.02;
       }
       peak = Math.max(peak, db);
+      if (asr.readyState !== WebSocket.OPEN) { if (queued.length < 30) queued.push(buf); return; }
       sentAt.push(Date.now());
       asr.send(buf);
     });
@@ -68,7 +71,7 @@ export function attachListening(server, { loadSession, recordDistress, enabled }
       let alerted = alertedNow;
       if (danger && loud && !fired) {
         fired = true;
-        s = await loadSession(id);
+        const s = await loadSession(id);
         ({ alerted } = await recordDistress(s, {
           score: Math.min(1, 0.3 + heard.score), cues: ['a sudden loud noise or shouting', ...heard.cues],
           spoken: heard.spoken, danger, transcribed: true,
