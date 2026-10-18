@@ -8,7 +8,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 4,
+  "version": 5,
   "editable": false,
   "graphTooltip": 1,
   "refresh": "1m",
@@ -58,22 +58,6 @@
   },
   "panels": [
     {
-      "type": "text",
-      "title": "",
-      "transparent": true,
-      "options": {
-        "mode": "markdown",
-        "content": "<div style=\"display:flex;align-items:center;gap:14px\"><img src=\"/favicon.svg\" width=\"64\" style=\"display:block\"><div><div style=\"font-size:24px;font-weight:600;letter-spacing:.02em\">tenshi \u00b7 the week</div><div style=\"opacity:.7;font-size:14px\">Every night is a session in Tiger Data. Long-range panels read the <code>metrics_1m</code> continuous aggregate, so a week stays fast. Sample data for the demo.</div></div></div>"
-      },
-      "id": 1,
-      "gridPos": {
-        "x": 0,
-        "y": 0,
-        "w": 24,
-        "h": 3
-      }
-    },
-    {
       "type": "stat",
       "title": "Nights out",
       "description": "",
@@ -98,19 +82,20 @@
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "#D1B896"
+            "fixedColor": "#3274D9"
           },
           "mappings": []
         },
         "overrides": []
       },
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
         "textMode": "value",
         "wideLayout": true,
         "showPercentChange": false,
+        "text": {},
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -119,10 +104,10 @@
           "values": false
         }
       },
-      "id": 2,
+      "id": 1,
       "gridPos": {
         "x": 0,
-        "y": 3,
+        "y": 0,
         "w": 4,
         "h": 5
       }
@@ -152,7 +137,7 @@
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "#D1B896"
+            "fixedColor": "#8F3BB8"
           },
           "mappings": [],
           "unit": "h",
@@ -161,12 +146,13 @@
         "overrides": []
       },
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
         "textMode": "value",
         "wideLayout": true,
         "showPercentChange": false,
+        "text": {},
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -175,10 +161,10 @@
           "values": false
         }
       },
-      "id": 3,
+      "id": 2,
       "gridPos": {
         "x": 4,
-        "y": 3,
+        "y": 0,
         "w": 4,
         "h": 5
       }
@@ -208,22 +194,22 @@
         "defaults": {
           "color": {
             "mode": "thresholds",
-            "fixedColor": "#5FD0D8"
+            "fixedColor": "#3274D9"
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "#FF4F4A",
+                "color": "#E02F44",
                 "value": null
               },
               {
-                "color": "#F0B04A",
+                "color": "#FF780A",
                 "value": 80
               },
               {
-                "color": "#5FB3BB",
+                "color": "#56A64B",
                 "value": 95
               }
             ]
@@ -234,12 +220,13 @@
         "overrides": []
       },
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value",
         "wideLayout": true,
         "showPercentChange": false,
+        "text": {},
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -248,10 +235,10 @@
           "values": false
         }
       },
-      "id": 4,
+      "id": 3,
       "gridPos": {
         "x": 8,
-        "y": 3,
+        "y": 0,
         "w": 4,
         "h": 5
       }
@@ -281,7 +268,7 @@
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "#5FD0D8"
+            "fixedColor": "#FF780A"
           },
           "mappings": [],
           "unit": "s",
@@ -290,12 +277,13 @@
         "overrides": []
       },
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
         "textMode": "value",
         "wideLayout": true,
         "showPercentChange": false,
+        "text": {},
         "reduceOptions": {
           "calcs": [
             "mean"
@@ -304,10 +292,10 @@
           "values": false
         }
       },
-      "id": 5,
+      "id": 4,
       "gridPos": {
         "x": 12,
-        "y": 3,
+        "y": 0,
         "w": 4,
         "h": 5
       }
@@ -337,22 +325,22 @@
         "defaults": {
           "color": {
             "mode": "thresholds",
-            "fixedColor": "#5FD0D8"
+            "fixedColor": "#3274D9"
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "#5FB3BB",
+                "color": "#56A64B",
                 "value": null
               },
               {
-                "color": "#F0B04A",
+                "color": "#FF780A",
                 "value": 1
               },
               {
-                "color": "#FF4F4A",
+                "color": "#E02F44",
                 "value": 3
               }
             ]
@@ -361,12 +349,69 @@
         "overrides": []
       },
       "options": {
-        "colorMode": "background_solid",
+        "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value",
         "wideLayout": true,
         "showPercentChange": false,
+        "text": {},
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 5,
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 4,
+        "h": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Rows in Tiger Data",
+      "description": "Every heartbeat, metric and event this week, in the events and metrics hypertables.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT s.armed_at AS time, sum((SELECT count(*) FROM metrics WHERE session_id = s.id) + (SELECT count(*) FROM events WHERE session_id = s.id)) OVER (ORDER BY s.armed_at) AS value FROM sessions s WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND $__timeFilter(s.armed_at) ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#1F9ABD"
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {},
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -377,16 +422,16 @@
       },
       "id": 6,
       "gridPos": {
-        "x": 16,
-        "y": 3,
+        "x": 20,
+        "y": 0,
         "w": 4,
         "h": 5
       }
     },
     {
-      "type": "stat",
-      "title": "Danger heard",
-      "description": "",
+      "type": "geomap",
+      "title": "Where the nights went",
+      "description": "Heartbeat locations from every night, five-minute averages.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
@@ -401,26 +446,258 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(*) AS value FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'distress_score' AND m.value >= 0.5 AND $__timeFilter(m.time)"
+          "rawSql": "SELECT time_bucket('5 minutes', e.time) AS time, avg(e.lat) AS latitude, avg(e.lng) AS longitude FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND e.kind = 'heartbeat' AND e.lat IS NOT NULL AND $__timeFilter(e.time) GROUP BY 1, s.id ORDER BY 1"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds",
-            "fixedColor": "#5FD0D8"
+            "mode": "fixed",
+            "fixedColor": "#A352CC"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "basemap": {
+          "type": "carto",
+          "name": "Dark",
+          "config": {
+            "theme": "dark",
+            "showLabels": true
+          }
+        },
+        "controls": {
+          "showZoom": true,
+          "mouseWheelZoom": false,
+          "showAttribution": true
+        },
+        "view": {
+          "id": "coords",
+          "lat": 43.68,
+          "lon": -79.36,
+          "zoom": 11,
+          "allLayers": true
+        },
+        "layers": [
+          {
+            "type": "heatmap",
+            "name": "Nights",
+            "filterData": {
+              "id": "byRefId",
+              "options": "A"
+            },
+            "tooltip": false,
+            "location": {
+              "mode": "coords",
+              "latitude": "latitude",
+              "longitude": "longitude"
+            },
+            "config": {
+              "blur": 18,
+              "radius": 9,
+              "weight": {
+                "fixed": 1,
+                "min": 0,
+                "max": 1
+              }
+            }
+          }
+        ],
+        "tooltip": {
+          "mode": "details"
+        }
+      },
+      "id": 7,
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 9,
+        "h": 9
+      }
+    },
+    {
+      "type": "piechart",
+      "title": "Time at each step",
+      "description": "Minutes spent on each step of the ladder across the week.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
           },
-          "mappings": [],
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "WITH c AS (SELECT e.time, e.detail->>'to' AS lvl, lead(e.time) OVER (PARTITION BY e.session_id ORDER BY e.time) AS nxt FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND e.kind = 'level_change' AND $__timeFilter(e.time)) SELECT CASE lvl WHEN 'ARMED' THEN 'Out' WHEN 'NUDGE' THEN 'Check-in' WHEN 'ALARM' THEN 'Alarm' WHEN 'CONTACT' THEN 'Contact' WHEN 'WIDER' THEN 'Backup' END AS \"step\", round((sum(EXTRACT(EPOCH FROM nxt - time)) / 60)::numeric) AS \"minutes\" FROM c WHERE nxt IS NOT NULL AND lvl <> 'RESOLVED' GROUP BY 1 ORDER BY 2 DESC"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "m",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Out"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#1F9ABD"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Check-in"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF780A"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Alarm"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E02F44"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Contact"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C4162A"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Backup"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8F3BB8"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [],
+        "tooltip": {
+          "mode": "single"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        }
+      },
+      "id": 8,
+      "gridPos": {
+        "x": 9,
+        "y": 5,
+        "w": 7,
+        "h": 9
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Battery when she got home",
+      "description": "Red under 20%: a dead phone looks like silence.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT to_char(s.armed_at AT TIME ZONE 'America/Toronto', 'Dy DD') AS \"night\", (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS \"Battery\" FROM sessions s WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND $__timeFilter(s.armed_at) ORDER BY s.armed_at"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "#5FB3BB",
+                "color": "#E02F44",
                 "value": null
               },
               {
-                "color": "#FF4F4A",
-                "value": 1
+                "color": "#FF780A",
+                "value": 20
+              },
+              {
+                "color": "#56A64B",
+                "value": 40
               }
             ]
           }
@@ -428,26 +705,28 @@
         "overrides": []
       },
       "options": {
-        "colorMode": "background_solid",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "value",
-        "wideLayout": true,
-        "showPercentChange": false,
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 300,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
-          "values": false
+          "values": true
         }
       },
-      "id": 7,
+      "id": 9,
       "gridPos": {
-        "x": 20,
-        "y": 3,
-        "w": 4,
-        "h": 5
+        "x": 16,
+        "y": 5,
+        "w": 8,
+        "h": 9
       }
     },
     {
@@ -482,39 +761,39 @@
               "options": {
                 "ARMED": {
                   "text": "Out tonight",
-                  "color": "#5FD0D8",
+                  "color": "#1F9ABD",
                   "index": 0
                 },
                 "NUDGE": {
                   "text": "Check-in",
-                  "color": "#F0B04A",
+                  "color": "#FF780A",
                   "index": 1
                 },
                 "ALARM": {
                   "text": "Alarm",
-                  "color": "#FF4F4A",
+                  "color": "#E02F44",
                   "index": 2
                 },
                 "CONTACT": {
                   "text": "Contact alerted",
-                  "color": "#FF4F4A",
+                  "color": "#C4162A",
                   "index": 3
                 },
                 "WIDER": {
                   "text": "Backup alerted",
-                  "color": "#FF4F4A",
+                  "color": "#8F3BB8",
                   "index": 4
                 },
                 "RESOLVED": {
                   "text": "Home",
-                  "color": "#5FB3BB",
+                  "color": "#56A64B",
                   "index": 5
                 }
               }
             }
           ],
           "custom": {
-            "fillOpacity": 85,
+            "fillOpacity": 90,
             "lineWidth": 0
           }
         },
@@ -523,7 +802,7 @@
       "options": {
         "showValue": "auto",
         "mergeValues": true,
-        "rowHeight": 0.75,
+        "rowHeight": 0.8,
         "alignValue": "center",
         "legend": {
           "showLegend": false
@@ -532,23 +811,23 @@
           "mode": "single"
         }
       },
-      "id": 8,
+      "id": 10,
       "gridPos": {
         "x": 0,
-        "y": 8,
+        "y": 14,
         "w": 24,
         "h": 4
       }
     },
     {
-      "id": 9,
       "type": "row",
       "title": "When it gets loud",
       "collapsed": false,
       "panels": [],
+      "id": 11,
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 18,
         "w": 24,
         "h": 1
       }
@@ -556,7 +835,7 @@
     {
       "type": "table",
       "title": "Loudness by hour of the night (dB)",
-      "description": "Each cell averages the minute rollups for that hour. Hotter means louder.",
+      "description": "Each cell averages the minute rollups (the metrics_1m continuous aggregate) for that hour. Brighter means louder.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
@@ -595,7 +874,7 @@
                 "id": "custom.cellOptions",
                 "value": {
                   "type": "color-background",
-                  "mode": "basic"
+                  "mode": "gradient"
                 }
               },
               {
@@ -609,7 +888,7 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "continuous-BlYlRd"
+                  "mode": "continuous-BlPu"
                 }
               },
               {
@@ -648,7 +927,7 @@
                 "id": "custom.cellOptions",
                 "value": {
                   "type": "color-background",
-                  "mode": "basic"
+                  "mode": "gradient"
                 }
               },
               {
@@ -662,7 +941,7 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "continuous-BlYlRd"
+                  "mode": "continuous-BlPu"
                 }
               },
               {
@@ -701,7 +980,7 @@
                 "id": "custom.cellOptions",
                 "value": {
                   "type": "color-background",
-                  "mode": "basic"
+                  "mode": "gradient"
                 }
               },
               {
@@ -715,7 +994,7 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "continuous-BlYlRd"
+                  "mode": "continuous-BlPu"
                 }
               },
               {
@@ -754,7 +1033,7 @@
                 "id": "custom.cellOptions",
                 "value": {
                   "type": "color-background",
-                  "mode": "basic"
+                  "mode": "gradient"
                 }
               },
               {
@@ -768,7 +1047,7 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "continuous-BlYlRd"
+                  "mode": "continuous-BlPu"
                 }
               },
               {
@@ -807,7 +1086,7 @@
                 "id": "custom.cellOptions",
                 "value": {
                   "type": "color-background",
-                  "mode": "basic"
+                  "mode": "gradient"
                 }
               },
               {
@@ -821,7 +1100,7 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "continuous-BlYlRd"
+                  "mode": "continuous-BlPu"
                 }
               },
               {
@@ -860,7 +1139,7 @@
                 "id": "custom.cellOptions",
                 "value": {
                   "type": "color-background",
-                  "mode": "basic"
+                  "mode": "gradient"
                 }
               },
               {
@@ -874,7 +1153,7 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "continuous-BlYlRd"
+                  "mode": "continuous-BlPu"
                 }
               },
               {
@@ -919,18 +1198,18 @@
       },
       "options": {
         "showHeader": true,
-        "cellHeight": "md",
+        "cellHeight": "sm",
         "footer": {
           "show": false
         },
         "sortBy": []
       },
-      "id": 10,
+      "id": 12,
       "gridPos": {
         "x": 0,
-        "y": 13,
-        "w": 15,
-        "h": 10
+        "y": 19,
+        "w": 14,
+        "h": 9
       }
     },
     {
@@ -957,13 +1236,14 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-BlYlRd"
+            "mode": "continuous-BlPu"
           },
           "min": 10,
           "max": 45,
           "unit": "dB",
           "custom": {
-            "fillOpacity": 90,
+            "fillOpacity": 85,
+            "gradientMode": "hue",
             "lineWidth": 0
           }
         },
@@ -971,8 +1251,8 @@
       },
       "options": {
         "orientation": "vertical",
-        "barWidth": 0.7,
-        "showValue": "never",
+        "barWidth": 0.75,
+        "showValue": "auto",
         "xTickLabelRotation": 0,
         "legend": {
           "showLegend": false
@@ -981,23 +1261,23 @@
           "mode": "single"
         }
       },
-      "id": 11,
+      "id": 13,
       "gridPos": {
-        "x": 15,
-        "y": 13,
-        "w": 9,
+        "x": 14,
+        "y": 19,
+        "w": 10,
         "h": 9
       }
     },
     {
-      "id": 12,
       "type": "row",
       "title": "Night by night",
       "collapsed": false,
       "panels": [],
+      "id": 14,
       "gridPos": {
         "x": 0,
-        "y": 23,
+        "y": 28,
         "w": 24,
         "h": 1
       }
@@ -1028,11 +1308,11 @@
           "custom": {
             "drawStyle": "bars",
             "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 80,
+            "lineWidth": 1,
+            "fillOpacity": 85,
             "gradientMode": "opacity",
             "showPoints": "never",
-            "pointSize": 7,
+            "pointSize": 6,
             "spanNulls": false,
             "axisBorderShow": false,
             "axisPlacement": "auto",
@@ -1043,7 +1323,7 @@
           },
           "color": {
             "mode": "fixed",
-            "fixedColor": "#5FD0D8"
+            "fixedColor": "#1F9ABD"
           },
           "unit": "s"
         },
@@ -1058,7 +1338,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#F0B04A"
+                  "fixedColor": "#FF780A"
                 }
               }
             ]
@@ -1068,99 +1348,29 @@
       "options": {
         "legend": {
           "showLegend": true,
-          "displayMode": "list",
-          "placement": "bottom"
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull"
+          ]
         },
         "tooltip": {
           "mode": "multi",
           "sort": "none"
         }
       },
-      "id": 13,
+      "id": 15,
       "gridPos": {
         "x": 0,
-        "y": 24,
-        "w": 8,
-        "h": 7
-      }
-    },
-    {
-      "type": "barchart",
-      "title": "Battery when she got home",
-      "description": "Red under 20%: a dead phone looks like silence.",
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "tiger"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "tiger"
-          },
-          "rawQuery": true,
-          "editorMode": "code",
-          "format": "table",
-          "rawSql": "SELECT to_char(s.armed_at AT TIME ZONE 'America/Toronto', 'Dy DD') AS \"night\", (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS \"Battery\" FROM sessions s WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND $__timeFilter(s.armed_at) ORDER BY s.armed_at"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF4F4A",
-                "value": null
-              },
-              {
-                "color": "#F0B04A",
-                "value": 20
-              },
-              {
-                "color": "#5FD0D8",
-                "value": 40
-              }
-            ]
-          },
-          "custom": {
-            "fillOpacity": 90,
-            "lineWidth": 0
-          },
-          "min": 0,
-          "max": 100
-        },
-        "overrides": []
-      },
-      "options": {
-        "orientation": "vertical",
-        "barWidth": 0.6,
-        "showValue": "auto",
-        "xTickLabelRotation": 0,
-        "legend": {
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "id": 14,
-      "gridPos": {
-        "x": 8,
-        "y": 24,
-        "w": 8,
-        "h": 7
+        "y": 29,
+        "w": 9,
+        "h": 8
       }
     },
     {
       "type": "barchart",
       "title": "Coldest walk home (the Switch)",
-      "description": "Red at 5\u00b0C or colder: likely outside in the cold.",
+      "description": "Blue at 5\u00b0C or colder: likely outside in the cold.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
@@ -1188,17 +1398,18 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#FF4F4A",
+                "color": "#3274D9",
                 "value": null
               },
               {
-                "color": "#5FD0D8",
+                "color": "#1F9ABD",
                 "value": 5
               }
             ]
           },
           "custom": {
-            "fillOpacity": 90,
+            "fillOpacity": 85,
+            "gradientMode": "opacity",
             "lineWidth": 0
           }
         },
@@ -1216,12 +1427,87 @@
           "mode": "single"
         }
       },
-      "id": 15,
+      "id": 16,
+      "gridPos": {
+        "x": 9,
+        "y": 29,
+        "w": 7,
+        "h": 8
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Loudest moment each night",
+      "description": "Peak dB above a quiet room. Red is shouting territory.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT to_char(s.armed_at AT TIME ZONE 'America/Toronto', 'Dy DD') AS \"night\", round((max(m.max) + 60)::numeric) AS \"Loudest\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'sound_peak_db' AND $__timeFilter(m.bucket) GROUP BY s.id, s.armed_at ORDER BY s.armed_at"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dB",
+          "min": 0,
+          "max": 60,
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#A352CC",
+                "value": null
+              },
+              {
+                "color": "#FF780A",
+                "value": 45
+              },
+              {
+                "color": "#E02F44",
+                "value": 52
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "lcd",
+        "valueMode": "color",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 300,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        }
+      },
+      "id": 17,
       "gridPos": {
         "x": 16,
-        "y": 24,
+        "y": 29,
         "w": 8,
-        "h": 7
+        "h": 8
       }
     },
     {
@@ -1259,13 +1545,36 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Alarms"
+              "options": "Night"
             },
             "properties": [
               {
                 "id": "custom.cellOptions",
                 "value": {
-                  "type": "color-text"
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#1F60C4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Hours"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
                 }
               },
               {
@@ -1274,14 +1583,127 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "#5FB3BB",
+                      "color": "#1F9ABD",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Check-ins"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#56A64B",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg reply (s)"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#56A64B",
                       "value": null
                     },
                     {
-                      "color": "#FF4F4A",
+                      "color": "#FF780A",
+                      "value": 15
+                    },
+                    {
+                      "color": "#E02F44",
+                      "value": 30
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Alarms"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#56A64B",
+                      "value": null
+                    },
+                    {
+                      "color": "#E02F44",
                       "value": 1
                     }
                   ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
                 }
               }
             ]
@@ -1296,7 +1718,7 @@
                 "id": "custom.cellOptions",
                 "value": {
                   "type": "color-background",
-                  "mode": "basic"
+                  "mode": "gradient"
                 }
               },
               {
@@ -1305,14 +1727,61 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "transparent",
+                      "color": "#56A64B",
                       "value": null
                     },
                     {
-                      "color": "#FF4F4A",
+                      "color": "#FF780A",
+                      "value": 0.3
+                    },
+                    {
+                      "color": "#E02F44",
                       "value": 0.5
                     }
                   ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Coldest (\u00b0C)"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#3274D9",
+                      "value": null
+                    },
+                    {
+                      "color": "#1F9ABD",
+                      "value": 5
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
                 }
               }
             ]
@@ -1327,7 +1796,7 @@
                 "id": "custom.cellOptions",
                 "value": {
                   "type": "gauge",
-                  "mode": "basic"
+                  "mode": "gradient"
                 }
               },
               {
@@ -1339,37 +1808,9 @@
                 "value": 100
               },
               {
-                "id": "thresholds",
+                "id": "color",
                 "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "#FF4F4A",
-                      "value": null
-                    },
-                    {
-                      "color": "#F0B04A",
-                      "value": 20
-                    },
-                    {
-                      "color": "#5FD0D8",
-                      "value": 40
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Coldest (\u00b0C)"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
+                  "mode": "thresholds"
                 }
               },
               {
@@ -1378,12 +1819,16 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "#FF4F4A",
+                      "color": "#E02F44",
                       "value": null
                     },
                     {
-                      "color": "#5FD0D8",
-                      "value": 5
+                      "color": "#FF780A",
+                      "value": 20
+                    },
+                    {
+                      "color": "#56A64B",
+                      "value": 40
                     }
                   ]
                 }
@@ -1394,18 +1839,18 @@
       },
       "options": {
         "showHeader": true,
-        "cellHeight": "md",
+        "cellHeight": "sm",
         "footer": {
           "show": false
         },
         "sortBy": []
       },
-      "id": 16,
+      "id": 18,
       "gridPos": {
         "x": 0,
-        "y": 31,
+        "y": 37,
         "w": 24,
-        "h": 9
+        "h": 8
       }
     }
   ],
