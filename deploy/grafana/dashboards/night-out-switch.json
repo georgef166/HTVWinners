@@ -140,7 +140,7 @@
         "overrides": []
       },
       "options": {
-        "colorMode": "background",
+        "colorMode": "background_solid",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value",
@@ -150,7 +150,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
+          "fields": "/.*/",
           "values": false
         }
       },
@@ -180,7 +180,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT EXTRACT(EPOCH FROM now() - armed_at) AS value FROM sessions WHERE id = '$session'"
+          "rawSql": "SELECT EXTRACT(EPOCH FROM coalesce(resolved_at, now()) - armed_at) AS value FROM sessions WHERE id = '$session'"
         }
       ],
       "fieldConfig": {
@@ -190,7 +190,7 @@
             "fixedColor": "#D1B896"
           },
           "mappings": [],
-          "unit": "s"
+          "unit": "dtdurations"
         },
         "overrides": []
       },
@@ -442,7 +442,7 @@
         "overrides": []
       },
       "options": {
-        "colorMode": "background",
+        "colorMode": "background_solid",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value",

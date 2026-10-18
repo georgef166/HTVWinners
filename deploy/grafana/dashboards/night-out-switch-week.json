@@ -361,7 +361,7 @@
         "overrides": []
       },
       "options": {
-        "colorMode": "background",
+        "colorMode": "background_solid",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value",
@@ -428,7 +428,7 @@
         "overrides": []
       },
       "options": {
-        "colorMode": "background",
+        "colorMode": "background_solid",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value",
@@ -571,7 +571,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT to_char((m.bucket AT TIME ZONE 'America/Toronto' - interval '12 hours')::date, 'Dy Mon DD') AS \"Night\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 20)::numeric, 0) AS \"8 PM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 21)::numeric, 0) AS \"9 PM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 22)::numeric, 0) AS \"10 PM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 23)::numeric, 0) AS \"11 PM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 0)::numeric, 0) AS \"12 AM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 1)::numeric, 0) AS \"1 AM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 2)::numeric, 0) AS \"2 AM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 3)::numeric, 0) AS \"3 AM\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY (m.bucket AT TIME ZONE 'America/Toronto' - interval '12 hours')::date ORDER BY (m.bucket AT TIME ZONE 'America/Toronto' - interval '12 hours')::date DESC"
+          "rawSql": "SELECT to_char((m.bucket AT TIME ZONE 'America/Toronto' - interval '12 hours')::date, 'Dy Mon DD') AS \"Night\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 21)::numeric, 0) AS \"9 PM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 22)::numeric, 0) AS \"10 PM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 23)::numeric, 0) AS \"11 PM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 0)::numeric, 0) AS \"12 AM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 1)::numeric, 0) AS \"1 AM\", round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = 2)::numeric, 0) AS \"2 AM\" FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY (m.bucket AT TIME ZONE 'America/Toronto' - interval '12 hours')::date ORDER BY (m.bucket AT TIME ZONE 'America/Toronto' - interval '12 hours')::date DESC"
         }
       ],
       "fieldConfig": {
@@ -585,43 +585,6 @@
           }
         },
         "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "8 PM"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background",
-                  "mode": "basic"
-                }
-              },
-              {
-                "id": "custom.align",
-                "value": "center"
-              },
-              {
-                "id": "unit",
-                "value": "none"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "continuous-BlYlRd"
-                }
-              },
-              {
-                "id": "min",
-                "value": -50
-              },
-              {
-                "id": "max",
-                "value": -15
-              }
-            ]
-          },
           {
             "matcher": {
               "id": "byName",
@@ -656,6 +619,22 @@
               {
                 "id": "max",
                 "value": -15
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": " ",
+                        "color": "transparent",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -693,6 +672,22 @@
               {
                 "id": "max",
                 "value": -15
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": " ",
+                        "color": "transparent",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -730,6 +725,22 @@
               {
                 "id": "max",
                 "value": -15
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": " ",
+                        "color": "transparent",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -767,6 +778,22 @@
               {
                 "id": "max",
                 "value": -15
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": " ",
+                        "color": "transparent",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -804,6 +831,22 @@
               {
                 "id": "max",
                 "value": -15
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": " ",
+                        "color": "transparent",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -841,43 +884,22 @@
               {
                 "id": "max",
                 "value": -15
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "3 AM"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background",
-                  "mode": "basic"
-                }
               },
               {
-                "id": "custom.align",
-                "value": "center"
-              },
-              {
-                "id": "unit",
-                "value": "none"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "continuous-BlYlRd"
-                }
-              },
-              {
-                "id": "min",
-                "value": -50
-              },
-              {
-                "id": "max",
-                "value": -15
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": " ",
+                        "color": "transparent",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           }
@@ -895,13 +917,13 @@
       "gridPos": {
         "x": 0,
         "y": 13,
-        "w": 14,
+        "w": 15,
         "h": 9
       }
     },
     {
       "type": "barchart",
-      "title": "Average loudness by hour",
+      "title": "How loud each hour gets",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
@@ -916,18 +938,20 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT to_char(make_time(h::int, 0, 0), 'HH12 AM') AS \"hour\", round(avg_db::numeric, 1) AS \"dB\" FROM ( SELECT extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') AS h, avg(m.avg) AS avg_db FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY 1) x ORDER BY (h + 12)::int % 24"
+          "rawSql": "SELECT to_char(make_time(h::int, 0, 0), 'HH12 AM') AS \"hour\", round((avg_db + 60)::numeric, 1) AS \"Loudness\" FROM ( SELECT extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') AS h, avg(m.avg) AS avg_db FROM metrics_1m m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY 1) x ORDER BY (h + 12)::int % 24"
         }
       ],
+      "description": "Average dB above a quiet room (-60 dB), by hour.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "continuous-BlYlRd"
           },
-          "min": -50,
-          "max": -15,
+          "min": 10,
+          "max": 45,
+          "unit": "dB",
           "custom": {
-            "fillOpacity": 85,
+            "fillOpacity": 90,
             "lineWidth": 0
           }
         },
@@ -947,9 +971,9 @@
       },
       "id": 11,
       "gridPos": {
-        "x": 14,
+        "x": 15,
         "y": 13,
-        "w": 10,
+        "w": 9,
         "h": 9
       }
     },
@@ -1049,9 +1073,9 @@
       }
     },
     {
-      "type": "timeseries",
+      "type": "barchart",
       "title": "Battery when she got home",
-      "description": "",
+      "description": "Red under 20%: a dead phone looks like silence.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
@@ -1065,28 +1089,13 @@
           },
           "rawQuery": true,
           "editorMode": "code",
-          "format": "time_series",
-          "rawSql": "SELECT s.armed_at AS time, (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS \"battery\" FROM sessions s WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND $__timeFilter(s.armed_at) ORDER BY 1"
+          "format": "table",
+          "rawSql": "SELECT to_char(s.armed_at AT TIME ZONE 'America/Toronto', 'Dy DD') AS \"night\", (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS \"Battery\" FROM sessions s WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND $__timeFilter(s.armed_at) ORDER BY s.armed_at"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "drawStyle": "bars",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 85,
-            "gradientMode": "scheme",
-            "showPoints": "never",
-            "pointSize": 7,
-            "spanNulls": false,
-            "axisBorderShow": false,
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
+          "unit": "percent",
           "color": {
             "mode": "thresholds"
           },
@@ -1107,21 +1116,25 @@
               }
             ]
           },
-          "unit": "percent",
+          "custom": {
+            "fillOpacity": 90,
+            "lineWidth": 0
+          },
           "min": 0,
           "max": 100
         },
         "overrides": []
       },
       "options": {
+        "orientation": "vertical",
+        "barWidth": 0.6,
+        "showValue": "auto",
+        "xTickLabelRotation": 0,
         "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom"
+          "showLegend": false
         },
         "tooltip": {
-          "mode": "multi",
-          "sort": "none"
+          "mode": "single"
         }
       },
       "id": 14,
@@ -1133,9 +1146,9 @@
       }
     },
     {
-      "type": "timeseries",
+      "type": "barchart",
       "title": "Coldest walk home (the Switch)",
-      "description": "",
+      "description": "Red at 5\u00b0C or colder: likely outside in the cold.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
@@ -1149,28 +1162,13 @@
           },
           "rawQuery": true,
           "editorMode": "code",
-          "format": "time_series",
-          "rawSql": "SELECT s.armed_at AS time, min(m.value) AS \"coldest\" FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'temp_c' AND $__timeFilter(m.time) GROUP BY s.id, s.armed_at ORDER BY 1"
+          "format": "table",
+          "rawSql": "SELECT to_char(s.armed_at AT TIME ZONE 'America/Toronto', 'Dy DD') AS \"night\", round(min(m.value)::numeric, 1) AS \"Coldest\" FROM metrics m JOIN sessions s ON s.id = m.session_id WHERE s.user_name = '$person' AND s.checkin_every_s >= 300 AND m.metric = 'temp_c' AND $__timeFilter(m.time) GROUP BY s.id, s.armed_at ORDER BY s.armed_at"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "drawStyle": "bars",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 85,
-            "gradientMode": "scheme",
-            "showPoints": "never",
-            "pointSize": 7,
-            "spanNulls": false,
-            "axisBorderShow": false,
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
+          "unit": "celsius",
           "color": {
             "mode": "thresholds"
           },
@@ -1187,19 +1185,23 @@
               }
             ]
           },
-          "unit": "celsius"
+          "custom": {
+            "fillOpacity": 90,
+            "lineWidth": 0
+          }
         },
         "overrides": []
       },
       "options": {
+        "orientation": "vertical",
+        "barWidth": 0.6,
+        "showValue": "auto",
+        "xTickLabelRotation": 0,
         "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom"
+          "showLegend": false
         },
         "tooltip": {
-          "mode": "multi",
-          "sort": "none"
+          "mode": "single"
         }
       },
       "id": 15,

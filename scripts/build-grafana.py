@@ -44,7 +44,7 @@ def header(markdown):
     return {"type": "text", "title": "", "transparent": True, "options": {"mode": "markdown", "content": markdown}}
 
 
-def stat(title, sql, unit=None, color=TEAL, fmt="time_series", calc="lastNotNull", spark=True, decimals=None, desc="", thresholds=None, mappings=None, mode="value"):
+def stat(title, sql, unit=None, color=TEAL, fmt="time_series", calc="lastNotNull", spark=True, decimals=None, desc="", thresholds=None, mappings=None, mode="value", text=False):
     d = {"color": {"mode": "thresholds" if thresholds else "fixed", "fixedColor": color}, "mappings": mappings or []}
     if thresholds: d["thresholds"] = {"mode": "absolute", "steps": thresholds}
     if unit: d["unit"] = unit
@@ -52,7 +52,7 @@ def stat(title, sql, unit=None, color=TEAL, fmt="time_series", calc="lastNotNull
     return {"type": "stat", "title": title, "description": desc, "datasource": DS, "targets": [q(sql, fmt)],
             "fieldConfig": {"defaults": d, "overrides": []},
             "options": {"colorMode": mode, "graphMode": "area" if spark else "none", "justifyMode": "center", "textMode": "value",
-                        "wideLayout": True, "showPercentChange": False, "reduceOptions": {"calcs": [calc], "fields": "", "values": False}}}
+                        "wideLayout": True, "showPercentChange": False, "reduceOptions": {"calcs": [calc], "fields": "/.*/" if text else "", "values": False}}}
 
 
 def gauge(title, sql, unit, steps, lo=0, hi=100, desc=""):
@@ -112,8 +112,8 @@ g.add(header(
     '<div style="opacity:.7;font-size:14px">Live from Tiger Data: every signal is a row in the <code>metrics</code> hypertable. '
     'Audio is never stored, only a score.</div></div></div>'), 24, 3)
 g.add(stat("Right now", "SELECT level AS value FROM sessions WHERE id = '$session'", fmt="table", spark=False,
-           mappings=LEVEL_MAP, mode="background", color=TEAL, desc="The escalation level the server is at for this night."), 5, 5)
-g.add(stat("Out for", "SELECT EXTRACT(EPOCH FROM now() - armed_at) AS value FROM sessions WHERE id = '$session'", "s", GOLD, "table", spark=False), 4, 5)
+           mappings=LEVEL_MAP, mode="background_solid", color=TEAL, text=True, desc="The escalation level the server is at for this night."), 5, 5)
+g.add(stat("Out for", "SELECT EXTRACT(EPOCH FROM coalesce(resolved_at, now()) - armed_at) AS value FROM sessions WHERE id = '$session'", "dtdurations", GOLD, "table", spark=False), 4, 5)
 g.add(stat("Check-ins answered", f"SELECT time, count(*) OVER (ORDER BY time) AS value FROM events WHERE {S} AND kind = 'checkin_ack' ORDER BY time", None, MINT,
            desc="Running count of check-ins answered, from the phone or the Switch."), 4, 5)
 g.add(stat("Average reply", f"SELECT time, avg(value) OVER (ORDER BY time) AS value FROM metrics WHERE {S} AND metric = 'reply_s' ORDER BY time", "s", TEAL, decimals=1,
@@ -121,7 +121,7 @@ g.add(stat("Average reply", f"SELECT time, avg(value) OVER (ORDER BY time) AS va
 g.add(gauge("Battery", f"SELECT time, value FROM metrics WHERE {S} AND metric = 'battery_pct' ORDER BY time", "percent",
             [{"color": RED, "value": None}, {"color": AMBER, "value": 20}, {"color": TEAL, "value": 40}]), 3, 5)
 g.add(stat("Danger heard", f"SELECT count(*) AS value FROM metrics WHERE {S} AND metric = 'distress_score' AND value >= 0.5", None, fmt="table", spark=False,
-           thresholds=[{"color": MINT, "value": None}, {"color": RED, "value": 1}], mode="background",
+           thresholds=[{"color": MINT, "value": None}, {"color": RED, "value": 1}], mode="background_solid",
            desc="30-second clips where Whisper (on our own server) heard a plea for help or aggression."), 4, 5)
 g.add(timeline("Escalation ladder", f"SELECT time, detail->>'to' AS \"level\" FROM events WHERE {S} AND kind = 'level_change' AND $__timeFilter(time) ORDER BY time",
                "Armed, check-in, alarm, contact, backup: each step's timer runs on the server."), 24, 4)
@@ -189,37 +189,46 @@ w.add(stat("Check-ins answered", f"SELECT 100.0 * count(*) FILTER (WHERE e.kind 
 w.add(stat("Average reply", f"SELECT s.armed_at AS time, avg(m.value) AS value {J} WHERE {P} AND m.metric = 'reply_s' AND $__timeFilter(m.time) GROUP BY s.id, s.armed_at ORDER BY 1",
            "s", TEAL, calc="mean", decimals=1, desc="Sparkline: average reply per night."), 4, 5)
 w.add(stat("Alarms", f"SELECT count(*) AS value {JE} WHERE {P} AND e.kind = 'level_change' AND e.detail->>'to' = 'ALARM' AND $__timeFilter(e.time)", None, fmt="table", spark=False,
-           thresholds=[{"color": MINT, "value": None}, {"color": AMBER, "value": 1}, {"color": RED, "value": 3}], mode="background", desc="Missed check-ins that set the phone's alarm off."), 4, 5)
+           thresholds=[{"color": MINT, "value": None}, {"color": AMBER, "value": 1}, {"color": RED, "value": 3}], mode="background_solid", desc="Missed check-ins that set the phone's alarm off."), 4, 5)
 w.add(stat("Danger heard", f"SELECT count(*) AS value {J} WHERE {P} AND m.metric = 'distress_score' AND m.value >= 0.5 AND $__timeFilter(m.time)", None, fmt="table", spark=False,
-           thresholds=[{"color": MINT, "value": None}, {"color": RED, "value": 1}], mode="background"), 4, 5)
+           thresholds=[{"color": MINT, "value": None}, {"color": RED, "value": 1}], mode="background_solid"), 4, 5)
 w.add(timeline("The ladder, every night", f"SELECT e.time, e.detail->>'to' AS \"level\" {JE} WHERE {P} AND e.kind = 'level_change' AND $__timeFilter(e.time) ORDER BY e.time"), 24, 4)
 
 w.row("When it gets loud")
-HOURS = [(20, "8 PM"), (21, "9 PM"), (22, "10 PM"), (23, "11 PM"), (0, "12 AM"), (1, "1 AM"), (2, "2 AM"), (3, "3 AM")]
+HOURS = [(21, "9 PM"), (22, "10 PM"), (23, "11 PM"), (0, "12 AM"), (1, "1 AM"), (2, "2 AM")]
 cols = ", ".join(f"round(avg(m.avg) FILTER (WHERE extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') = {h})::numeric, 0) AS \"{label}\"" for h, label in HOURS)
 heat = table("Loudness by hour of the night (dB)", f"""SELECT to_char((m.bucket AT TIME ZONE 'America/Toronto' - interval '12 hours')::date, 'Dy Mon DD') AS "Night", {cols}
     {JA} WHERE {P} AND m.metric = 'sound_db' AND $__timeFilter(m.bucket)
     GROUP BY (m.bucket AT TIME ZONE 'America/Toronto' - interval '12 hours')::date ORDER BY (m.bucket AT TIME ZONE 'America/Toronto' - interval '12 hours')::date DESC""",
-    [override(label, **{"custom.cellOptions": {"type": "color-background", "mode": "basic"}, "custom.align": "center", "unit": "none", "color": {"mode": "continuous-BlYlRd"}, "min": -50, "max": -15}) for _, label in HOURS],
+    [override(label, **{"custom.cellOptions": {"type": "color-background", "mode": "basic"}, "custom.align": "center", "unit": "none", "color": {"mode": "continuous-BlYlRd"}, "min": -50, "max": -15,
+              "mappings": [{"type": "special", "options": {"match": "null", "result": {"text": " ", "color": "transparent", "index": 0}}}]}) for _, label in HOURS],
     "Each cell averages the minute rollups for that hour. Hotter means louder.")
-w.add(heat, 14, 9)
-w.add({"type": "barchart", "title": "Average loudness by hour", "datasource": DS,
-       "targets": [q(f"""SELECT to_char(make_time(h::int, 0, 0), 'HH12 AM') AS "hour", round(avg_db::numeric, 1) AS "dB" FROM (
+w.add(heat, 15, 9)
+w.add({"type": "barchart", "title": "How loud each hour gets", "datasource": DS,
+       "targets": [q(f"""SELECT to_char(make_time(h::int, 0, 0), 'HH12 AM') AS "hour", round((avg_db + 60)::numeric, 1) AS "Loudness" FROM (
            SELECT extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') AS h, avg(m.avg) AS avg_db {JA}
            WHERE {P} AND m.metric = 'sound_db' AND $__timeFilter(m.bucket) GROUP BY 1) x ORDER BY (h + 12)::int % 24""", "table")],
-       "fieldConfig": {"defaults": {"color": {"mode": "continuous-BlYlRd"}, "min": -50, "max": -15, "custom": {"fillOpacity": 85, "lineWidth": 0}}, "overrides": []},
-       "options": {"orientation": "vertical", "barWidth": 0.7, "showValue": "never", "xTickLabelRotation": 0, "legend": {"showLegend": False}, "tooltip": {"mode": "single"}}}, 10, 9)
+       "description": "Average dB above a quiet room (-60 dB), by hour.",
+       "fieldConfig": {"defaults": {"color": {"mode": "continuous-BlYlRd"}, "min": 10, "max": 45, "unit": "dB", "custom": {"fillOpacity": 90, "lineWidth": 0}}, "overrides": []},
+       "options": {"orientation": "vertical", "barWidth": 0.7, "showValue": "never", "xTickLabelRotation": 0, "legend": {"showLegend": False}, "tooltip": {"mode": "single"}}}, 9, 9)
 
 w.row("Night by night")
 w.add(series("Reply time per night", [q(f"""SELECT s.armed_at AS time, avg(m.value) AS "average", max(m.value) AS "slowest" {J}
     WHERE {P} AND m.metric = 'reply_s' AND $__timeFilter(m.time) GROUP BY s.id, s.armed_at ORDER BY 1""")], "s", TEAL, draw="bars", fill=80, legend=True,
     overrides=[override("slowest", color={"mode": "fixed", "fixedColor": AMBER})]), 8, 7)
-w.add(series("Battery when she got home", [q(f"""SELECT s.armed_at AS time, (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS "battery"
-    FROM sessions s WHERE {P} AND $__timeFilter(s.armed_at) ORDER BY 1""")], "percent", TEAL, draw="bars", fill=85, lo=0, hi=100,
-    thresholds=[{"color": RED, "value": None}, {"color": AMBER, "value": 20}, {"color": TEAL, "value": 40}], scheme=True), 8, 7)
-w.add(series("Coldest walk home (the Switch)", [q(f"""SELECT s.armed_at AS time, min(m.value) AS "coldest" {J}
-    WHERE {P} AND m.metric = 'temp_c' AND $__timeFilter(m.time) GROUP BY s.id, s.armed_at ORDER BY 1""")], "celsius", TEAL, draw="bars", fill=85,
-    thresholds=[{"color": RED, "value": None}, {"color": TEAL, "value": 5}], scheme=True), 8, 7)
+def bars(title, sql, unit, steps, lo=None, hi=None, desc=""):
+    d = {"unit": unit, "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": steps}, "custom": {"fillOpacity": 90, "lineWidth": 0}}
+    if lo is not None: d["min"] = lo
+    if hi is not None: d["max"] = hi
+    return {"type": "barchart", "title": title, "description": desc, "datasource": DS, "targets": [q(sql, "table")], "fieldConfig": {"defaults": d, "overrides": []},
+            "options": {"orientation": "vertical", "barWidth": 0.6, "showValue": "auto", "xTickLabelRotation": 0, "legend": {"showLegend": False}, "tooltip": {"mode": "single"}}}
+NIGHT = "to_char(s.armed_at AT TIME ZONE 'America/Toronto', 'Dy DD')"
+w.add(bars("Battery when she got home", f"""SELECT {NIGHT} AS "night", (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS "Battery"
+    FROM sessions s WHERE {P} AND $__timeFilter(s.armed_at) ORDER BY s.armed_at""", "percent",
+    [{"color": RED, "value": None}, {"color": AMBER, "value": 20}, {"color": TEAL, "value": 40}], 0, 100, "Red under 20%: a dead phone looks like silence."), 8, 7)
+w.add(bars("Coldest walk home (the Switch)", f"""SELECT {NIGHT} AS "night", round(min(m.value)::numeric, 1) AS "Coldest" {J}
+    WHERE {P} AND m.metric = 'temp_c' AND $__timeFilter(m.time) GROUP BY s.id, s.armed_at ORDER BY s.armed_at""", "celsius",
+    [{"color": RED, "value": None}, {"color": TEAL, "value": 5}], desc="Red at 5°C or colder: likely outside in the cold."), 8, 7)
 w.add(table("Every night", f"""SELECT to_char(s.armed_at AT TIME ZONE 'America/Toronto', 'Dy Mon DD, HH12:MI AM') AS "Night",
     round((EXTRACT(EPOCH FROM coalesce(s.resolved_at, now()) - s.armed_at) / 3600)::numeric, 1) AS "Hours",
     (SELECT count(*) FROM events e WHERE e.session_id = s.id AND e.kind = 'checkin_ack') AS "Check-ins",
