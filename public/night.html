@@ -123,7 +123,7 @@
     function timeline(events) {
       const LABEL = {
         checkin_sent: (e) => [e.detail?.reason === 'distress' ? 'Something sounded wrong, so we checked on you' : 'Check-in sent', 'text-mist'],
-        checkin_ack: () => ['You answered “I’m OK”', 'text-mint'],
+        checkin_ack: () => ['You checked in', 'text-mint'],
         stand_down: () => ['You cancelled the alarm with your PIN', 'text-mint'],
         contact_ack: () => ['Your contact said they’re on it', 'text-mint'],
         distress_check: (e) => [e.detail?.score >= 0.5 ? `Heard ${(e.detail.cues || []).join(' and ')}` : '30-second check: nothing worrying', e.detail?.score >= 0.5 ? 'text-signal' : 'text-mist'],

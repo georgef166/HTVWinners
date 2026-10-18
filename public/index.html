@@ -281,7 +281,7 @@
       const cues = [];
       const cue = (at, fn) => cues.push({ at, fn });
       ['10:14 PM', '10:34 PM', '10:54 PM'].forEach((time, i) => {
-        const l = label(blips[i], `<small>${time}</small>I'm OK`, '#5FD0D8');
+        const l = label(blips[i], `<small>${time}</small>Checked in`, '#5FD0D8');
         cue(T_OK[0] + (T_OK[1] - T_OK[0]) * (blips[i] / flatX), () => l.classList.add('on'));
       });
       const noAnswer = label(flatX + (nodeX - flatX) * 0.3, '<small>11:14 PM</small>No answer', '#ff453a');
