@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <title>tenshi necklace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/":"/vendor/three/jsm/"}}</script>
+  <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/necklace/necklace.css" />
+</head>
+<body class="app streetlight">
+  <header id="top">
+    <a class="icon-btn" href="/me.html" aria-label="Back to the app">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+    </a>
+    <span class="brand"><span id="logo"></span><span class="brand-name">tenshi</span></span>
+    <span class="eyebrow top-title">The Switch</span>
+  </header>
+
+  <main id="stage" aria-label="Interactive 3D necklace">
+    <canvas id="gl" aria-label="3D model of the tenshi necklace. Use the list of sensors to explore it." tabindex="-1"></canvas>
+    <div id="labels"></div>
+    <div id="tooltip" role="tooltip" hidden></div>
+    <p id="hint" class="pill glass" hidden>Flip to see the sensors</p>
+  </main>
+
+  <button id="flip" class="btn" type="button" aria-pressed="false" aria-label="Showing the front. Flip to the back (F)">
+    <span class="seg is-on" data-side="front">Front</span><span class="seg" data-side="back">Back</span>
+  </button>
+
+  <aside id="panel" class="glass-card" aria-live="polite" aria-labelledby="panelTitle" hidden></aside>
+
+  <nav id="list" aria-label="Sensors"></nav>
+
+  <ol id="fallback" hidden aria-label="Sensors on the necklace"></ol>
+
+  <div id="loading" role="status">
+    <span id="loadLogo"></span>
+    <p class="eyebrow">Loading the necklace</p>
+  </div>
+
+  <p id="err" role="alert" hidden></p>
+
+  <script>
+    document.getElementById('logo').innerHTML = NOS.logo('sm');
+    document.getElementById('loadLogo').innerHTML = NOS.logo('md', 96);
+  </script>
+  <script type="module" src="/necklace/main.js"></script>
+</body>
+</html>
