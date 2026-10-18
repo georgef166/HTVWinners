@@ -12,6 +12,7 @@ services:
       TZ: ${TZ:-America/Toronto}
       PUBLIC_URL: https://${SITE_HOST:?set SITE_HOST in .env}
       HOST_LABEL: ${HOST_LABEL:-Vultr · Toronto}
+      VOSK_URL: ${VOSK_URL:-ws://vosk:2700}
       # Tiger Cloud when TIGER_DATABASE_URL is set in .env; otherwise the TimescaleDB container below.
       DATABASE_URL: ${TIGER_DATABASE_URL:-postgresql://postgres:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/postgres?sslmode=disable}
     depends_on:
@@ -47,6 +48,12 @@ services:
     profiles: ["model"]
     volumes:
       - whisper-models:/home/ubuntu/.cache/huggingface/hub
+
+  # Streaming speech recognition (Kaldi via Vosk) for live keyword spotting on stage, private to this server.
+  vosk:
+    build: ./deploy/vosk
+    restart: unless-stopped
+    profiles: ["model"]
 
   # Grafana on top of Tiger Data, served at /grafana. Read-only for visitors.
   grafana:
