@@ -4,15 +4,36 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { createMaterials, makeTextMaterial, COLORS } from './materials.js';
 
 const PI = Math.PI;
-const BZ = -0.41; // back surface of the PCB plate (root z)
+const BZ = -0.15; // back surface of the PCB plate (root z)
+const DEG = PI / 180;
 
-// Component layout in "view space" from behind: bx = -root.x, by = root.y.
+// Component layout in "view space" from behind: bx = -root.x, by = root.y. s = scale, rot = rotation as seen from behind.
 const LAY = {
-  touch: { bx: 1.5, by: 1.2 },
-  buzzer: { bx: -1.6, by: 1.0 },
-  baro: { bx: 0, by: 1.75 },
-  brain: { bx: 0, by: -1.6 },
+  touch: { bx: 1.3, by: 0.55, rot: -40 * DEG, s: 0.6 },
+  baro: { bx: -1.3, by: 0.55, rot: 45 * DEG, s: 0.6 },
+  buzzer: { bx: 0, by: 0.62, rot: 0, s: 0.5 },
+  brain: { bx: 0, by: -1.8, rot: 0, s: 0.47 },
 };
+// unscaled footprints (rect w,h or circle r)
+const FOOT = { touch: { w: 1, h: 1 }, baro: { w: 1, h: 0.9 }, buzzer: { r: 0.58 }, brain: { w: 2.4, h: 1.7 } };
+// local component point -> view space
+const T = (id, lx, ly) => {
+  const l = LAY[id], c = Math.cos(l.rot), s = Math.sin(l.rot);
+  return [l.bx + l.s * (lx * c - ly * s), l.by + l.s * (lx * s + ly * c)];
+};
+function footprint(id, pad = 0, per = 1) {
+  const f = FOOT[id], pts = [];
+  if (f.r) {
+    for (let i = 0; i < 24; i++) pts.push(T(id, (f.r + pad) * Math.cos((i / 24) * 2 * PI), (f.r + pad) * Math.sin((i / 24) * 2 * PI)));
+    return pts;
+  }
+  const w = f.w / 2 + pad, h = f.h / 2 + pad, n = per;
+  for (let i = 0; i < n; i++) pts.push(T(id, -w + (2 * w * i) / n, -h));
+  for (let i = 0; i < n; i++) pts.push(T(id, w, -h + (2 * h * i) / n));
+  for (let i = 0; i < n; i++) pts.push(T(id, w - (2 * w * i) / n, h));
+  for (let i = 0; i < n; i++) pts.push(T(id, -w, h - (2 * h * i) / n));
+  return pts;
+}
 
 // ---------- small helpers ----------
 const box = (w, h, d, mat, x, y, z0) => {
@@ -57,60 +78,133 @@ function registerPart(group, id) {
   group.userData.materials = mats;
 }
 
-// ---------- pendant outline (view space, symmetric, scalloped by feather tips) ----------
-// Back PCB plate outline (independent of the front jewelry; do not change).
-const PLATE_TIPS = [[2.0, -1.9], [2.4, -0.9], [2.6, 0.3], [2.65, 1.5], [2.55, 2.6], [2.35, 3.6], [1.75, 3.15], [1.15, 2.9], [0.5, 2.78]];
-function outlinePoints() {
-  const right = [[0, -3.05], [0.8, -2.95], [1.45, -2.6]];
-  PLATE_TIPS.forEach((t, j) => {
-    if (j) {
-      const p = PLATE_TIPS[j - 1];
-      const mx = (p[0] + t[0]) / 2, my = (p[1] + t[1]) / 2;
-      const dx = mx, dy = my - 0.3, l = Math.hypot(dx, dy);
-      right.push([mx - (dx / l) * 0.1, my - (dy / l) * 0.1]);
-    }
-    right.push(t);
-  });
-  const left = right.slice(1).reverse().map(([x, y]) => [-x, y]);
-  const pts = [...right.map(([x, y]) => new THREE.Vector3(x, y, 0)), new THREE.Vector3(0, 2.7, 0), ...left.map(([x, y]) => new THREE.Vector3(x, y, 0))];
-  const c = new THREE.CatmullRomCurve3(pts, true, 'centripetal');
-  const out = c.getPoints(320).map((p) => new THREE.Vector2(p.x, p.y));
-  out.pop();
-  return out;
+// ---------- pendant silhouette (shared by the front jewelry and the back PCB) ----------
+// The back plate is the union of the same shapes the front is made of: 8 feather polygons (two mirrored wings),
+// a keyhole centre web, a pear lobe behind the hanging gem and an eyelet lug at each top wing tip.
+const PEAR_SC = 1.12, PEAR_Y = -1.5;
+const LUG_R = 0.17, LUG_HOLE = 0.055;
+const RING_R = 0.1, RING_T = 0.024;
+const WEB_HALF = [[0, 1.17], [0.25, 1.13], [0.45, 1.0], [0.52, 0.78], [0.52, 0.55], [0.58, 0.35], [0.72, 0.15], [0.78, -0.05], [0.72, -0.3], [0.55, -0.5], [0.3, -0.62]];
+const PLATE_D = 0.16; // plate occupies z in [-0.15, 0.01], tucked into the bottom of the wings
+
+function featherPoly(f, sx, n = 24, inset = 0) {
+  const { c, nrm, w } = featherCurve(f, sx);
+  const A = [], B = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, [px, py] = c(t), [nx, ny] = nrm(t), ww = Math.max(0, w(t) - inset);
+    A.push([px + nx * ww, py + ny * ww]);
+    B.push([px - nx * ww, py - ny * ww]);
+  }
+  return [...A, ...B.reverse().slice(1, -1)];
+}
+function webPoly(k = 1) {
+  const m = ([x, y]) => [-x, y];
+  const pts = [...WEB_HALF, [0, -0.66], ...WEB_HALF.slice(1).reverse().map(m)];
+  const c = new THREE.CatmullRomCurve3(pts.map(([x, y]) => new THREE.Vector3(x, y, 0)), true, 'centripetal');
+  return c.getPoints(90).map((p) => [p.x * k, 0.3 + (p.y - 0.3) * k]).slice(0, -1);
+}
+function pearPoly(n = 90, inset = 0) {
+  const o = [];
+  for (let i = 0; i < n; i++) { const [x, y] = pearPt(0.83 - inset, 2.39 - 2 * inset, i / n); o.push([x * PEAR_SC, y * PEAR_SC + PEAR_Y]); }
+  return o;
+}
+// Geometry of the top wing tip: tip of the upper feather, eyelet centre, jump ring and chain end.
+function tipInfo(sx) {
+  const { c, nrm } = featherCurve(WING_FEATHERS[0], sx);
+  const tip = c(1), r = nrm(1), e = new THREE.Vector3(r[2], r[3], 0).normalize();
+  const tipV = new THREE.Vector3(tip[0], tip[1], WING_FEATHERS[0].z);
+  const H = tipV.clone().addScaledVector(e, 0.1);              // eyelet (lug) centre
+  const C = H.clone().addScaledVector(e, RING_R + 0.03);       // jump ring centre (ring wire sits on the hole rim)
+  const apex = C.clone().addScaledVector(e, RING_R);
+  const Lc = apex.clone().addScaledVector(e, 0.082);           // end link centre == ring group origin
+  return { sx, tip: tipV, e, H, C, Lc };
+}
+function circlePoly(cx, cy, r, n = 28) {
+  return Array.from({ length: n }, (_, i) => [cx + r * Math.cos((i / n) * 2 * PI), cy + r * Math.sin((i / n) * 2 * PI)]);
+}
+function silhouette() {
+  const feathers = [];
+  const IN = 0.02; // plate is inset a hair so it hides behind the front jewelry's bevelled edge
+  [1, -1].forEach((sx) => WING_FEATHERS.forEach((f) => feathers.push(featherPoly(f, sx, 24, IN))));
+  const lugs = [1, -1].map((sx) => { const t = tipInfo(sx); return circlePoly(t.H.x, t.H.y, LUG_R - IN); });
+  return [...feathers, webPoly(0.96), pearPoly(90, IN), ...lugs];
+}
+const pip = (x, y, p) => {
+  let r = false;
+  for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+    const [a, b] = p[i], [c, d] = p[j];
+    if ((b > y) !== (d > y) && x < ((c - a) * (y - b)) / (d - b) + a) r = !r;
+  }
+  return r;
+};
+// coarse distance field of the union (root-space polygons; the union is x-symmetric)
+function makeField(polys, R = 0.04) {
+  const X0 = -3.2, Y0 = -3.4, NX = Math.round(6.4 / R), NY = Math.round(6.2 / R);
+  const D = new Float32Array(NX * NY);
+  for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) D[j * NX + i] = polys.some((p) => pip(X0 + i * R, Y0 + j * R, p)) ? 99 : 0;
+  const fw = [[-1, 0, 1], [0, -1, 1], [-1, -1, 1.414], [1, -1, 1.414]], bw = [[1, 0, 1], [0, 1, 1], [1, 1, 1.414], [-1, 1, 1.414]];
+  const relax = (nb) => (i, j) => { let d = D[j * NX + i]; for (const [di, dj, w] of nb) { const a = i + di, b = j + dj; if (a >= 0 && b >= 0 && a < NX && b < NY) d = Math.min(d, D[b * NX + a] + w); } D[j * NX + i] = d; };
+  const f1 = relax(fw), f2 = relax(bw);
+  for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) f1(i, j);
+  for (let j = NY - 1; j >= 0; j--) for (let i = NX - 1; i >= 0; i--) f2(i, j);
+  // clearance in cm at view-space (bx, by)
+  return (bx, by) => {
+    const i = Math.round((-bx - X0) / R), j = Math.round((by - Y0) / R);
+    if (i < 0 || j < 0 || i >= NX || j >= NY) return -1;
+    return D[j * NX + i] * R - R;
+  };
 }
 
 // ---------- PCB texture ----------
-function drawBoard(outline, lowPower) {
-  const S = lowPower ? 190 : 380;
-  const W = 5.4, H = 6.6, BYMAX = 3.4;
+// L = layout, nets = routes (view-space polylines), polys = silhouette polygons (root space).
+function drawBoard(polys, L, nets, holes, lowPower, field) {
+  const S = lowPower ? 150 : 300;
+  const W = 5.6, H = 5.6, BYMAX = 2.6;
   const cw = Math.round(W * S), ch = Math.round(H * S);
   const mk = () => { const c = document.createElement('canvas'); c.width = cw; c.height = ch; return c; };
-  const A = mk(), E = mk();
-  const a = A.getContext('2d'), e = E.getContext('2d');
+  const A = mk(), E = mk(), MK = mk();
+  const a = A.getContext('2d'), e = E.getContext('2d'), mm = MK.getContext('2d');
   const X = (bx) => (bx + W / 2) * S;
   const Y = (by) => (BYMAX - by) * S;
   const gold = '#D1B896', silk = '#C9D3E6', aqua = '#5FD0D8';
+
+  // union mask in view space (x mirrored)
+  mm.fillStyle = '#fff';
+  polys.forEach((p) => { mm.beginPath(); p.forEach(([x, y], i) => (i ? mm.lineTo(X(-x), Y(y)) : mm.moveTo(X(-x), Y(y)))); mm.closePath(); mm.fill(); });
+  const erode = (cm) => {
+    const c = mk(), x = c.getContext('2d');
+    x.drawImage(MK, 0, 0);
+    x.globalCompositeOperation = 'destination-in';
+    for (let k = 0; k < 16; k++) { const t = (k / 16) * 2 * PI; x.drawImage(MK, Math.cos(t) * cm * S, Math.sin(t) * cm * S); }
+    return c;
+  };
+  const band = (outer, inner, paint) => { // pixels in `outer` but not in `inner`, painted
+    const c = mk(), x = c.getContext('2d');
+    x.drawImage(outer, 0, 0); x.globalCompositeOperation = 'destination-out'; x.drawImage(inner, 0, 0);
+    x.globalCompositeOperation = 'source-in'; x.fillStyle = paint; x.fillRect(0, 0, cw, ch);
+    return c;
+  };
 
   const grad = a.createLinearGradient(0, 0, cw, ch);
   grad.addColorStop(0, '#0f1f3b'); grad.addColorStop(0.5, '#0E1A33'); grad.addColorStop(1, '#0c2a3a');
   a.fillStyle = grad; a.fillRect(0, 0, cw, ch);
   e.fillStyle = '#000'; e.fillRect(0, 0, cw, ch);
 
-  const path = (ctx) => {
-    ctx.beginPath();
-    outline.forEach((p, i) => (i ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y))));
-    ctx.closePath();
-  };
-
   // blueprint grid
-  a.save(); path(a); a.clip();
   a.strokeStyle = 'rgba(95,208,216,0.07)'; a.lineWidth = 1.2;
-  for (let g = -2.75; g <= 2.76; g += 0.25) { a.beginPath(); a.moveTo(X(g), 0); a.lineTo(X(g), ch); a.stroke(); }
-  for (let g = -3.25; g <= 3.4; g += 0.25) { a.beginPath(); a.moveTo(0, Y(g)); a.lineTo(cw, Y(g)); a.stroke(); }
-  // board edge ring
-  a.lineJoin = 'round'; a.strokeStyle = 'rgba(209,184,150,0.75)'; a.lineWidth = 0.1 * S; path(a); a.stroke();
-  e.save(); path(e); e.clip(); e.lineJoin = 'round'; e.strokeStyle = 'rgba(90,75,50,1)'; e.lineWidth = 0.1 * S; path(e); e.stroke(); e.restore();
-  a.restore();
+  for (let g = -2.8; g <= 2.81; g += 0.25) { a.beginPath(); a.moveTo(X(g), 0); a.lineTo(X(g), ch); a.stroke(); }
+  for (let g = -3.0; g <= 2.61; g += 0.25) { a.beginPath(); a.moveTo(0, Y(g)); a.lineTo(cw, Y(g)); a.stroke(); }
+
+  // gold edge line + castellated band following the outline
+  const e1 = erode(0.04), e2 = erode(0.11);
+  a.drawImage(band(MK, e1, gold), 0, 0);
+  e.drawImage(band(MK, e1, 'rgb(90,75,50)'), 0, 0);
+  const hatch = document.createElement('canvas'); hatch.width = hatch.height = 16;
+  const hx = hatch.getContext('2d'); hx.fillStyle = gold; hx.fillRect(0, 0, 16, 7); // stripes
+  const bc = band(e1, e2, '#000'); const bx = bc.getContext('2d'); bx.globalCompositeOperation = 'source-in';
+  bx.fillStyle = bx.createPattern(hatch, 'repeat'); bx.fillRect(0, 0, cw, ch);
+  a.globalAlpha = 0.85; a.drawImage(bc, 0, 0); a.globalAlpha = 1;
+  e.globalAlpha = 0.5; e.drawImage(bc, 0, 0); e.globalAlpha = 1;
 
   const poly = (ctx, pts, color, wCm) => {
     ctx.strokeStyle = color; ctx.lineWidth = wCm * S; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -118,69 +212,59 @@ function drawBoard(outline, lowPower) {
   };
   const dot = (ctx, x, y, r, color) => { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(x), Y(y), r * S, 0, PI * 2); ctx.fill(); };
 
-  // routes: [startX, startY, targetX, bendY]
-  const PADY = LAY.brain.by + 0.72;
-  const route = (px, py, tx, yb) => [[px, py], [px, yb], [tx, yb - Math.abs(px - tx)], [tx, PADY]];
-  const routes = [
-    route(1.3, 0.78, 0.8, 0.5), route(1.5, 0.78, 1.0, 0.35), route(1.7, 0.78, 1.2, 0.2), // touch SIG VCC GND
-    route(-1.95, 0.55, -1.0, 0.3), route(-1.25, 0.55, -0.8, 0.1), // buzzer legs
-    ...[-0.375, -0.125, 0.125, 0.375].map((x) => [[x, LAY.baro.by - 0.38], [x, PADY]]), // baro I2C bus
-  ];
-  const tracePink = [];
-  routes.forEach((r) => {
-    poly(a, r, 'rgba(0,0,0,0.35)', 0.075);
-    poly(a, r, gold, 0.05);
-    poly(e, r, 'rgb(70,58,38)', 0.05);
-    tracePink.push(r);
-  });
-  // vias at the diagonal ends
-  routes.forEach((r) => {
-    if (r.length === 4) {
-      const [x, y] = r[2];
-      dot(a, x, y, 0.07, gold); dot(a, x, y, 0.028, '#050a14'); dot(e, x, y, 0.07, 'rgb(100,85,55)');
+  // traces: they run all the way to the pin pads under the component bodies, so nothing is disconnected
+  nets.forEach((r) => { poly(a, r, 'rgba(0,0,0,0.35)', 0.07); poly(a, r, gold, 0.045); poly(e, r, 'rgb(70,58,38)', 0.045); });
+  // vias at the corners of the routes
+  nets.forEach((r) => {
+    for (let k = 2; k < r.length - 1; k += 2) {
+      const [x, y] = r[k];
+      dot(a, x, y, 0.06, gold); dot(a, x, y, 0.024, '#050a14'); dot(e, x, y, 0.06, 'rgb(100,85,55)');
     }
   });
-  // scattered vias
-  [[-2.1, 2.2], [2.1, 2.3], [-2.0, -1.9], [2.0, -1.9], [0.0, -2.85], [-0.9, 1.4], [0.9, 1.3]].forEach(([x, y]) => {
-    dot(a, x, y, 0.06, gold); dot(a, x, y, 0.025, '#050a14'); dot(e, x, y, 0.06, 'rgb(90,75,50)');
+  // pads at the pin ends
+  nets.forEach((r) => [r[0], r[r.length - 1]].forEach(([x, y]) => {
+    dot(a, x, y, 0.08, gold); dot(a, x, y, 0.03, '#10182a'); dot(e, x, y, 0.08, 'rgb(150,125,85)');
+  }));
+  // eyelet pads at the wing tips (where the jump rings are)
+  [1, -1].forEach((sx) => {
+    const t = tipInfo(sx);
+    dot(a, -t.H.x, t.H.y, 0.135, gold); dot(a, -t.H.x, t.H.y, 0.058, '#050a14'); dot(e, -t.H.x, t.H.y, 0.135, 'rgb(130,108,72)');
   });
-  // solder pads at every pin
-  const pads = [];
-  routes.forEach((r) => { pads.push(r[0], r[r.length - 1]); });
-  pads.forEach(([x, y]) => { dot(a, x, y, 0.09, gold); dot(a, x, y, 0.035, '#10182a'); dot(e, x, y, 0.09, 'rgb(150,125,85)'); });
+  // mounting holes (only where they fit)
+  holes.forEach(([x, y]) => {
+    dot(a, x, y, 0.17, gold); dot(a, x, y, 0.095, '#03070f'); dot(e, x, y, 0.17, 'rgb(130,108,72)'); dot(e, x, y, 0.095, '#000');
+    [a, e].forEach((c) => { c.strokeStyle = aqua; c.lineWidth = 0.012 * S; c.beginPath(); c.arc(X(x), Y(y), 0.23 * S, 0, PI * 2); c.stroke(); });
+  });
 
   // footprint outlines (aqua, dashed)
-  a.save(); a.setLineDash([0.07 * S, 0.05 * S]); a.strokeStyle = aqua; a.lineWidth = 0.022 * S;
-  e.save(); e.setLineDash([0.07 * S, 0.05 * S]); e.strokeStyle = aqua; e.lineWidth = 0.022 * S;
-  const frame = (cx, cy, w, h) => { [a, e].forEach((c) => c.strokeRect(X(cx - w / 2), Y(cy + h / 2), w * S, h * S)); };
-  frame(LAY.touch.bx, LAY.touch.by, 1.14, 1.14);
-  frame(LAY.baro.bx, LAY.baro.by, 1.14, 1.04);
-  frame(LAY.brain.bx, LAY.brain.by, 2.52, 1.82);
-  [a, e].forEach((c) => { c.beginPath(); c.arc(X(LAY.buzzer.bx), Y(LAY.buzzer.by), 0.66 * S, 0, PI * 2); c.stroke(); });
-  a.restore(); e.restore();
-
-  // mounting holes
-  [[-2.05, -0.4], [2.05, -0.4], [-1.95, 2.45], [1.95, 2.45]].forEach(([x, y]) => {
-    dot(a, x, y, 0.2, gold); dot(a, x, y, 0.115, '#03070f'); dot(e, x, y, 0.2, 'rgb(130,108,72)'); dot(e, x, y, 0.115, '#000');
-    a.strokeStyle = aqua; a.lineWidth = 0.015 * S; a.beginPath(); a.arc(X(x), Y(y), 0.27 * S, 0, PI * 2); a.stroke();
-    e.strokeStyle = aqua; e.lineWidth = 0.015 * S; e.beginPath(); e.arc(X(x), Y(y), 0.27 * S, 0, PI * 2); e.stroke();
+  [a, e].forEach((c) => { c.save(); c.setLineDash([0.06 * S, 0.045 * S]); c.strokeStyle = aqua; c.lineWidth = 0.02 * S; });
+  Object.entries(L).forEach(([id, l]) => {
+    const pts = footprint(id, 0.07);
+    [a, e].forEach((c) => { c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y)))); c.closePath(); c.stroke(); });
   });
+  [a, e].forEach((c) => c.restore());
 
   // silkscreen
-  const text = (str, x, y, size, align = 'center') => {
+  const text = (str, x, y, size, rot = 0) => {
     [[a, silk], [e, '#5b6678']].forEach(([c, col]) => {
-      c.fillStyle = col; c.textAlign = align; c.textBaseline = 'middle';
+      c.save(); c.translate(X(x), Y(y)); c.rotate(-rot);
+      c.fillStyle = col; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.font = `700 ${Math.round(size * S)}px Menlo, "SF Mono", Consolas, "Courier New", monospace`;
-      c.fillText(str, X(x), Y(y));
+      c.fillText(str, 0, 0); c.restore();
     });
   };
-  text('TOUCH D4', LAY.touch.bx, 1.9, 0.15);
-  text('BUZZER D8', LAY.buzzer.bx, 1.78, 0.15);
-  text('BARO I2C', 0, 2.47, 0.15);
-  text('UNO R4', 1.82, -1.05, 0.17);
-  text('WiFi', 1.82, -1.28, 0.13);
-  text('tenshi', -1.82, -1.05, 0.2);
-  text('REV A', -1.82, -1.3, 0.11);
+  const lblSize = 0.1;
+  const place = (str, cx, cy, cands) => {
+    const hw = (str.length * lblSize * 0.6) / 2;
+    for (const [dx, dy] of cands) {
+      const x = cx + dx, y = cy + dy;
+      if ([-1, -0.5, 0, 0.5, 1].every((k) => [-0.05, 0.05].every((v) => field(x + k * hw, y + v) > 0.1))) { text(str, x, y, lblSize); return; }
+    }
+  };
+  place('BUZZER D8', L.buzzer.bx, L.buzzer.by, [[0, 0.4], [0, -0.4]]);
+  place('TOUCH D4', L.touch.bx, L.touch.by, [[0.1, 0.5], [0.3, 0.45], [0.3, -0.45], [0.5, 0], [0, -0.5]]);
+  place('BARO I2C', L.baro.bx, L.baro.by, [[-0.1, 0.5], [-0.3, 0.45], [-0.3, -0.45], [-0.5, 0], [0, -0.5]]);
+  place('tenshi  REV A', 0, -2.47, [[0, 0], [0, 0.05]]);
 
   const mkTex = (cv, color) => {
     const t = new THREE.CanvasTexture(cv);
@@ -193,43 +277,48 @@ function drawBoard(outline, lowPower) {
 
 // Drop triangles facing +Z so the plate does not show as a solid shield behind the front jewelry.
 function stripFrontFaces(geo) {
-  const pos = geo.attributes.position, nor = geo.attributes.normal, uv = geo.attributes.uv;
-  const P = [], N = [], U = [];
+  const pos = geo.attributes.position, nor = geo.attributes.normal;
+  const P = [], N = [];
   for (let i = 0; i < pos.count; i += 3) {
     if (nor.getZ(i) + nor.getZ(i + 1) + nor.getZ(i + 2) > 0.9) continue;
     for (let k = 0; k < 3; k++) {
       P.push(pos.getX(i + k), pos.getY(i + k), pos.getZ(i + k));
       N.push(nor.getX(i + k), nor.getY(i + k), nor.getZ(i + k));
-      if (uv) U.push(uv.getX(i + k), uv.getY(i + k));
     }
   }
   geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
-  if (uv) geo.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+  geo.deleteAttribute('uv');
   geo.clearGroups();
 }
 
-function buildPcb(M, lowPower) {
+function buildPcb(M, lowPower, polys, nets, holes, field) {
   const g = new THREE.Group();
-  const outline = outlinePoints();
-  const shape = new THREE.Shape(outline);
+  const shapes = polys.map((p) => new THREE.Shape(p.map(([x, y]) => new THREE.Vector2(x, y))));
 
-  // plate body (neat navy board edge)
-  const bodyGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1, curveSegments: 1 });
+  // plate body (navy board edge), tucked up into the wings so it touches them
+  const bodyGeo = new THREE.ExtrudeGeometry(shapes, { depth: PLATE_D, bevelEnabled: false, curveSegments: 1 });
   stripFrontFaces(bodyGeo);
   const body = new THREE.Mesh(bodyGeo, M.maskEdge);
-  body.position.z = BZ + 0.02;
+  body.position.z = BZ;
   g.add(body);
-  // depth-only occluder on the plate front: hides the mounted hardware from the front view without drawing a shield
-  const occ = new THREE.Mesh(new THREE.ShapeGeometry(shape, 1), new THREE.MeshBasicMaterial({ colorWrite: false }));
-  occ.position.z = BZ + 0.15;
+  // depth-only occluder just inside the back face: hides the mounted hardware from the front view
+  const occ = new THREE.Mesh(new THREE.ShapeGeometry(shapes, 1), new THREE.MeshBasicMaterial({ colorWrite: false }));
+  occ.position.z = BZ + 0.06;
   occ.renderOrder = -10;
   occ.userData.id = null;
   g.add(occ);
 
+  // lowPower: the gem is plainly transparent, so give it a dark backing instead of relying on the depth-only occluder
+  if (lowPower) {
+    const backing = new THREE.Mesh(new THREE.ShapeGeometry(shapes[shapes.length - 3], 1), M.maskEdge);
+    backing.position.z = BZ + 0.062;
+    backing.userData.id = null;
+    g.add(backing);
+  }
   // textured back face
-  const tex = drawBoard(outline, lowPower);
-  const geo = new THREE.ShapeGeometry(shape, 1);
+  const tex = drawBoard(polys, LAY, nets, holes, lowPower, field);
+  const geo = new THREE.ShapeGeometry(shapes, 1);
   geo.rotateY(PI); // normal -> -Z, vertex x -> -bx
   const pos = geo.attributes.position;
   const uv = new Float32Array(pos.count * 2);
@@ -246,40 +335,40 @@ function buildPcb(M, lowPower) {
   const face = new THREE.Mesh(geo, mat);
   face.position.z = BZ - 0.003;
   g.add(face);
-  return { group: g, outline };
+  return { group: g };
 }
 
 // ---------- components (local frame: x right-from-behind, y up, +z away from board) ----------
 function buildTouch(M) {
   const g = new THREE.Group();
   g.add(box(1, 1, 0.06, M.modBlue, 0, 0, 0));
-  g.add(cyl(0.35, 0.012, M.maskDark, 0, 0.14, 0.06, 40));
-  g.add(cyl(0.3, 0.035, M.copper, 0, 0.14, 0.06, 40));
+  g.add(cyl(0.35, 0.012, M.maskDark, 0, 0.14, 0.05, 40));
+  g.add(cyl(0.3, 0.035, M.copper, 0, 0.14, 0.045, 40));
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.012, 6, 36), M.goldLightPin || M.pin);
-  ring.position.set(0, 0.14, 0.098); g.add(ring);
-  g.add(box(0.18, 0.13, 0.05, M.black, -0.38, 0.4, 0.06)); // TTP223 IC
-  g.add(box(0.07, 0.05, 0.02, M.aqua, 0.38, 0.4, 0.06)); // power LED
-  g.add(box(0.66, 0.1, 0.09, M.black, 0, -0.42, 0.06)); // header housing
-  [-0.2, 0, 0.2].forEach((x) => g.add(box(0.035, 0.035, 0.3, M.pin, x, -0.42, 0.06)));
+  ring.position.set(0, 0.14, 0.085); g.add(ring);
+  g.add(box(0.18, 0.13, 0.05, M.black, -0.38, 0.4, 0.04)); // TTP223 IC
+  g.add(box(0.07, 0.05, 0.02, M.aqua, 0.38, 0.4, 0.045)); // power LED
+  g.add(box(0.66, 0.1, 0.09, M.black, 0, -0.42, 0.04)); // header housing
+  [-0.2, 0, 0.2].forEach((x) => g.add(box(0.035, 0.035, 0.3, M.pin, x, -0.42, 0.0)));
   g.add(plane(0.9, 0.2, makeTextMaterial([
     { text: 'SIG', x: -0.2, y: 0, size: 0.07 }, { text: 'VCC', x: 0, y: 0, size: 0.07 }, { text: 'GND', x: 0.2, y: 0, size: 0.07 },
-  ], 0.9, 0.2), 0, -0.29, 0.062));
+  ], 0.9, 0.2), 0, -0.29, 0.057));
   return g;
 }
 
 function buildBuzzer(M) {
   const g = new THREE.Group();
-  g.add(cyl(0.52, 0.42, M.canBlack, 0, 0, 0.02, 40));
-  g.add(cyl(0.45, 0.012, M.canTop, 0, 0, 0.44, 40));
+  g.add(cyl(0.52, 0.45, M.canBlack, 0, 0, -0.02, 40));
+  g.add(cyl(0.45, 0.012, M.canTop, 0, 0, 0.425, 40));
   const rim = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.014, 6, 40), M.silver);
-  rim.position.z = 0.44; g.add(rim);
-  g.add(cyl(0.085, 0.014, M.hole, 0, 0, 0.452, 20));
+  rim.position.z = 0.43; g.add(rim);
+  g.add(cyl(0.085, 0.014, M.hole, 0, 0, 0.43, 20));
   const hr = new THREE.Mesh(new THREE.TorusGeometry(0.125, 0.012, 6, 24), M.silver);
-  hr.position.z = 0.456; g.add(hr);
-  g.add(plane(0.2, 0.2, makeTextMaterial([{ text: '+', x: 0, y: 0, size: 0.18 }], 0.2, 0.2), -0.3, 0.27, 0.454));
+  hr.position.z = 0.44; g.add(hr);
+  g.add(plane(0.2, 0.2, makeTextMaterial([{ text: '+', x: 0, y: 0, size: 0.18 }], 0.2, 0.2), -0.3, 0.27, 0.4385));
   [-1, 1].forEach((s) => {
-    g.add(cyl(0.032, 0.18, M.pin, s * 0.35, -0.45, 0, 10));
-    g.add(box(0.05, 0.16, 0.02, M.pin, s * 0.34, -0.38, 0.03));
+    g.add(cyl(0.032, 0.22, M.pin, s * 0.35, -0.45, -0.03, 10));
+    g.add(box(0.05, 0.16, 0.02, M.pin, s * 0.34, -0.38, -0.01));
   });
   return g;
 }
@@ -287,16 +376,16 @@ function buildBuzzer(M) {
 function buildBaro(M) {
   const g = new THREE.Group();
   g.add(box(1, 0.9, 0.05, M.modTeal, 0, 0, 0));
-  g.add(box(0.36, 0.36, 0.08, M.silver, 0, 0.05, 0.05)); // DPS310 LGA lid
-  g.add(cyl(0.05, 0.012, M.hole, 0.09, 0.14, 0.13, 14)); // pressure port
+  g.add(box(0.36, 0.36, 0.08, M.silver, 0, 0.05, 0.03)); // DPS310 LGA lid
+  g.add(cyl(0.05, 0.012, M.hole, 0.09, 0.14, 0.10, 14)); // pressure port
   // gold pad outline
   const o = 0.48, t = 0.022;
-  g.add(box(o, t, 0.012, M.pin, 0, 0.05 + o / 2, 0.05));
-  g.add(box(o, t, 0.012, M.pin, 0, 0.05 - o / 2, 0.05));
-  g.add(box(t, o, 0.012, M.pin, -o / 2, 0.05, 0.05));
-  g.add(box(t, o, 0.012, M.pin, o / 2, 0.05, 0.05));
-  g.add(box(1.06, 0.1, 0.09, M.black, 0, -0.38, 0.05)); // header housing
-  [-0.375, -0.125, 0.125, 0.375].forEach((x) => g.add(box(0.035, 0.035, 0.28, M.pin, x, -0.38, 0.05)));
+  g.add(box(o, t, 0.012, M.pin, 0, 0.05 + o / 2, 0.045));
+  g.add(box(o, t, 0.012, M.pin, 0, 0.05 - o / 2, 0.045));
+  g.add(box(t, o, 0.012, M.pin, -o / 2, 0.05, 0.045));
+  g.add(box(t, o, 0.012, M.pin, o / 2, 0.05, 0.045));
+  g.add(box(1.06, 0.1, 0.09, M.black, 0, -0.38, 0.03)); // header housing
+  [-0.375, -0.125, 0.125, 0.375].forEach((x) => g.add(box(0.035, 0.035, 0.28, M.pin, x, -0.38, 0.0)));
   g.add(plane(1.0, 0.16, makeTextMaterial([
     { text: 'VCC', x: -0.375, y: 0, size: 0.065 }, { text: 'GND', x: -0.125, y: 0, size: 0.065 },
     { text: 'SCL', x: 0.125, y: 0, size: 0.065 }, { text: 'SDA', x: 0.375, y: 0, size: 0.065 },
@@ -308,18 +397,18 @@ function buildBaro(M) {
 function buildBrain(M, lowPower) {
   const g = new THREE.Group();
   const board = new THREE.Mesh(new RoundedBoxGeometry(2.4, 1.7, 0.07, 2, 0.12), M.unoTeal);
-  board.position.z = 0.035; g.add(board);
+  board.position.z = 0.03; g.add(board);
   // USB-C connector on the left end
-  g.add(box(0.5, 0.62, 0.2, M.silver, -1.12, 0.3, 0.07));
-  g.add(box(0.02, 0.42, 0.08, M.black, -1.375, 0.3, 0.13));
+  g.add(box(0.5, 0.62, 0.2, M.silver, -1.12, 0.3, 0.05));
+  g.add(box(0.02, 0.42, 0.08, M.black, -1.375, 0.3, 0.11));
   // LED matrix 12x8
-  g.add(box(1.0, 0.72, 0.03, M.black, -0.15, 0.05, 0.07));
+  g.add(box(1.0, 0.72, 0.03, M.black, -0.15, 0.05, 0.05));
   const pat = [
     '............', '..........1.', '.........11.', '1.......11..', '11.....11...', '.11...11....', '..11.11.....', '...111......',
   ];
   const on = [], off = [];
   for (let j = 0; j < 8; j++) for (let i = 0; i < 12; i++) {
-    const p = new THREE.Vector3(-0.15 + (i - 5.5) * 0.075, 0.05 + (3.5 - j) * 0.075, 0.1 + 0.006);
+    const p = new THREE.Vector3(-0.15 + (i - 5.5) * 0.075, 0.05 + (3.5 - j) * 0.075, 0.08 + 0.004);
     (pat[j][i] === '1' ? on : off).push(p);
   }
   const dotG = new THREE.BoxGeometry(0.05, 0.05, 0.012);
@@ -331,19 +420,19 @@ function buildBrain(M, lowPower) {
     g.add(im);
   });
   // square MCU + ESP module
-  g.add(box(0.46, 0.46, 0.06, M.black, 0.82, 0.25, 0.07));
-  g.add(cyl(0.03, 0.01, M.silver, 0.64, 0.43, 0.13, 10));
-  g.add(box(0.52, 0.4, 0.04, M.silver, 0.82, -0.28, 0.07));
-  g.add(box(0.52, 0.1, 0.05, M.black, 0.82, -0.4, 0.07));
+  g.add(box(0.46, 0.46, 0.06, M.black, 0.82, 0.25, 0.05));
+  g.add(cyl(0.03, 0.01, M.silver, 0.64, 0.43, 0.10, 10));
+  g.add(box(0.52, 0.4, 0.04, M.silver, 0.82, -0.28, 0.05));
+  g.add(box(0.52, 0.1, 0.05, M.black, 0.82, -0.4, 0.05));
   // headers
-  g.add(box(2.3, 0.1, 0.12, M.black, 0, 0.72, 0.07));
-  [-1.0, -0.8, -0.375, -0.125, 0.125, 0.375, 0.8, 1.0, 1.2].forEach((x) => g.add(box(0.035, 0.035, 0.22, M.pin, x, 0.72, 0.07)));
-  g.add(box(2.0, 0.1, 0.12, M.black, 0, -0.72, 0.07));
-  for (let k = 0; k < 8; k++) g.add(box(0.035, 0.035, 0.22, M.pin, -0.875 + k * 0.25, -0.72, 0.07));
+  g.add(box(2.3, 0.1, 0.12, M.black, 0, 0.72, 0.05));
+  [-1.0, -0.8, -0.375, -0.125, 0.125, 0.375, 0.8, 1.0, 1.2].forEach((x) => g.add(box(0.035, 0.035, 0.22, M.pin, x, 0.72, 0.0)));
+  g.add(box(2.0, 0.1, 0.12, M.black, 0, -0.72, 0.05));
+  for (let k = 0; k < 8; k++) g.add(box(0.035, 0.035, 0.22, M.pin, -0.875 + k * 0.25, -0.72, 0.0));
   // reset button, status LED, label
-  g.add(box(0.16, 0.16, 0.05, M.silver, -0.92, -0.42, 0.07));
-  g.add(cyl(0.045, 0.03, M.black, -0.92, -0.42, 0.12, 12));
-  g.add(box(0.06, 0.04, 0.02, M.aqua, -0.92, -0.18, 0.07));
+  g.add(box(0.16, 0.16, 0.05, M.silver, -0.92, -0.42, 0.05));
+  g.add(cyl(0.045, 0.03, M.black, -0.92, -0.42, 0.09, 12));
+  g.add(box(0.06, 0.04, 0.02, M.aqua, -0.92, -0.18, 0.05));
   g.add(plane(1.1, 0.3, makeTextMaterial([
     { text: 'UNO R4 WiFi', x: 0, y: 0.05, size: 0.115 }, { text: 'ARDUINO', x: 0, y: -0.08, size: 0.07, color: '#5FD0D8' },
   ], 1.1, 0.3), -0.1, -0.5, 0.0705));
@@ -447,10 +536,24 @@ function buildWings(M, lowPower) {
     im.instanceMatrix.needsUpdate = true;
     g.add(im);
   }
+  // gold keyhole web joining the two wings under the centre stone (same outline as the back plate's web)
+  const web = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(webPoly().map(([x, y]) => new THREE.Vector2(x, y))), {
+    depth: 0.05, bevelEnabled: true, bevelThickness: F_BEVEL, bevelSize: 0.02, bevelSegments: 1, curveSegments: 1,
+  }), M.goldBase);
+  g.add(web);
   // small gold hub where the wings meet, below the centre stone
   const hub = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), M.gold);
-  hub.scale.set(1.5, 1, 0.55); hub.position.set(0, -0.02, 0.14);
+  hub.scale.set(1.5, 1, 0.55); hub.position.set(0, -0.02, 0.1);
   g.add(hub);
+  // eyelet lugs at the top outer tip of each wing (jump rings pass through these holes)
+  [1, -1].forEach((sx) => {
+    const t = tipInfo(sx);
+    const sh = new THREE.Shape(circlePoly(0, 0, LUG_R, lowPower ? 16 : 28).map(([x, y]) => new THREE.Vector2(x, y)));
+    sh.holes.push(new THREE.Path(circlePoly(0, 0, LUG_HOLE, 16).map(([x, y]) => new THREE.Vector2(x, y))));
+    const lug = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: F_DEPTH, bevelEnabled: true, bevelThickness: F_BEVEL, bevelSize: 0.015, bevelSegments: 1, curveSegments: 1 }), M.goldLight);
+    lug.position.set(t.H.x, t.H.y, WING_FEATHERS[0].z);
+    g.add(lug);
+  });
   return g;
 }
 
@@ -465,11 +568,11 @@ function buildCenterStone(M) {
   // four prongs at 45 degrees + a collar cup
   for (let k = 0; k < 4; k++) {
     const a = PI / 4 + (k * PI) / 2, x = Math.cos(a) * 0.29, y = Math.sin(a) * 0.29;
-    const pr = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.2, 8), M.gold);
-    pr.rotation.x = PI / 2; pr.position.set(x, y, 0.0);
+    const pr = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.3, 8), M.gold);
+    pr.rotation.x = PI / 2; pr.position.set(x, y, -0.01);
     g.add(pr);
     const tip = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), M.gold);
-    tip.position.set(x * 0.97, y * 0.97, 0.1);
+    tip.position.set(x * 0.97, y * 0.97, 0.135);
     g.add(tip);
   }
   const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.12, 0.14, 16), M.gold);
@@ -492,7 +595,7 @@ function pearGemGeo(M_, low) {
   const G = ring(0.74, 2.2, 0, 0), C = ring(0.6, 1.75, 0.17, 0.5), T = ring(0.4, 1.3, 0.27, 0);
   const tri = [];
   const add = (a, b, c) => tri.push(a, b, c);
-  const tc = new THREE.Vector3(0, -0.02, 0.27), cul = new THREE.Vector3(0, -0.05, -0.55);
+  const tc = new THREE.Vector3(0, -0.02, 0.27), cul = new THREE.Vector3(0, -0.05, -0.25);
   for (let i = 0; i < N; i++) {
     const j = (i + 1) % N;
     add(G[j], G[i], C[i]); add(C[i], C[j], G[j]); // kite between girdle and crown ring
@@ -522,31 +625,34 @@ function buildPear(M, lowPower) {
 }
 
 function buildChain(M, lowPower) {
-  // open chain hanging from the outer top tips of the two wings, looping up and behind the neck
-  const half = [[2.55, 2.12, 0.15], [3.0, 3.6, -0.1], [3.45, 5.4, -0.8], [3.7, 7.5, -2.3], [3.05, 9.2, -4.5], [0, 9.6, -5.6]];
-  // build symmetric list: right tip ... top ... left tip
-  const right = half.map((p) => new THREE.Vector3(...p));
-  const left = half.slice(0, -1).reverse().map(([x, y, z]) => new THREE.Vector3(-x, y, z));
+  // open chain from the jump ring at the top outer tip of one wing, up and around the neck, down to the other wing
+  const R = tipInfo(1), Lf = tipInfo(-1);
+  const p1 = R.Lc.clone().addScaledVector(R.e, 0.5);
+  const mid = [[3.15, 3.9, 0.05], [3.5, 5.4, -0.8], [3.7, 7.5, -2.3], [3.05, 9.2, -4.5], [0, 9.6, -5.6]].map((p) => new THREE.Vector3(...p));
+  const right = [R.Lc.clone(), p1, ...mid];
+  const left = right.slice(0, -1).reverse().map((v) => new THREE.Vector3(-v.x, v.y, v.z));
   const curve = new THREE.CatmullRomCurve3([...right, ...left], false, 'centripetal');
-  const N = lowPower ? 54 : 100;
   const len = curve.getLength();
-  const spacing = len / (N - 1);
-  const geo = new THREE.TorusGeometry(0.1, 0.03, lowPower ? 4 : 6, lowPower ? 10 : 14);
+  const SP = 0.16;
+  let N = Math.round(len / SP);
+  if (lowPower) N = Math.round(N * 0.8);
+  if (N % 2 === 0) N++; // odd count: both end links share the same orientation (flat, hooked on the rings)
+  const geo = new THREE.TorusGeometry(0.062, 0.02, lowPower ? 4 : 6, lowPower ? 10 : 14);
   geo.scale(1.7, 1, 1);
-  const s = Math.min(1.5, (spacing * 1.5) / 0.46);
+  const spacing = len / (N - 1), s = Math.min(1.25, spacing / SP);
   const im = new THREE.InstancedMesh(geo, M.chain, N);
-  const T = new THREE.Vector3(), n = new THREE.Vector3(), b = new THREE.Vector3(), ref = new THREE.Vector3(0, 0, 1);
-  const m4 = new THREE.Matrix4(), p = new THREE.Vector3(), nb = new THREE.Vector3();
+  const T3 = new THREE.Vector3(), n = new THREE.Vector3(), b = new THREE.Vector3(), ref = new THREE.Vector3();
+  const m4 = new THREE.Matrix4(), p = new THREE.Vector3(), sc = new THREE.Vector3(s, s, s);
   for (let i = 0; i < N; i++) {
     const u = i / (N - 1);
     curve.getPointAt(u, p);
-    curve.getTangentAt(u, T).normalize();
+    curve.getTangentAt(u, T3).normalize();
     ref.set(0, 0, 1);
-    if (Math.abs(T.dot(ref)) > 0.9) ref.set(0, 1, 0);
-    n.copy(ref).addScaledVector(T, -T.dot(ref)).normalize();
-    b.crossVectors(T, n);
-    if (i % 2) { nb.copy(n).negate(); m4.makeBasis(T, b, nb); } else m4.makeBasis(T, n, b);
-    m4.scale(new THREE.Vector3(s, s, s));
+    if (Math.abs(T3.dot(ref)) > 0.9) ref.set(0, 1, 0);
+    n.copy(ref).addScaledVector(T3, -T3.dot(ref)).normalize();
+    if (i % 2 === 0) { b.crossVectors(n, T3); m4.makeBasis(T3, b, n); } // flat (plane contains T and n x T)
+    else { b.crossVectors(T3, n); m4.makeBasis(T3, n, b); }            // turned 90 degrees
+    m4.scale(sc);
     m4.setPosition(p);
     im.setMatrixAt(i, m4);
   }
@@ -554,12 +660,22 @@ function buildChain(M, lowPower) {
   im.frustumCulled = false;
   const g = new THREE.Group();
   g.add(im);
-  // small jump rings at the wing tips
-  [1, -1].forEach((sx) => {
-    const r = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 8, 20), M.gold);
-    r.position.set(sx * 2.55, 2.12, 0.2);
-    g.add(r);
+  // jump rings: threaded through the wing-tip eyelet holes; the end links hang through them.
+  // Each ring group sits exactly on the chain end (end link centre).
+  const rings = [R, Lf].map((t, k) => {
+    const grp = new THREE.Group();
+    grp.name = k ? 'jumpring-left' : 'jumpring-right';
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(RING_R, RING_T, lowPower ? 6 : 8, lowPower ? 18 : 28), M.gold);
+    const ez = new THREE.Vector3(0, 0, 1);
+    m4.makeBasis(t.e, ez, new THREE.Vector3().crossVectors(t.e, ez));
+    ring.quaternion.setFromRotationMatrix(m4);
+    ring.position.copy(t.C).sub(t.Lc);
+    grp.add(ring);
+    grp.position.copy(t.Lc);
+    g.add(grp);
+    return grp;
   });
+  g.userData.chainEnds = { right: R.Lc.clone(), left: Lf.Lc.clone(), rings: rings.map((r) => r.position.clone()) };
   return g;
 }
 
@@ -574,36 +690,106 @@ function countTris(root) {
   return Math.round(t);
 }
 
+// polyline offset (miter) by d along n = (-dy, dx)
+function offsetLine(pts, d) {
+  const seg = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const dx = pts[i + 1][0] - pts[i][0], dy = pts[i + 1][1] - pts[i][1], l = Math.hypot(dx, dy);
+    seg.push([-dy / l, dx / l]);
+  }
+  return pts.map((p, i) => {
+    const n1 = seg[Math.max(0, i - 1)], n2 = seg[Math.min(seg.length - 1, i)];
+    let mx = n1[0] + n2[0], my = n1[1] + n2[1];
+    const ml = Math.hypot(mx, my); mx /= ml; my /= ml;
+    const k = d / (mx * n1[0] + my * n1[1]);
+    return [p[0] + mx * k, p[1] + my * k];
+  });
+}
+
+// Gold traces between the components and the Arduino header (view space polylines).
+function buildNets() {
+  const nets = [];
+  const HX = [-1.0, -0.8, -0.375, -0.125, 0.125, 0.375, 0.8, 1.0, 1.2]; // Arduino top header pins (local x)
+  const brainPin = (k) => T('brain', HX[k], 0.72);
+  const PITCH = 0.045, YT = -1.0;
+  // pins sorted by their position along the bus normal so the lanes never cross
+  const bus = (pins, base, firstTarget) => {
+    const dir = [base[1][0] - base[0][0], base[1][1] - base[0][1]];
+    const dl = Math.hypot(...dir), nrm = [-dir[1] / dl, dir[0] / dl];
+    const sorted = pins.slice().sort((p, q) => p[0] * nrm[0] + p[1] * nrm[1] - (q[0] * nrm[0] + q[1] * nrm[1]));
+    sorted.forEach((P, k) => {
+      const off = (k - (sorted.length - 1) / 2) * PITCH;
+      const lane = offsetLine(base, off);
+      const lx = lane[lane.length - 1][0], tp = brainPin(firstTarget + k), tx = tp[0];
+      const d = Math.abs(tx - lx);
+      const path = [P, ...lane, [lx, YT], [tx, YT - d], tp];
+      nets.push(path.filter((q, i) => !i || Math.hypot(q[0] - path[i - 1][0], q[1] - path[i - 1][1]) > 1e-4));
+    });
+  };
+  const mid = (ps) => [ps.reduce((a, p) => a + p[0], 0) / ps.length, ps.reduce((a, p) => a + p[1], 0) / ps.length];
+  const dirOf = (id) => { const l = LAY[id]; return [Math.sin(l.rot), -Math.cos(l.rot)]; }; // local -y in view space
+  const exit = (id, pins, dist) => { const m = mid(pins), d = dirOf(id); return [m[0] + d[0] * dist, m[1] + d[1] * dist]; };
+  // baro (view left) -> header pins 0..3
+  const bp = [-0.375, -0.125, 0.125, 0.375].map((x) => T('baro', x, -0.38));
+  bus(bp, [exit('baro', bp, 0.3), [-0.64, -0.2], [-0.4, -0.44], [-0.17, -0.67], [-0.17, -0.75]], 0);
+  // touch (view right) -> header pins 6..8
+  const tp = [-0.2, 0, 0.2].map((x) => T('touch', x, -0.42));
+  bus(tp, [exit('touch', tp, 0.3), [0.62, -0.2], [0.33, -0.49], [0.17, -0.65], [0.17, -0.75]], 6);
+  // buzzer legs -> header pins 4..5 (straight down the centre)
+  const bz = [-0.35, 0.35].map((x) => T('buzzer', x, -0.45));
+  bz.forEach((P, k) => {
+    const lx = (k ? 1 : -1) * 0.0225, tpn = brainPin(4 + k), d = Math.abs(tpn[0] - lx);
+    const dyv = Math.abs(P[0] - lx);
+    nets.push([P, [P[0], 0.05], [lx, 0.05 - dyv], [lx, YT], [tpn[0], YT - d], tpn]);
+  });
+  return nets;
+}
+
 export function buildNecklace({ lowPower = false } = {}) {
   const M = createMaterials({ lowPower });
   const root = new THREE.Group();
   root.name = 'necklace';
 
+  const polys = silhouette();
+  const field = makeField(polys);
+  const nets = buildNets();
+  // mounting holes only where a pad ring fits inside the outline and clear of all components
+  const holes = [[1.9, 1.15], [2.05, 0.6], [1.0, 1.9], [1.55, 1.5], [0.0, -2.35], [0.8, -0.85]]
+    .flatMap(([x, y]) => [[x, y], [-x, y]])
+    .filter(([x, y]) => field(x, y) > 0.3 && Object.keys(LAY).every((id) => Math.hypot(x - LAY[id].bx, y - LAY[id].by) > 0.75 * LAY[id].s * Math.max(FOOT[id].w || 0, FOOT[id].h || 0, (FOOT[id].r || 0) * 2) + 0.35));
+
   // ---- front jewelry (+Z) ----
   root.add(buildChain(M, lowPower));
-  const pcb = buildPcb(M, lowPower);
+  const pcb = buildPcb(M, lowPower, polys, nets, holes, field);
   root.add(pcb.group);
 
   root.add(buildWings(M, lowPower));
   const cs = buildCenterStone(M);
-  cs.position.set(0, 0.68, 0.22);
+  cs.position.set(0, 0.68, 0.19);
   root.add(cs);
   const pear = buildPear(M, lowPower);
-  pear.position.set(0, -1.45, 0.2);
+  pear.scale.setScalar(PEAR_SC);
+  pear.position.set(0, PEAR_Y, 0.2);
   root.add(pear);
-  // bail ring threading the hub and the pear collar
-  const bail = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.028, 8, 20), M.gold);
-  bail.rotation.y = PI / 2; bail.position.set(0, -0.2, 0.2);
+  // bail ring wrapped around the collar and sunk into the web
+  const bail = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.03, 8, 22), M.gold);
+  bail.rotation.y = PI / 2; bail.position.set(0, -0.3, 0.1);
   root.add(bail);
 
   // ---- hardware components (-Z) ----
   const builders = { touch: () => buildTouch(M), buzzer: () => buildBuzzer(M), baro: () => buildBaro(M), brain: () => buildBrain(M, lowPower) };
-  const topH = { touch: 0.12, buzzer: 0.46, baro: 0.14, brain: 0.14 };
-  const dist = { touch: 5.0, buzzer: 5.5, baro: 5.0, brain: 8.0 };
+  const topH = { touch: 0.3, buzzer: 0.45, baro: 0.3, brain: 0.28 };
+  const dist = { touch: 4.0, buzzer: 3.8, baro: 4.0, brain: 5.6 };
   const parts = {}, anchors = {};
+  const SINK = 0.025; // components sit slightly into the board
   for (const id of Object.keys(LAY)) {
-    const part = builders[id]();
-    part.position.set(-LAY[id].bx, LAY[id].by, BZ - 0.004);
+    const l = LAY[id];
+    const part = new THREE.Group();
+    const inner = builders[id]();
+    inner.rotation.z = l.rot;
+    inner.scale.setScalar(l.s);
+    part.add(inner);
+    part.position.set(-l.bx, l.by, BZ + SINK);
     part.rotation.y = PI; // local x -> view-right (root -x), local +z -> root -z
     registerPart(part, id);
     root.add(part);
@@ -611,7 +797,7 @@ export function buildNecklace({ lowPower = false } = {}) {
 
     const anchor = new THREE.Object3D();
     anchor.name = 'anchor-' + id;
-    anchor.position.set(-LAY[id].bx, LAY[id].by, BZ - topH[id]);
+    anchor.position.set(-l.bx, l.by, BZ + SINK - topH[id] * l.s);
     const d = dist[id];
     // offset = camera position relative to lookAt, in root-local space (negative z = behind the board)
     const off = new THREE.Vector3(0.1, 0.22, -1).normalize().multiplyScalar(d);
@@ -620,10 +806,17 @@ export function buildNecklace({ lowPower = false } = {}) {
     anchors[id] = anchor;
   }
 
+  // fit report: minimum clearance of each footprint to the plate edge (cm)
+  const fit = {};
+  for (const id of Object.keys(LAY)) fit[id] = +Math.min(...footprint(id, 0, 6).map(([x, y]) => field(x, y))).toFixed(3);
+  root.userData.fit = fit;
+  root.userData.nets = nets;
+
   root.traverse((o) => { if (o.userData.id === undefined) o.userData.id = null; });
   root.updateMatrixWorld(true);
   const bounds = new THREE.Box3().setFromObject(root);
   root.userData.triangleCount = countTris(root);
   root.userData.lowPower = lowPower;
+  root.userData.chainEnds = root.children[0].userData.chainEnds;
   return { root, anchors, parts, bounds };
 }
