@@ -774,7 +774,7 @@ export function buildNecklace({ lowPower = false } = {}) {
   // ---- hardware components (-Z) ----
   const builders = { touch: () => buildTouch(M), buzzer: () => buildBuzzer(M), baro: () => buildBaro(M), brain: () => buildBrain(M, lowPower) };
   const topH = { touch: 0.3, buzzer: 0.45, baro: 0.3, brain: 0.28 };
-  const dist = { touch: 4.0, buzzer: 3.8, baro: 4.0, brain: 5.6 };
+  const dist = { touch: 5.4, buzzer: 5.2, baro: 5.4, brain: 7.6 }; // camera distance on focus, about a third further out than before
   const parts = {}, anchors = {};
   const SINK = 0.025; // components sit slightly into the board
   for (const id of Object.keys(LAY)) {
