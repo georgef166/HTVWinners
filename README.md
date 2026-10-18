@@ -42,7 +42,7 @@ The smoke test runs the whole ladder against the API (about 80 s) and prints `SM
 
 ## Where it runs
 
-The app and our own AI models (Llama for the summary, Whisper for distress audio) run on Vultr in Toronto, so Maya's night never goes to a third-party AI company. Her data lives in a managed **Tiger Cloud** service next door in Canada (Central). Tiger Data stores events as a hypertable with compression, 7-day retention (location deletes itself) and a continuous aggregate behind the signal trace. Step-by-step: [docs/DEPLOY-VULTR.md](docs/DEPLOY-VULTR.md).
+The app and our own AI models run on Vultr in Toronto: Vosk (Kaldi) streams speech and spots distress phrases mid-sentence on stage, Whisper checks the clip after a scream on a real night, and Llama writes the contact's summary. So so Maya's night never goes to a third-party AI company. Her data lives in a managed **Tiger Cloud** service next door in Canada (Central). Tiger Data stores events as a hypertable with compression, 7-day retention (location deletes itself) and a continuous aggregate behind the signal trace. Step-by-step: [docs/DEPLOY-VULTR.md](docs/DEPLOY-VULTR.md).
 
 ## Her dashboard and Grafana
 
