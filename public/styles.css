@@ -69,7 +69,7 @@ body.app.ok { background: #0f2f32; }
 .glass { background: rgb(var(--ink-rgb) / .72); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
 
 /* Cards: a flat tinted panel; on dark pages, a faint fill with a hairline. */
-.glass-card { position: relative; border-radius: 22px; background: var(--dusk); }
+.glass-card { position: relative; border-radius: 16px; background: var(--dusk); }
 .theme-dark .glass-card, body.app .glass-card { background: rgb(255 255 255 / .04); border: 1px solid rgb(255 255 255 / .08); }
 
 /* ---------- Buttons ---------- */
@@ -112,7 +112,7 @@ body.app.ok { background: #0f2f32; }
 .field input {
   display: block; width: 100%; margin-top: .4rem; padding: .85rem 1rem;
   font: 400 1.0625rem var(--font-text); color: var(--paper);
-  background: var(--ink); border: 1px solid var(--line); border-radius: 12px;
+  background: var(--ink); border: 1px solid var(--line); border-radius: 8px;
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 .field input::placeholder { color: rgb(var(--mist-rgb) / .7); }

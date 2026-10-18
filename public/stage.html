@@ -31,17 +31,17 @@
     #trayBtn:hover, #trayBtn[aria-expanded="true"] { color: var(--paper); background: rgb(var(--paper-rgb) / .08); }
     #trayMenu { position: absolute; left: 0; bottom: calc(100% + 8px); width: 260px; padding: 6px; border-radius: 16px; background: rgb(var(--dusk-rgb)); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .1); display: none; }
     #trayMenu.open { display: block; }
-    #trayMenu .tool { width: 100%; justify-content: space-between; height: 40px; border-radius: 10px; }
+    #trayMenu .tool { width: 100%; justify-content: space-between; height: 40px; border-radius: 8px; }
     #trayMenu kbd { font: 500 12px var(--font-text); color: var(--mist); padding: 2px 7px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .14); }
     .tool.fired { background: rgb(var(--sodium-rgb) / .22); color: var(--paper); }
     .tool[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
     .tool[aria-pressed="true"] svg { opacity: 1; }
     .tool.primary { background: var(--sodium); color: var(--on-sodium); font-weight: 600; }
     .tool.primary:hover { background: rgb(var(--sodium-rgb) / .88); }
-    #qrPop { position: absolute; right: 0; top: calc(100% + 10px); z-index: 60; display: flex; gap: 12px; padding: 12px; border-radius: 22px; background: rgb(var(--dusk-rgb)); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .1), 0 30px 60px -20px #000; opacity: 0; transform: translateY(-6px) scale(.98); transform-origin: top right; pointer-events: none; transition: opacity .18s ease, transform .22s var(--ease-out); }
+    #qrPop { position: absolute; right: 0; top: calc(100% + 10px); z-index: 60; display: flex; gap: 12px; padding: 12px; border-radius: 16px; background: rgb(var(--dusk-rgb)); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .1), 0 30px 60px -20px #000; opacity: 0; transform: translateY(-6px) scale(.98); transform-origin: top right; pointer-events: none; transition: opacity .18s ease, transform .22s var(--ease-out); }
     #qrPop.open { opacity: 1; transform: none; pointer-events: auto; }
     #qrPop figure { flex: none; margin: 0; text-align: center; }
-    #qrPop img { display: block; width: 148px; height: 148px; max-width: none; border-radius: 12px; background: #fff; padding: 6px; }
+    #qrPop img { display: block; width: 148px; height: 148px; max-width: none; border-radius: 8px; background: #fff; padding: 6px; }
     #qrPop figcaption { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--paper); }
 
     .stage { display: grid; grid-template-columns: auto minmax(48px, 110px) minmax(0, 1fr) minmax(48px, 110px) auto; align-items: center; height: calc(100vh - 72px); padding: 0 32px 28px; }
