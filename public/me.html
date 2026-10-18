@@ -464,6 +464,15 @@
     const RATE = 16000, SECONDS = 30;
     const ring = new Float32Array(RATE * SECONDS);
     let ringAt = 0, ringFull = false, baseline = null, loudFrames = 0, lastCheck = 0, listening = false;
+    // On stage only, the mic streams live to the keyword spotter on our server so the audience sees each word.
+    let live = null, lastLevel = 0, gate = 0;
+    const preroll = [];
+    function openLive() {
+      live = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/sessions/${encodeURIComponent(id)}/stream`);
+      live.binaryType = 'arraybuffer';
+      live.onclose = () => { live = null; if (state?.level !== 'RESOLVED') setTimeout(openLive, 1500); };
+    }
+    const tell = (msg) => { if (STAGE) try { window.parent.postMessage({ nos: 'mic', ...msg }, location.origin); } catch {} };
     async function startListening() {
       if (listening || !navigator.mediaDevices?.getUserMedia) return;
       try {
@@ -484,10 +493,31 @@
           // A spike is 18 dB over the room's usual level, held for about half a second.
           if (baseline == null) baseline = db;
           if (db > baseline + 18 && db > -30) loudFrames++; else { loudFrames = 0; baseline = baseline * 0.995 + db * 0.005; }
+          if (STAGE) {
+            if (Date.now() - lastLevel > 80) { lastLevel = Date.now(); tell({ db, baseline }); }
+            // 16 kHz 16-bit PCM, averaging each group of samples (cleaner than dropping them).
+            const out = new Int16Array(Math.floor(x.length / step));
+            for (let j = 0; j < out.length; j++) {
+              let acc = 0; const from = Math.floor(j * step), to = Math.floor((j + 1) * step);
+              for (let k = from; k < to; k++) acc += x[k];
+              out[j] = Math.max(-1, Math.min(1, acc / (to - from))) * 0x7fff;
+            }
+            // Only stream while someone is talking (plus a moment either side), so room noise isn't turned into words.
+            const was = gate > 0;
+            gate = db > baseline + 6 && db > -60 ? 10 : Math.max(0, gate - 1);
+            if (live?.readyState === WebSocket.OPEN) {
+              if (gate && !was) { live.send(JSON.stringify({ room: +baseline.toFixed(1) })); while (preroll.length) live.send(preroll.shift()); }
+              if (gate) live.send(out.buffer);
+              else if (was) for (let n = 0; n < 8; n++) live.send(new ArrayBuffer(out.byteLength));  // trailing quiet ends the utterance
+            }
+            if (!gate) { preroll.push(out.buffer); if (preroll.length > 4) preroll.shift(); }
+            return;  // on stage the live stream does the listening
+          }
           const cooldown = state?.demo ? 12000 : 60000;
           if (loudFrames >= 6 && Date.now() - lastCheck > cooldown) { lastCheck = Date.now(); loudFrames = 0; setTimeout(() => sendClip(db), 2000); }  // keep 2 s after the shout so the words that follow are in the clip
         };
         listening = true;
+        if (STAGE) openLive();
         $('#listenRow').classList.replace('hidden', 'flex');
       } catch {
         showErr('Microphone access was declined, so listening is off. Check-ins still work.');
@@ -526,7 +556,7 @@
     }
 
     poll().then(heartbeat);
-    const pollTimer = setInterval(poll, 2000);
+    const pollTimer = setInterval(poll, STAGE ? 1000 : 2000);
     const beatTimer = setInterval(heartbeat, 10000);
   </script>
 </body>

@@ -93,7 +93,13 @@ docker run -d --name tiger --restart unless-stopped -p 127.0.0.1:5432:5432 \
 
 `DATABASE_URL=postgresql://postgres:<strong-password>@127.0.0.1:5432/postgres?sslmode=disable`
 
-**B. Tiger Cloud** (managed): create a free service at tigerdata.com and copy its connection string into `DATABASE_URL`.
+**B. Tiger Cloud** (managed, what the live site uses): create a service at console.cloud.timescale.com (we run 0.5 CPU, Development, `ca-central-1`, closest to the Toronto box). Put its connection string in your local `.env` as `TIGER_DATABASE_URL`, then:
+
+```bash
+node deploy/vultr.mjs tiger
+```
+
+That copies the string to the server's `.env` over ssh stdin (never on a command line), restarts the app and Grafana against Tiger Cloud, and seeds the sample week. node-postgres treats `sslmode=require` as full certificate verification, which rejects Tiger's chain, so the script adds `uselibpqcompat=true`: the connection is still encrypted, with libpq's `require` semantics. The local TimescaleDB container keeps running as the fallback; delete the `TIGER_` lines from `/opt/nos/.env` and run `docker compose up -d` to switch back.
 
 On startup the app turns on the Tiger Data features automatically and logs anything it skips:
 - `events` becomes a **hypertable**
@@ -101,7 +107,7 @@ On startup the app turns on the Tiger Data features automatically and logs anyth
 - **retention**: events, including location, delete themselves after 7 days
 - a **continuous aggregate** `heartbeat_1m` (heartbeats per minute) that feeds the contact's signal trace on a real night
 
-Check it with `curl https://<host>/api/health`, which should report `"store":"postgres","timescale":true`.
+Check it with `curl https://<host>/api/health`, which should report `"store":"postgres","timescale":true` (plus `"tiger_cloud":true` on Tiger Cloud).
 
 ## 4. The app
 

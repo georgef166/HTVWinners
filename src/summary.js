@@ -1,6 +1,7 @@
 // Plain-language summary for the trusted contact. Gemini when configured, template otherwise.
 import { GoogleGenAI } from '@google/genai';
 import { assess } from './predict.js';
+import { note } from './pipeline.js';
 
 const INSTRUCTION = `Write 2–3 short factual sentences for a trusted friend about this person's night, using ONLY the facts below: when they turned on tenshi, the last time they responded, how long since, the battery, and whether a location is on the map. Then one line starting "Suggested next step:" (call them; if no answer and you are nearby, go to the last location; if you believe they are in danger, call 911). Never guess at causes, substances, intoxication or intent. Never say "drugged" or "drunk". Say "hasn't responded". Do not add facts that are not listed. Do not include coordinates. Never say "armed". Reply with only the sentences, no introduction.`;
 
@@ -119,8 +120,12 @@ export async function summarize(session, events, now = new Date()) {
     process.env.GEMINI_API_KEY && ['gemini', gemini],
   ].filter(Boolean);
   for (const [source, call] of providers) {
+    const t = performance.now();
     try {
-      return { text: cleanModelText(await withTimeout(call(prompt))), source };
+      const text = cleanModelText(await withTimeout(call(prompt)));
+      const model = source === 'vultr' ? process.env.LLM_MODEL || 'llama3.1:8b' : process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      note(session.id, { kind: 'model', source, model, ms: Math.round(performance.now() - t) });
+      return { text, source };
     } catch (err) {
       console.warn(`[summary] ${source} failed (${err.message}), trying the next option`);
     }

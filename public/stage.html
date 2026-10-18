@@ -26,10 +26,10 @@
     .tool:active { transform: scale(.97); }
     .tool.solo { box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .12); }
     /* Presenter tray: the demo triggers live here, out of the judges' way */
-    #tray { position: fixed; left: 24px; bottom: 20px; z-index: 40; }
+    #tray { position: relative; z-index: 40; }
     #trayBtn { height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 500; color: rgb(var(--paper-rgb) / .6); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .12); }
     #trayBtn:hover, #trayBtn[aria-expanded="true"] { color: var(--paper); background: rgb(var(--paper-rgb) / .08); }
-    #trayMenu { position: absolute; left: 0; bottom: calc(100% + 8px); width: 260px; padding: 6px; border-radius: 16px; background: rgb(var(--dusk-rgb)); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .1); display: none; }
+    #trayMenu { position: absolute; left: 0; top: calc(100% + 8px); width: 260px; padding: 6px; border-radius: 16px; background: rgb(var(--dusk-rgb)); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .1); display: none; }
     #trayMenu.open { display: block; }
     #trayMenu .tool { width: 100%; justify-content: space-between; height: 40px; border-radius: 8px; }
     #trayMenu kbd { font: 500 12px var(--font-text); color: var(--mist); padding: 2px 7px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .14); }
@@ -44,15 +44,16 @@
     #qrPop img { display: block; width: 148px; height: 148px; max-width: none; border-radius: 8px; background: #fff; padding: 6px; }
     #qrPop figcaption { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--paper); }
 
-    .stage { display: grid; grid-template-columns: auto minmax(48px, 110px) minmax(0, 1fr) minmax(48px, 110px) auto; align-items: center; height: calc(100vh - 72px); padding: 0 32px 28px; }
+    .stage { display: grid; grid-template-columns: auto minmax(48px, 110px) minmax(0, 1fr) minmax(48px, 110px) auto; align-items: center; height: calc(100vh - 72px - var(--under)); padding: 0 32px 40px; }
     .device { position: relative; width: calc(375px * var(--s)); height: calc(780px * var(--s)); border-radius: calc(52px * var(--s)); padding: calc(10px * var(--s)); background: #0C0D14; box-shadow: 0 0 0 1px rgb(255 255 255 / .14), inset 0 0 0 1px rgb(255 255 255 / .05), 0 40px 100px -30px #000; }
     /* Phones fade in once their page has painted, instead of flashing white */
     .device iframe { width: 375px; height: 760px; border: 0; border-radius: 42px; transform: scale(var(--s)); transform-origin: top left; background: transparent; opacity: 0; transition: opacity .45s ease; }
     .device iframe.ready { opacity: 1; }
     .device .who { position: absolute; top: calc(100% + 14px); left: 0; right: 0; text-align: center; font-size: 16px; font-weight: 600; color: var(--mist); }
-    :root { --s: .72; }
-    @media (max-height: 760px) { :root { --s: .62; } }
-    @media (min-height: 900px) { :root { --s: .82; } }
+    :root { --s: .72; --under: 184px; }
+    @media (max-height: 880px) { :root { --s: .62; } }
+    @media (max-height: 800px) { :root { --s: .54; } .feed { display: none; } }
+    @media (min-height: 960px) { :root { --s: .82; } }
 
     /* Wires carry real events between the phones and the server */
     .wire { position: relative; margin: 0 16px; height: 4px; border-radius: 4px; background: repeating-linear-gradient(90deg, rgba(174,181,218,.35) 0 8px, transparent 8px 16px); background-size: 32px 4px; animation: flow 1.2s linear infinite; }
@@ -91,6 +92,50 @@
     .stage.live .wire, .stage.live > section { opacity: 1; }
     @media (prefers-reduced-motion: reduce) { .stage .device, .stage .wire, .stage > section { opacity: 1; transform: none; transition: none; } }
     @media (prefers-reduced-motion: reduce) { .wire { animation: none; } }
+    /* Under the hood: what the phone hears, and where her night goes (Vultr, then Tiger Data) */
+    .under { position: fixed; left: 0; right: 0; bottom: 0; height: var(--under); display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 14fr); gap: 16px; padding: 0 32px 20px 32px; opacity: 0; transition: opacity .8s ease .8s; }
+    .stage.live ~ .under { opacity: 1; }
+    .panel { position: relative; display: flex; flex-direction: column; min-width: 0; border-radius: 16px; background: rgb(var(--dusk-rgb) / .55); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .08); padding: 14px 18px; }
+    .panel h2 { font-size: 14px; font-weight: 600; color: var(--mist); display: flex; align-items: center; gap: 10px; }
+    .meter { display: flex; align-items: center; gap: 3px; height: 16px; }
+    .meter i { width: 4px; border-radius: 2px; background: rgb(var(--paper-rgb) / .25); height: 4px; transition: height .08s linear, background-color .2s; }
+    .meter.on i { background: var(--sodium); }
+    #captions { flex: 1; min-height: 0; margin-top: 6px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; overflow: hidden; }
+    #captions:empty { display: none; }
+    #captions li { display: flex; align-items: baseline; gap: 12px; min-width: 0; animation: feed-in .35s var(--ease-out) both; }
+    #captions li .q { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 16px; color: rgb(var(--paper-rgb) / .5); }
+    #captions li:last-child .q { font-size: 22px; font-weight: 500; color: var(--paper); }
+    #captions li:last-child { flex-wrap: wrap; row-gap: 2px; }
+    #captions li:last-child .q { flex-basis: 100%; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
+    #captions li .m { flex: none; font-size: 13px; color: var(--mist); font-variant-numeric: tabular-nums; }
+    #captions li.live .q::after { content: ''; display: inline-block; width: 2px; height: .9em; margin-left: 3px; vertical-align: -0.1em; background: var(--sodium); animation: caret 1s steps(2) infinite; }
+    @keyframes caret { 50% { opacity: 0; } }
+    #captions mark { background: none; color: rgb(var(--tone, var(--signal-rgb))); font-weight: 700; }
+    .tag { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+    .tag.red { background: rgb(var(--signal-rgb) / .18); color: var(--signal); }
+    .tag.amber { background: rgb(var(--amber-rgb) / .16); color: var(--amber); }
+    .hear-empty { flex: 1; margin-top: 10px; font-size: 16px; line-height: 1.45; color: var(--mist); max-width: 46ch; }
+    .fine { margin-top: 8px; font-size: 12px; color: rgb(var(--mist-rgb) / .8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .flow { display: grid; grid-template-columns: minmax(0, 1fr) 52px minmax(0, 1.2fr) 52px minmax(0, 1.1fr); align-items: stretch; padding: 14px; }
+    .node { border-radius: 12px; padding: 12px 14px; background: rgb(var(--ink-rgb) / .6); box-shadow: inset 0 0 0 1px rgb(var(--paper-rgb) / .1); transition: box-shadow .3s ease; min-width: 0; }
+    .node.hot { box-shadow: inset 0 0 0 1.5px rgb(var(--node, var(--sodium-rgb))); }
+    .node .name { display: flex; align-items: baseline; gap: 8px; font-family: var(--font-display); font-size: 19px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
+    .node .where { font-family: var(--font-text); font-size: 12.5px; font-weight: 500; color: var(--mist); letter-spacing: 0; overflow: hidden; text-overflow: ellipsis; }
+    .node ul { margin-top: 8px; display: grid; gap: 5px; }
+    .node li { display: grid; grid-template-columns: 8px auto minmax(0, 1fr); align-items: center; column-gap: 8px; font-size: 13.5px; min-width: 0; }
+    .node li b { font-weight: 600; color: rgb(var(--paper-rgb) / .9); white-space: nowrap; }
+    .node li span:last-child { color: var(--mist); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+    .node li .dot { width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--paper-rgb) / .2); transition: background-color .3s; }
+    .node li.hot .dot { background: rgb(var(--node, var(--sodium-rgb))); }
+    .node li.hot span:last-child { color: var(--paper); }
+    #nodeVultr { --node: var(--sodium-rgb); }
+    #nodeTiger { --node: var(--gold-rgb); }
+    #nodePhone { --node: var(--mint-rgb); }
+    .link { position: relative; align-self: center; height: 2px; margin: 0 6px; background: rgb(var(--paper-rgb) / .18); }
+    .link small { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font-size: 11.5px; line-height: 1.25; color: var(--mist); }
+    .link .packet { width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; box-shadow: none !important; }
+
   </style>
   <link rel="stylesheet" href="/tw.css" />
 </head>
@@ -113,6 +158,16 @@
   <header class="relative z-20 flex h-[72px] items-center gap-3 px-8">
     <a href="/" class="flex items-center gap-3"><span id="logo"></span><span class="wordmark text-[22px]">tenshi</span></a>
     <span class="ml-1 flex items-center gap-2 rounded-full px-2.5 py-1 text-[12.5px] font-semibold text-paper/80 shadow-[inset_0_0_0_1px_rgb(var(--paper-rgb)/.12)]"><span class="breathe h-1.5 w-1.5 rounded-full bg-signal"></span>Live</span>
+      <!-- Presenter tray: demo triggers, kept out of the story -->
+      <div id="tray">
+        <div id="trayMenu" role="menu" aria-label="Presenter controls">
+          <button id="drain" class="tool" role="menuitem">Drain battery <kbd>B</kbd></button>
+          <button id="cold" class="tool" role="menuitem" aria-pressed="false"><span>Switch reads −2°C</span> <kbd>C</kbd></button>
+          <button id="distress" class="tool" role="menuitem">Phone hears “help” <kbd>H</kbd></button>
+          <button id="restart" class="tool" role="menuitem">Restart the night <kbd>R</kbd></button>
+        </div>
+        <button id="trayBtn" aria-expanded="false" aria-controls="trayMenu">Presenter <kbd class="ml-1 text-[11px] opacity-70">P</kbd></button>
+      </div>
     <div class="ml-auto flex items-center gap-2.5">
       <a id="nightLink" target="_blank" rel="noopener" class="tool solo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>Maya's dashboard</a>
       <div class="relative">
@@ -125,16 +180,6 @@
     </div>
   </header>
 
-  <!-- Presenter tray: demo triggers, kept out of the story -->
-  <div id="tray">
-    <div id="trayMenu" role="menu" aria-label="Presenter controls">
-      <button id="drain" class="tool" role="menuitem">Drain battery <kbd>B</kbd></button>
-      <button id="cold" class="tool" role="menuitem" aria-pressed="false"><span>Switch reads −2°C</span> <kbd>C</kbd></button>
-      <button id="distress" class="tool" role="menuitem">Phone hears “help” <kbd>H</kbd></button>
-      <button id="restart" class="tool" role="menuitem">Restart the night <kbd>R</kbd></button>
-    </div>
-    <button id="trayBtn" aria-expanded="false" aria-controls="trayMenu">Presenter <kbd class="ml-1 text-[11px] opacity-70">P</kbd></button>
-  </div>
 
   <main class="stage">
     <div class="device" id="mayaDevice"><iframe id="maya" title="Maya's phone" allow="autoplay; geolocation; microphone"></iframe><p class="who">Maya's phone</p></div>
@@ -153,6 +198,44 @@
     <div class="wire out" id="wireOut"></div>
     <div class="device" id="jordanDevice"><iframe id="jordan" title="Jordan's phone" allow="autoplay"></iframe><p class="who">Jordan's phone</p></div>
   </main>
+
+  <!-- Under the hood, from real server events: what her phone hears, and what Vultr and Tiger Data do with it -->
+  <section class="under" aria-label="How tenshi works right now">
+    <div class="panel">
+      <h2>What Maya's phone hears <span id="meter" class="meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></h2>
+      <ol id="captions" aria-live="polite"></ol>
+      <p id="hearEmpty" class="hear-empty">Say something near this laptop. Her mic streams to a speech recognizer on Vultr and the words appear as you speak.</p>
+      <p class="fine">On stage the mic streams live. On a real night audio leaves her phone only after a scream-level spike, and no transcript is ever stored.</p>
+    </div>
+    <div class="panel flow">
+      <div class="node" id="nodePhone">
+        <p class="name">Maya's phone</p>
+        <ul>
+          <li id="rowMic"><i class="dot"></i><b>Mic</b><span>listening</span></li>
+          <li id="rowBeat"><i class="dot"></i><b>Heartbeat</b><span>every 10s</span></li>
+          <li id="rowGps"><i class="dot"></i><b>Sends</b><span>GPS, battery</span></li>
+        </ul>
+      </div>
+      <div class="link" id="linkIn"><small>HTTPS</small></div>
+      <div class="node" id="nodeVultr">
+        <p class="name">Vultr <span class="where" id="hostLabel"></span></p>
+        <ul>
+          <li id="rowAsr"><i class="dot"></i><b>Vosk</b><span>live keyword spotting</span></li>
+          <li id="rowLlama"><i class="dot"></i><b id="llamaName">Llama</b><span>Jordan's summary</span></li>
+          <li id="rowTimer"><i class="dot"></i><b>Timer</b><span>runs if her phone dies</span></li>
+        </ul>
+      </div>
+      <div class="link" id="linkDb"><small>SQL</small></div>
+      <div class="node" id="nodeTiger">
+        <p class="name">Tiger Data <span class="where" id="dbLabel"></span></p>
+        <ul>
+          <li id="rowWrite"><i class="dot"></i><b>Write</b><span>events, metrics</span></li>
+          <li id="rowNight"><i class="dot"></i><b>Tonight</b><span>0 rows</span></li>
+          <li id="rowAll"><i class="dot"></i><b>All</b><span>feeds Grafana</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
   <script>
     const $ = (s) => document.querySelector(s);
@@ -183,8 +266,8 @@
     };
     // Packet colours come from the theme tokens so the wires match everything else.
     const css = getComputedStyle(document.body);
-    const C = Object.fromEntries(['sodium', 'mint', 'signal', 'paper'].map((k) => [k, `rgb(${css.getPropertyValue(`--${k}-rgb`).trim()})`]));
-    const DEVICE_FEED = { touch: 'Switch: touch check-in', code: 'Switch: joystick code entered', nfc: 'Switch: home tag tapped' };
+    const C = Object.fromEntries(['sodium', 'mint', 'signal', 'paper', 'gold'].map((k) => [k, `rgb(${css.getPropertyValue(`--${k}-rgb`).trim()})`]));
+    const DEVICE_FEED = { touch: 'Switch: touch check-in', code: 'Switch: joystick code entered' };
 
     function packet(wire, { color, reverse = false, big = false, ms = 900 }) {
       const p = document.createElement('span');
@@ -221,6 +304,8 @@
       if (e.kind === 'device' && DEVICE_FEED[e.detail?.type]) { feed(DEVICE_FEED[e.detail.type], 'info', e.t); if (animate) packet(wIn, { color: C.paper }); return; }
       if (e.kind === 'level_change') {
         const lf = LEVEL_FEED[e.detail?.to];
+        const tm = { ALARM: 'no answer, alarm on', CONTACT: `alerted Jordan ${clock(e.t)}`, WIDER: `alerted backup ${clock(e.t)}` }[e.detail?.to];
+        if (tm) row('#rowTimer', tm, animate);
         if (lf) feed(lf[0], lf[1], e.t);
         if (animate && e.detail?.to === 'CONTACT') {
           packet(wOut, { color: C.signal, big: true, ms: 1100 });
@@ -232,6 +317,7 @@
       }
       const f = FEED[e.kind];
       if (!f) return;
+      if (e.kind === 'checkin_sent') row('#rowTimer', `check-in ${clock(e.t)}`, animate);
       feed(f[0], f[1], e.t);
       if (!animate) return;
       if (e.kind === 'checkin_sent') packet(wIn, { color: C.sodium, reverse: true });
@@ -317,10 +403,90 @@
       $('#nightLink').href = `/night.html?id=${id}`;
       loadPhone($('#maya'), `/me.html?id=${id}&stage=1`);
       loadPhone($('#jordan'), `/contact.html?t=${links.contactToken}&stage=1`);
-      seen = new Set(); lastLevel = null; $('#feed').innerHTML = ''; $('#cold').setAttribute('aria-pressed', 'false');
+      seen = new Set(); lastLevel = null; $('#feed').innerHTML = ''; watchPipe(); $('#cold').setAttribute('aria-pressed', 'false');
       poll();
     }
     setInterval(poll, 1000);
+
+    // ---- Under the hood: live words and the Vultr / Tiger Data flow, pushed from /pipeline/stream ----
+    let pipe = null, lastPacket = 0;
+    const liveLines = new Map();  // one in-progress line per listening phone
+    const meterBars = [...document.querySelectorAll('#meter i')];
+    const CUE_RE = /\b(help( me)?|somebody help|someone help|stop( it)?|get (the \w+ )?(off|away)( from)?( me)?|let (me )?go|leave me alone|don'?t touch( me)?|back off|call (the )?(police|cops)|call 911|f+u+c+k\w*|motherf\w*|shit\w*|bitch\w*|asshole|bastard)\b/gi;
+    const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const clock = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+    function row(sel, text, hot = true) {
+      const li = $(sel); li.lastElementChild.textContent = text;
+      if (!hot) return;
+      li.classList.add('hot'); li.closest('.node').classList.add('hot');
+      clearTimeout(li._t); li._t = setTimeout(() => { li.classList.remove('hot'); if (!li.closest('.node').querySelector('li.hot')) li.closest('.node').classList.remove('hot'); }, 2200);
+    }
+    function caption(cls = '') {
+      $('#hearEmpty').hidden = true;
+      const li = document.createElement('li');
+      li.className = cls;
+      li.innerHTML = '<span class="q"></span><span class="m"></span>';
+      $('#captions').append(li);
+      while ($('#captions').children.length > 3) $('#captions').firstChild.remove();
+      return li;
+    }
+    // One line of speech: cue words marked, and what tenshi did about them.
+    function fill(li, e) {
+      const tone = e.alerted || (e.danger && e.loud) ? 'var(--signal-rgb)' : 'var(--amber-rgb)';
+      li.querySelector('.q').innerHTML = e.spoken?.length ? esc(e.text).replace(CUE_RE, (w) => `<mark style="--tone:${tone}">${w}</mark>`) : esc(e.text);
+      const tag = e.alerted ? `<span class="tag red">Danger ${e.danger} · Jordan alerted</span>`
+        : e.danger && e.loud ? `<span class="tag red">Danger ${e.danger}</span>`
+        : e.danger ? '<span class="tag amber">Not shouted · no alert</span>' : '';
+      if (tag || !li._tagged) li.querySelector('.m').innerHTML = tag || (e.final ? '' : 'live');
+      if (tag) li._tagged = true;
+    }
+    // Mic level from Maya's phone, for the meter.
+    window.addEventListener('message', (e) => {
+      if (e.origin !== location.origin || e.data?.nos !== 'mic' || e.data.db == null) return;
+      const over = Math.max(0, Math.min(1, (e.data.db - e.data.baseline + 4) / 34));
+      $('#meter').classList.toggle('on', over > 0.35);
+      meterBars.forEach((b, i) => { const h = 4 + over * 12 * (0.55 + 0.45 * Math.sin(i * 1.7 + Date.now() / 90) ** 2); b.style.height = `${h.toFixed(1)}px`; });
+    });
+    function onPipe(e, animate) {
+      if (e.kind === 'words') {
+        let line = liveLines.get(e.src);
+        if (e.dropped) { line?.remove(); liveLines.delete(e.src); if (!$('#captions').children.length) $('#hearEmpty').hidden = false; return; }
+        if (!line?.isConnected) liveLines.set(e.src, (line = caption('live')));
+        fill(line, e);
+        if (e.final) { line.classList.remove('live'); liveLines.delete(e.src); }
+        row('#rowAsr', `${e.lag} ms behind live`, animate);
+        row('#rowMic', 'streaming live', animate);
+        if (animate && Date.now() - lastPacket > 350) { lastPacket = Date.now(); packet($('#linkIn'), { color: C.mint, ms: 500 }); }
+        if (e.alerted) row('#rowTimer', `alerted Jordan ${clock(e.at)}`, animate);
+        return;
+      }
+      if (e.kind === 'model') { row('#rowLlama', `summary in ${(e.ms / 1000).toFixed(1)}s`, animate); return; }
+      if (e.kind === 'tiger') {
+        const what = e.table === 'events' ? String(e.what).replace(/_/g, ' ') : e.table === 'metrics' ? `${e.rows} metrics` : 'night state';
+        row('#rowWrite', `${e.ms} ms · ${what}`, animate);
+        if (animate && e.what === 'heartbeat') { packet($('#linkIn'), { color: C.mint, ms: 650 }); row('#rowBeat', clock(e.at).replace(/\s?[AP]M$/i, '')); }
+        if (animate) setTimeout(() => packet($('#linkDb'), { color: C.gold, ms: 600 }), e.what === 'heartbeat' ? 500 : 0);
+      }
+    }
+    function watchPipe() {
+      pipe?.close();
+      liveLines.clear(); $('#captions').innerHTML = ''; $('#hearEmpty').hidden = false;
+      pipe = new EventSource(`/api/sessions/${id}/pipeline/stream`);
+      pipe.onmessage = (m) => {
+        const e = JSON.parse(m.data);
+        if (e.kind === 'hello') {
+          $('#hostLabel').textContent = (e.host || '').replace(/^Vultr\s*·\s*/, '');
+          $('#dbLabel').textContent = e.db?.kind === 'tiger' ? e.db.region : e.db?.kind === 'timescale' ? 'TimescaleDB' : 'in memory';
+          if (e.llm) $('#llamaName').textContent = e.llm.replace(/^llama/i, 'Llama ').replace(':', ' ').replace(/\b(\d+)b\b/i, '$1B');
+          e.entries.forEach((x) => onPipe(x, false));
+          if (e.db?.total_rows != null) row('#rowAll', `${e.db.total_rows.toLocaleString()} rows, in Grafana`, false);
+        } else if (e.kind === 'stats') {
+          if (e.total_rows != null) row('#rowAll', `${e.total_rows.toLocaleString()} rows, in Grafana`, false);
+          return;
+        } else onPipe(e, true);
+        if (e.rows != null) row('#rowNight', `${e.rows.toLocaleString()} rows`, false);
+      };
+    }
     function loadPhone(frame, src) {
       frame.classList.remove('ready');
       frame.onload = () => requestAnimationFrame(() => frame.classList.add('ready'));

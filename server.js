@@ -4,6 +4,8 @@ import QRCode from 'qrcode';
 import { createStore, newId, newToken, hashPin } from './src/store.js';
 import { assess } from './src/predict.js';
 import { analyzeClip } from './src/distress.js';
+import { instrument, since, watch } from './src/pipeline.js';
+import { attachListening } from './src/listen.js';
 import {
   DEMO, TIMINGS, LadderError, startTicker, contactLink, lastResponseAt, secondsLeft,
   checkinAck, standDown, disarm, contactAck, resolve, promptCheckin, alertContact,
@@ -13,7 +15,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_URL = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
 const PLACEHOLDER_PHONE = '+15555550123';
 
-const store = await createStore();
+const store = instrument(await createStore());
 const app = express();
 app.set('trust proxy', true);
 app.use(express.json({ limit: '10kb' }));
@@ -285,6 +287,31 @@ app.post('/api/sessions/:id/audio-check', express.raw({ type: ['audio/wav', 'app
   res.json({ ...result, ...outcome });
 }));
 
+// What Vultr and Tiger Data are doing for this night, pushed to the stage as it happens (Server-Sent Events):
+// words as they're recognised, rows landing in Tiger Data, the summary model, alerts.
+let rowCache = { n: null, at: 0 };
+const rowCount = async () => {
+  if (Date.now() - rowCache.at > 5000) rowCache = { n: await store.rowCount().catch(() => null), at: Date.now() };
+  return rowCache.n;
+};
+app.get('/api/sessions/:id/pipeline/stream', wrap(async (req, res) => {
+  const s = await loadSession(req.params.id);
+  const tiger = /tsdb\.cloud\.timescale\.com|tigerdata\.(com|cloud)/.test(process.env.DATABASE_URL || '');
+  res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' });
+  res.flushHeaders();
+  const send = (e) => { res.write(`data: ${JSON.stringify(e)}\n\n`); res.flush?.(); };
+  send({
+    kind: 'hello', ...since(s.id, 0),
+    host: process.env.HOST_LABEL || 'This laptop',
+    db: { kind: tiger ? 'tiger' : store.timescale ? 'timescale' : store.kind, region: tiger ? process.env.TIGER_REGION_LABEL || 'Canada (Central)' : null, total_rows: await rowCount() },
+    asr: process.env.VOSK_URL ? 'vosk-small-en' : null,
+    llm: process.env.LLM_BASE_URL ? process.env.LLM_MODEL || 'llama3.1:8b' : null,
+  });
+  const stop = watch(s.id, send);
+  const stats = setInterval(async () => send({ kind: 'stats', total_rows: await rowCount() }), 5000);
+  req.on('close', () => { stop(); clearInterval(stats); });
+}));
+
 // Demo only: pretend the phone just heard someone asking for help.
 app.post('/api/demo/:id/distress', wrap(async (req, res) => {
   if (!DEMO) throw new LadderError(404, 'Not found');
@@ -410,7 +437,6 @@ app.post('/api/contact/:token/resolve', wrap(async (req, res) => {
 // ---- Hardware Switch (Arduino Uno R4 WiFi) ----
 // One Switch per server, authenticated with SWITCH_KEY. It controls the night it was linked to.
 const SWITCH_KEY = process.env.SWITCH_KEY || (DEMO ? 'demo-switch' : null);
-const HOME_TAGS = (process.env.SWITCH_HOME_TAG || '').split(',').map((t) => t.trim().toUpperCase()).filter(Boolean);
 const sw = { sessionId: null, owner: null, linkedAt: 0, lastSeen: 0, tempC: null, pressureHpa: null, coldDemo: false };
 const switchConnected = () => Date.now() - sw.lastSeen < 10_000;
 const switchInfo = (s) => (sw.sessionId === s.id
@@ -439,7 +465,7 @@ app.get('/api/switch/state', wrap(async (req, res) => {
   const window = s.level === 'ARMED'
     ? Math.max(1, Math.round((new Date(s.next_checkin_at) - since) / 1000))
     : ({ NUDGE: TIMINGS.nudge, ALARM: TIMINGS.alarm, CONTACT: TIMINGS.contact })[s.level] ?? 0;
-  res.send(`L=${s.level};S=${secondsLeft(s) ?? 0};W=${window};A=${s.contact_acked ? 1 : 0};O=${outlook.level};C=${s.contact_name.replace(/[;=\n]/g, '')};U=${PUBLIC_URL}/me.html?id=${s.id}\n`);  // U: written to the Switch's NFC tag
+  res.send(`L=${s.level};S=${secondsLeft(s) ?? 0};W=${window};A=${s.contact_acked ? 1 : 0};O=${outlook.level};C=${s.contact_name.replace(/[;=\n]/g, '')}\n`);
 }));
 
 app.post('/api/switch/event', wrap(async (req, res) => {
@@ -472,16 +498,6 @@ app.post('/api/switch/event', wrap(async (req, res) => {
         if (err.status === 403) return res.status(403).send('ERR;WRONGCODE\n');
         throw err;
       }
-    }
-    case 'nfc': {
-      // Tapping the home tag by the front door ends the night, no PIN needed.
-      const tag = String(b.tag ?? '').toUpperCase().replace(/[^0-9A-F]/g, '');
-      if (!tag) throw new BadRequest('tag is required');
-      const isHome = HOME_TAGS.length ? HOME_TAGS.includes(tag) : DEMO;
-      await log({ type: 'nfc', tag, home: isHome });
-      if (!isHome) return res.status(403).send('ERR;UNKNOWNTAG\n');
-      await resolve(store, s, 'home_tag');
-      return res.send('OK;L=RESOLVED\n');
     }
     case 'reading': {
       let tempC = num(b.temp_c, -40, 85);
@@ -524,6 +540,8 @@ app.post('/api/demo/:id/cold', wrap(async (req, res) => {
 }));
 
 startTicker(store);
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`tenshi on ${PUBLIC_URL} (store: ${store.kind}, demo: ${DEMO ? 'on' : 'off'})`);
 });
+// Stage only: Maya's phone streams its mic for live keyword spotting (a real night sends audio only after a spike).
+attachListening(server, { loadSession, recordDistress, enabled: DEMO });

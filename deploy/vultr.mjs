@@ -169,9 +169,12 @@ async function destroy(flag) {
 // Point the live server at Tiger Cloud. The connection string goes from your local .env to the server's
 // .env over ssh stdin, so the password never appears in a command line, a log or this terminal.
 function tiger(ip) {
-  const url = process.env.TIGER_DATABASE_URL;
-  if (!url) die('Add TIGER_DATABASE_URL=postgres://... to .env (Tiger Cloud console → your service → Connect).');
-  const u = new URL(url);
+  if (!process.env.TIGER_DATABASE_URL) die('Add TIGER_DATABASE_URL=postgres://... to .env (Tiger Cloud console → your service → Connect).');
+  const u = new URL(process.env.TIGER_DATABASE_URL);
+  // node-postgres treats sslmode=require as verify-full, which rejects Tiger's chain; libpq semantics still encrypt.
+  u.searchParams.set('sslmode', 'require');
+  u.searchParams.set('uselibpqcompat', 'true');
+  const url = u.toString();
   const vars = {
     TIGER_DATABASE_URL: url, TIGER_HOST: u.hostname, TIGER_PORT: u.port || '5432', TIGER_USER: decodeURIComponent(u.username),
     TIGER_PASSWORD: decodeURIComponent(u.password), TIGER_DB: u.pathname.slice(1) || 'tsdb', TIGER_SSLMODE: 'require',

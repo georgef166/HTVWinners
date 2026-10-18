@@ -88,7 +88,7 @@
           <span id="dangerLevel" class="rounded-full bg-[#b3261e] px-3 py-1 text-[13px] font-bold text-white">High danger</span>
         </div>
         <ul id="dangerCues" class="mt-3 space-y-1.5 text-[19px] font-semibold leading-snug"></ul>
-        <p class="mt-3 text-[13px] text-[#2a1119]/70">Detected on our own server from a 30-second clip. The audio was never saved.</p>
+        <p class="mt-3 text-[13px] text-[#2a1119]/70">Detected on our own server, not a third party. The audio was never saved.</p>
       </div>
       <p id="widerNote" class="mt-4 hidden rounded-2xl bg-black/20 px-4 py-3 text-[15px] font-bold leading-snug"></p>
       <p id="ackNote" class="mt-4 hidden rounded-2xl bg-white/15 px-4 py-3 text-[15px] font-bold leading-snug">You said you're on it. <span class="name"></span>'s phone now shows that you're coming.</p>
@@ -370,7 +370,7 @@
     });
 
     poll();
-    setInterval(poll, 2000);
+    setInterval(poll, STAGE ? 1000 : 2000);
   </script>
 </body>
 </html>

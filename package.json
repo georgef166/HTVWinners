@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "live": "node scripts/live.js",
     "start": "node server.js",
     "smoke": "node scripts/smoke.js",
     "switch-sim": "node scripts/switch-sim.js",
@@ -19,7 +20,8 @@
     "dotenv": "^18.0.8",
     "express": "^5.3.0",
     "pg": "^8.23.1",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.17"

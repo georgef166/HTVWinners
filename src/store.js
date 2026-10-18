@@ -83,6 +83,7 @@ function memoryStore() {
     async listActiveSessions() {
       return [...sessions.values()].filter((s) => s.level !== 'RESOLVED').map((s) => ({ ...s }));
     },
+    async rowCount() { return events.length + metrics.length; },
     async addEvent(e) {
       events.push({ time: new Date(), lat: null, lng: null, battery: null, detail: null, ...e });
     },
@@ -208,6 +209,10 @@ async function pgStore(url) {
     async listActiveSessions() {
       const { rows } = await q(`SELECT * FROM sessions WHERE level <> 'RESOLVED'`);
       return rows;
+    },
+    async rowCount() {
+      const { rows } = await q('SELECT (SELECT count(*) FROM events) + (SELECT count(*) FROM metrics) AS n');
+      return Number(rows[0].n);
     },
     async addEvent(e) {
       await q(

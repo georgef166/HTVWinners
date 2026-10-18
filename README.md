@@ -15,6 +15,14 @@ Disarm (PIN) or the contact's "False alarm / resolved" ──▶ RESOLVED
 
 The timer lives on the server. If the phone dies or goes quiet, the ladder still climbs.
 
+## Demo day
+
+```bash
+npm run live
+```
+
+Checks every live service (app, Tiger Cloud, Llama, Whisper, Grafana), sends a spoken "Help!" and a calm clip through Whisper to prove the instant alert fires only when it should, starts the USB bridge if the Switch is plugged in, and opens the stage.
+
 ## Run it
 
 ```bash
@@ -34,7 +42,7 @@ The smoke test runs the whole ladder against the API (about 80 s) and prints `SM
 
 ## Where it runs
 
-The app, our own AI model and the Tiger Data database all run on Vultr, so Maya's night never goes to a third-party AI company. Tiger Data stores events as a hypertable with compression, 7-day retention (location deletes itself) and a continuous aggregate behind the signal trace. Step-by-step: [docs/DEPLOY-VULTR.md](docs/DEPLOY-VULTR.md).
+The app and our own AI models run on Vultr in Toronto: Vosk (Kaldi) streams speech and spots distress phrases mid-sentence on stage, Whisper checks the clip after a scream on a real night, and Llama writes the contact's summary. So so Maya's night never goes to a third-party AI company. Her data lives in a managed **Tiger Cloud** service next door in Canada (Central). Tiger Data stores events as a hypertable with compression, 7-day retention (location deletes itself) and a continuous aggregate behind the signal trace. Step-by-step: [docs/DEPLOY-VULTR.md](docs/DEPLOY-VULTR.md).
 
 ## Her dashboard and Grafana
 
@@ -48,7 +56,7 @@ Since the phone is checking in anyway, Maya gets her night back as data: **Your 
 
 ## The hardware Switch
 
-An Arduino Uno R4 WiFi Switch lets Maya check in with a touch, cancel an alarm with a joystick gesture (up, right, down, left = PIN 1234), and end the night by tapping an NFC tag by her door. Its LED and buzzer still work if her phone is dead, and its temperature sensor feeds the prediction engine. Wiring, flashing and the protocol are in [hardware/README.md](hardware/README.md). No board? `npm run switch-sim` stands in for it.
+An Arduino Uno R4 WiFi Switch lets Maya check in with a touch and cancel an alarm with a joystick gesture (up, right, down, left = PIN 1234). Its LED and buzzer still work if her phone is dead, and its temperature sensor feeds the prediction engine. Wiring, flashing and the protocol are in [hardware/README.md](hardware/README.md). No board? `npm run switch-sim` stands in for it.
 
 ## Environment
 
@@ -59,13 +67,13 @@ Copy `.env.example` to `.env`. Every variable is optional.
 | `PORT` | HTTP port (default 3000) |
 | `PUBLIC_URL` | Base URL used in SMS links and the QR code. Set it to a LAN IP or tunnel URL so a real phone can scan the QR. |
 | `DEMO` | `1` (default) uses second-long demo timings; `0` uses real timings (20 min check-ins, 2 min nudge, 1 min alarm, 5 min before widening) |
-| `DATABASE_URL` | Postgres connection string (Tiger Data in production). Unset means an in-memory store. On Timescale/Tiger Data, `events` becomes a hypertable. |
+| `DATABASE_URL` | Postgres connection string. Unset means an in-memory store. On Timescale/Tiger Data, `events` and `metrics` become hypertables. |
+| `TIGER_DATABASE_URL` | Tiger Cloud connection string. On the Vultr box it overrides `DATABASE_URL` for the app and Grafana; `node deploy/vultr.mjs tiger` copies it there. |
 | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_MS` | Our own model, OpenAI-compatible (Ollama or vLLM on Vultr, or Vultr Serverless Inference). Tried first for the summary |
 | `GEMINI_API_KEY` | Fallback summary model if the self-hosted one is unset or down |
 | `GEMINI_MODEL` | Default `gemini-2.5-flash` |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Send real SMS. Unset means messages are logged to the console. |
 | `SWITCH_KEY` | Shared key the hardware Switch sends. Unset in demo mode means `demo-switch` |
-| `SWITCH_HOME_TAG` | NFC tag UID(s) that end the night. Unset in demo mode means any tag |
 
 ## How it's built
 
