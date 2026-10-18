@@ -288,7 +288,7 @@ app.get('/api/sessions/:id/metrics', wrap(async (req, res) => {
   const events = (await store.listEvents(s.id))
     .filter((e) => new Date(e.time) >= since && ['checkin_sent', 'checkin_ack', 'stand_down', 'level_change', 'distress_check', 'contact_ack'].includes(e.kind))
     .map((e) => ({ t: new Date(e.time).getTime(), kind: e.kind, detail: e.detail || null }));
-  res.json({ now: Date.now(), minutes, user_name: s.user_name, level: s.level, armed_at: s.armed_at, series, events });
+  res.json({ now: Date.now(), minutes, user_name: s.user_name, contact_name: s.contact_name, level: s.level, armed_at: s.armed_at, series, events });
 }));
 
 app.post('/api/sessions/:id/heartbeat', wrap(async (req, res) => {
