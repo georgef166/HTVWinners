@@ -4,8 +4,8 @@
 //  - The line goes flat and red when she goes quiet
 //  - Dots underneath for her phone's heartbeats (the phone can be fine while she isn't)
 (function () {
-  // Levels where she's silent: orange while a check-in waits, red once the alarm is up.
-  const SILENT = { NUDGE: 'orange', ALARM: 'signal', CONTACT: 'signal', WIDER: 'signal' };
+  // Levels where she's silent: amber while a check-in waits, red once the alarm is up.
+  const SILENT = { NUDGE: 'amber', ALARM: 'signal', CONTACT: 'signal', WIDER: 'signal' };
   const LABELS = {
     NUDGE: 'Check-in', ALARM: 'No answer', CONTACT: 'Contact alerted', WIDER: 'Backup alerted', RESOLVED: 'Night ended',
   };
@@ -63,7 +63,7 @@
       if (this._pal && now - this._palAt < 1000) return this._pal;
       const cs = getComputedStyle(this.canvas);
       const v = (n) => cs.getPropertyValue(`--${n}-rgb`).trim().split(/\s+/).join(',');
-      const tokens = { sodium: v('sodium'), signal: v('signal'), mint: v('mint'), mist: v('mist'), line: v('line'), orange: '255,149,0' };
+      const tokens = { sodium: v('sodium'), signal: v('signal'), mint: v('mint'), mist: v('mist'), line: v('line'), amber: v('amber') };
       this._pal = (name, a = 1) => `rgba(${tokens[name] || name},${a})`;
       this._palAt = now;
       return this._pal;

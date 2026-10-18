@@ -52,7 +52,6 @@
     @keyframes lift { from { transform: translateY(24px) rotate(4deg); opacity: 0; } }
     .phone .route-mini { --dot: 9px; --track: 2px; --dot-mid: 4.5px; }
     .phone .route-mini .stop-name { font-size: 7.5px; margin-top: .35rem; }
-    .phone .route-mini .is-here .stop-dot { box-shadow: 0 0 0 3px rgb(var(--sodium-rgb) / .25); }
     @media (max-width: 480px) {
       .phones { height: 430px; }
       .phone { transform-origin: top left; }
@@ -279,7 +278,7 @@
       const cues = [];
       const cue = (at, fn) => cues.push({ at, fn });
       ['10:14 PM', '10:34 PM', '10:54 PM'].forEach((time, i) => {
-        const l = label(blips[i], `<small>${time}</small>I'm OK`, '#30d158');
+        const l = label(blips[i], `<small>${time}</small>I'm OK`, '#5FD0D8');
         cue(T_OK[0] + (T_OK[1] - T_OK[0]) * (blips[i] / flatX), () => l.classList.add('on'));
       });
       const noAnswer = label(flatX + (nodeX - flatX) * 0.3, '<small>11:14 PM</small>No answer', '#ff453a');

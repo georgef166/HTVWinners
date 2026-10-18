@@ -126,13 +126,13 @@ body.app.ok { background: #0f2f32; }
   content: ''; position: absolute; top: var(--dot-mid); left: 50%; width: 100%; height: var(--track);
   transform: translateY(-50%); background: var(--line); z-index: 0;
 }
-.route .stop.is-past::after { background: var(--sodium); }
+.route .stop.is-past::after { background: rgb(var(--t-next)); }
 .route .stop-dot {
   position: relative; z-index: 1; width: var(--dot); height: var(--dot); border-radius: 50%;
   background: var(--ink); border: var(--track) solid var(--line); box-sizing: border-box;
 }
-.route .stop.is-past .stop-dot { background: var(--sodium); border-color: var(--sodium); }
-.route .stop.is-here .stop-dot { background: var(--ink); border-color: var(--sodium); box-shadow: 0 0 0 6px rgb(var(--sodium-rgb) / .18); }
+.route .stop.is-past .stop-dot { background: rgb(var(--t)); border-color: rgb(var(--t)); }
+.route .stop.is-here .stop-dot { background: var(--ink); border-color: rgb(var(--t)); box-shadow: 0 0 0 6px rgb(var(--t) / .2); }
 .route .stop-name { margin-top: .55rem; font-weight: 600; color: var(--mist); }
 .route .is-here .stop-name, .route .is-past .stop-name { color: var(--paper); }
 
@@ -144,11 +144,8 @@ body.app.ok { background: #0f2f32; }
 .route-full .stop:not(:last-child)::after { left: 0; width: 100%; }
 .route-full .stop-name { font-family: var(--font-display); font-weight: 600; font-size: 1.2rem; letter-spacing: -0.02em; margin-top: 1rem; color: var(--paper); }
 .route-full .stop-desc { margin-top: .4rem; color: var(--mist); font-size: .975rem; line-height: 1.5; max-width: 22ch; }
-.route-full .stop-dot { border-color: var(--sodium); }
-.route-full .stop:nth-child(1)::after { background: var(--sodium); }
-.route-full .stop:nth-child(2)::after { background: linear-gradient(90deg, var(--sodium), var(--signal)); }
-.route-full .stop:nth-child(n+3)::after { background: var(--signal); }
-.route-full .stop:nth-child(n+3) .stop-dot { border-color: var(--signal); }
+.route-full .stop-dot { border-color: rgb(var(--t)); }
+.route-full .stop:not(:last-child)::after { background: rgb(var(--t-next)); }
 .route-draw .stop:not(:last-child)::after { transform-origin: left center; transform: translateY(-50%) scaleX(0); }
 .route-draw.in .stop:not(:last-child)::after { animation: draw .55s cubic-bezier(.3, .7, .2, 1) both; animation-delay: calc(var(--n, 0) * .28s + .2s); }
 .route-draw .stop-dot { transform: scale(0); }
@@ -169,7 +166,6 @@ body.app.ok { background: #0f2f32; }
     top: var(--dot); left: calc(var(--dot) / 2); width: var(--track); height: calc(100% + 1.6rem - var(--dot));
     transform: translateX(-50%);
   }
-  .route-full .stop:nth-child(2)::after { background: linear-gradient(180deg, var(--sodium), var(--signal)); }
   .route-draw .stop:not(:last-child)::after, .route-draw.in .stop:not(:last-child)::after { animation: none; transform: translateX(-50%); }
 }
 

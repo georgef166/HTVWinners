@@ -169,9 +169,9 @@
     let silentSince = null;
 
     // Feed tones map to the dot colour; the text itself stays neutral and readable.
-    const TONE = { info: 'bg-sodium', ok: 'bg-mint', alert: 'bg-signal', muted: 'bg-mist' };
+    const TONE = { info: 'bg-sodium', wait: 'bg-amber', ok: 'bg-mint', alert: 'bg-signal', muted: 'bg-mist' };
     const FEED = {
-      checkin_sent: ['Check-in sent to Maya’s phone', 'info'],
+      checkin_sent: ['Check-in sent to Maya’s phone', 'wait'],
       checkin_ack: ['Maya: “I’m OK”', 'ok'],
       stand_down: ['Maya entered her PIN. Alarm cancelled', 'ok'],
       contact_ack: ['Jordan: “I’m on it”', 'ok'],

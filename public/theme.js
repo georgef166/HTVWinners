@@ -15,7 +15,7 @@ window.NOS = {
     { level: 'NUDGE', name: 'Nudge', desc: 'A check-in comes due. One tap says you’re fine.' },
     { level: 'ALARM', name: 'Alarm', desc: 'No tap, so your phone gets loud. Your PIN stops it.' },
     { level: 'CONTACT', name: 'Contact', desc: 'Still quiet. Your friend gets your last location and a short summary.' },
-    { level: 'WIDER', name: 'Wider', desc: 'If they don’t confirm they’re on it, your backup gets the link too.' },
+    { level: 'WIDER', name: 'Backup', desc: 'If they don’t confirm they’re on it, your backup gets the link too.' },
   ],
 
   // tenshi mark: the Figma wings, redrawn as smooth symmetric curves (gold) under an elliptical halo
@@ -42,8 +42,10 @@ window.NOS = {
     const idx = this.STOPS.findIndex((s) => s.level === level);
     el.classList.remove('route-mini', 'route-full');
     el.classList.add('route', `route-${variant}`);
+    // Each step wears its meaning: teal = fine, amber = waiting for an answer, red = alarm and alerts.
+    const tone = (lv) => ({ ARMED: 'mint', NUDGE: 'amber' })[lv] || 'signal';
     el.innerHTML = `<ol>${this.STOPS.map((s, i) => `
-      <li class="stop ${i < idx ? 'is-past' : ''} ${i === idx ? 'is-here' : ''}" ${i === idx ? 'aria-current="step"' : ''}>
+      <li class="stop ${i < idx ? 'is-past' : ''} ${i === idx ? 'is-here' : ''}" style="--t: var(--${tone(s.level)}-rgb); --t-next: var(--${tone(this.STOPS[i + 1]?.level)}-rgb)" ${i === idx ? 'aria-current="step"' : ''}>
         <span class="stop-dot" aria-hidden="true"></span>
         <span class="stop-name">${s.name}</span>
         ${variant === 'full' ? `<span class="stop-desc">${who ? this.STOPS_FOR[s.level](who) : s.desc}</span>` : ''}

@@ -17,8 +17,6 @@
   <style>
     body { transition: background-color .4s ease; user-select: none; }
     .flash header * { color: inherit; border-color: currentColor; }
-    .state-contact .route .stop.is-here .stop-dot { border-color: var(--signal); box-shadow: 0 0 0 6px rgb(var(--signal-rgb) / .3); }
-    .state-contact .route .stop.is-past::after, .state-contact .route .stop.is-past .stop-dot { background: var(--signal); border-color: var(--signal); }
     /* While booting, the ring sweeps in slowly instead of ticking */
     .boot:not(.settled) .ring-fill { transition: stroke-dashoffset 1.6s cubic-bezier(.16,1,.3,1); }
     #unlock.gone { opacity: 0; pointer-events: none; }
