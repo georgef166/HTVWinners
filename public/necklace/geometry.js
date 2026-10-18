@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { createMaterials, makeTextMaterial, COLORS } from './materials.js';
-import { pearGemGeometry, roundStoneGeometry, createDiamondMesh } from './gem.js';
+import { pearGemGeometry, roundStoneGeometry, paveStoneGeometry, createDiamondMesh } from './gem.js';
 
 const PI = Math.PI;
 const BZ = -0.15; // back surface of the PCB plate (root z)
@@ -523,11 +523,18 @@ function buildWings(M, lowPower) {
     });
   });
   if (pave.length) {
-    const im = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.045, 1), M.pave, pave.length);
-    const m4 = new THREE.Matrix4();
-    pave.forEach(([x, y, z], k) => im.setMatrixAt(k, m4.makeTranslation(x, y, z)));
-    im.instanceMatrix.needsUpdate = true;
-    g.add(im);
+    // tiny faceted round brilliants, girdle sunk ~0.02 into the feather, each in a thin gold bezel ring
+    const im = new THREE.InstancedMesh(paveStoneGeometry(), M.pave, pave.length);
+    const bz = new THREE.InstancedMesh(new THREE.TorusGeometry(0.066, 0.013, 6, 12), M.goldBase, pave.length);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), ax = new THREE.Vector3(0, 0, 1), one = new THREE.Vector3(1, 1, 1), pp = new THREE.Vector3(), eu = new THREE.Euler(), qi = new THREE.Quaternion();
+    pave.forEach(([x, y, z], k) => {
+      // vary facet orientation + a slight tilt so each stone catches a different part of the environment
+      q.setFromEuler(eu.set(Math.sin(k * 1.7) * 0.18, Math.cos(k * 2.3) * 0.18, (k * 0.61803) % (Math.PI / 4)));
+      im.setMatrixAt(k, m4.compose(pp.set(x, y, z - 0.043), q, one));
+      bz.setMatrixAt(k, m4.compose(pp.set(x, y, z - 0.03), qi, one));
+    });
+    im.instanceMatrix.needsUpdate = true; bz.instanceMatrix.needsUpdate = true;
+    g.add(bz, im);
   }
   if (barbs.length) {
     const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.012, 0.01), M.engrave, barbs.length);

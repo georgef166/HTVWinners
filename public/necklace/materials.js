@@ -167,7 +167,9 @@ export function createMaterials({ lowPower = false } = {}) {
     goldLight: phys({ color: 0xedddb4, roughness: 0.18, env: 1.3 }),
     chain: phys({ color: GOLD, roughness: 0.13, env: 1.35 }),
     feather,
-    pave: std({ color: 0xffffff, roughness: 0.06, metalness: 0, emissive: 0xffffff, emissiveIntensity: 0.18, envMapIntensity: 2.2, flatShading: true }),
+    pave: lowPower
+      ? std({ color: 0xffffff, roughness: 0.05, metalness: 0, emissive: 0xffffff, emissiveIntensity: 0.4, envMapIntensity: 3, flatShading: true })
+      : new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.03, metalness: 0, emissive: 0xeaf1ff, emissiveIntensity: 0.05, envMapIntensity: 2.4, flatShading: true, clearcoat: 1, clearcoatRoughness: 0.02, iridescence: 0.4, iridescenceIOR: 1.8 }),
     centerStone: std({ color: 0xffffff, roughness: 0.04, metalness: 0.05, emissive: 0xeaf1ff, emissiveIntensity: 0.85, envMapIntensity: 2.4, flatShading: true }),
     engrave: phys({ color: 0xb0914f, roughness: 0.38, env: 0.9 }),
     gem: lowPower
