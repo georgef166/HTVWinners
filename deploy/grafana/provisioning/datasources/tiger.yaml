@@ -1,15 +1,16 @@
 apiVersion: 1
+# Tiger Data: Tiger Cloud when TIGER_* is set in .env, otherwise the local TimescaleDB container.
 datasources:
   - name: Tiger Data
     uid: tiger
     type: grafana-postgresql-datasource
-    url: db:5432
-    user: postgres
+    url: $DS_HOST
+    user: $DS_USER
     isDefault: true
     secureJsonData:
-      password: $DB_PASSWORD
+      password: $DS_PASSWORD
     jsonData:
-      database: postgres
-      sslmode: disable
+      database: $DS_DATABASE
+      sslmode: $DS_SSLMODE
       postgresVersion: 1700
       timescaledb: true

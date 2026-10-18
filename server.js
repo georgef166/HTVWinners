@@ -117,6 +117,7 @@ const links = (s) => ({
 
 app.get('/api/health', (req, res) => res.json({
   app: 'night-out-switch', demo: DEMO, store: store.kind, timescale: !!store.timescale,
+  tiger_cloud: /tsdb\.cloud\.timescale\.com|tigerdata\.(com|cloud)/.test(process.env.DATABASE_URL || ''),
   model: process.env.LLM_BASE_URL ? 'self-hosted' : process.env.GEMINI_API_KEY ? 'gemini' : 'template',
   audio: process.env.WHISPER_URL ? 'self-hosted whisper' : 'loudness only',
   grafana: !!process.env.GRAFANA_URL,

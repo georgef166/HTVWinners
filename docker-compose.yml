@@ -11,12 +11,14 @@ services:
       PORT: "3000"
       TZ: ${TZ:-America/Toronto}
       PUBLIC_URL: https://${SITE_HOST:?set SITE_HOST in .env}
-      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/postgres?sslmode=disable
+      # Tiger Cloud when TIGER_DATABASE_URL is set in .env; otherwise the TimescaleDB container below.
+      DATABASE_URL: ${TIGER_DATABASE_URL:-postgresql://postgres:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/postgres?sslmode=disable}
     depends_on:
       db:
         condition: service_healthy
 
-  # Tiger Data (TimescaleDB): hypertable, compression, retention and continuous aggregates are set up by the app.
+  # Local TimescaleDB, the fallback when Tiger Cloud isn't configured. The app sets up the hypertables, compression,
+  # retention and continuous aggregates on whichever database it connects to.
   db:
     image: timescale/timescaledb-ha:pg17
     restart: unless-stopped
@@ -50,7 +52,12 @@ services:
     image: grafana/grafana:11.3.0
     restart: unless-stopped
     environment:
-      DB_PASSWORD: ${DB_PASSWORD}
+      # Same database as the app: Tiger Cloud if configured, else the local container
+      DS_HOST: ${TIGER_HOST:-db}:${TIGER_PORT:-5432}
+      DS_USER: ${TIGER_USER:-postgres}
+      DS_PASSWORD: ${TIGER_PASSWORD:-${DB_PASSWORD}}
+      DS_DATABASE: ${TIGER_DB:-postgres}
+      DS_SSLMODE: ${TIGER_SSLMODE:-disable}
       GF_SERVER_ROOT_URL: https://${SITE_HOST}/grafana/
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
