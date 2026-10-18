@@ -201,9 +201,10 @@ heat = table("Loudness by hour of the night (dB)", f"""SELECT to_char((m.bucket 
     {JA} WHERE {P} AND m.metric = 'sound_db' AND $__timeFilter(m.bucket)
     GROUP BY (m.bucket AT TIME ZONE 'America/Toronto' - interval '12 hours')::date ORDER BY (m.bucket AT TIME ZONE 'America/Toronto' - interval '12 hours')::date DESC""",
     [override(label, **{"custom.cellOptions": {"type": "color-background", "mode": "basic"}, "custom.align": "center", "unit": "none", "color": {"mode": "continuous-BlYlRd"}, "min": -50, "max": -15,
-              "mappings": [{"type": "special", "options": {"match": "null", "result": {"text": " ", "color": "transparent", "index": 0}}}]}) for _, label in HOURS],
+              "mappings": [{"type": "special", "options": {"match": "null", "result": {"text": " ", "color": "transparent", "index": 0}}}]}) for _, label in HOURS]
+    + [override("Night", **{"custom.width": 110})],
     "Each cell averages the minute rollups for that hour. Hotter means louder.")
-w.add(heat, 15, 9)
+w.add(heat, 15, 10)
 w.add({"type": "barchart", "title": "How loud each hour gets", "datasource": DS,
        "targets": [q(f"""SELECT to_char(make_time(h::int, 0, 0), 'HH12 AM') AS "hour", round((avg_db + 60)::numeric, 1) AS "Loudness" FROM (
            SELECT extract(hour FROM m.bucket AT TIME ZONE 'America/Toronto') AS h, avg(m.avg) AS avg_db {JA}
