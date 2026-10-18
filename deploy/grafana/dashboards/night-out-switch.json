@@ -58,7 +58,7 @@
   "panels": [
     {
       "type": "stat",
-      "title": "Right now",
+      "title": "",
       "description": "The escalation level the server is at for this night.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -119,7 +119,8 @@
                 }
               }
             }
-          ]
+          ],
+          "displayName": "Right now"
         },
         "overrides": []
       },
@@ -127,10 +128,12 @@
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -149,7 +152,7 @@
     },
     {
       "type": "stat",
-      "title": "Out for",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -175,7 +178,8 @@
             "fixedColor": "#1F60C4"
           },
           "mappings": [],
-          "unit": "dtdurations"
+          "unit": "dtdurations",
+          "displayName": "Out for"
         },
         "overrides": []
       },
@@ -183,10 +187,12 @@
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -205,7 +211,7 @@
     },
     {
       "type": "stat",
-      "title": "Check-ins answered",
+      "title": "",
       "description": "Running count of check-ins answered, from the phone or the Switch.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -230,7 +236,8 @@
             "mode": "fixed",
             "fixedColor": "#56A64B"
           },
-          "mappings": []
+          "mappings": [],
+          "displayName": "Check-ins answered"
         },
         "overrides": []
       },
@@ -238,10 +245,12 @@
         "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -260,7 +269,7 @@
     },
     {
       "type": "stat",
-      "title": "Average reply",
+      "title": "",
       "description": "How fast check-ins get answered. Slower replies make the next check-in come sooner.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -287,7 +296,8 @@
           },
           "mappings": [],
           "unit": "s",
-          "decimals": 1
+          "decimals": 1,
+          "displayName": "Average reply"
         },
         "overrides": []
       },
@@ -295,10 +305,12 @@
         "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -358,11 +370,11 @@
       },
       "options": {
         "basemap": {
-          "type": "carto",
+          "type": "xyz",
           "name": "Dark",
           "config": {
-            "theme": "dark",
-            "showLabels": true
+            "url": "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+            "attribution": "Tiles \u00a9 Esri"
           }
         },
         "controls": {
@@ -371,11 +383,13 @@
           "showAttribution": true
         },
         "view": {
-          "id": "coords",
+          "id": "fit",
           "lat": 43.655,
           "lon": -79.39,
           "zoom": 13,
-          "allLayers": true
+          "maxZoom": 15,
+          "allLayers": true,
+          "padding": 12
         },
         "layers": [
           {
@@ -530,7 +544,7 @@
     },
     {
       "type": "stat",
-      "title": "Danger heard",
+      "title": "",
       "description": "Times the phone heard a plea for help or aggression and alerted the contact at once.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -568,7 +582,8 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "displayName": "Danger heard"
         },
         "overrides": []
       },
@@ -576,10 +591,12 @@
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -598,7 +615,7 @@
     },
     {
       "type": "stat",
-      "title": "Switch",
+      "title": "",
       "description": "Temperature from the Switch. Blue at 5\u00b0C or colder.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -638,7 +655,8 @@
             ]
           },
           "unit": "celsius",
-          "decimals": 1
+          "decimals": 1,
+          "displayName": "Switch"
         },
         "overrides": []
       },
@@ -646,10 +664,12 @@
         "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -883,7 +903,7 @@
     },
     {
       "type": "stat",
-      "title": "Loudness now",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -910,7 +930,8 @@
           },
           "mappings": [],
           "unit": "dB",
-          "decimals": 0
+          "decimals": 0,
+          "displayName": "Loudness now"
         },
         "overrides": []
       },
@@ -918,10 +939,12 @@
         "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -940,7 +963,7 @@
     },
     {
       "type": "stat",
-      "title": "Loudest tonight",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -967,7 +990,8 @@
           },
           "mappings": [],
           "unit": "dB",
-          "decimals": 0
+          "decimals": 0,
+          "displayName": "Loudest tonight"
         },
         "overrides": []
       },
@@ -975,10 +999,12 @@
         "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -997,7 +1023,7 @@
     },
     {
       "type": "stat",
-      "title": "Movement now",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -1024,7 +1050,8 @@
           },
           "mappings": [],
           "unit": "accMS2",
-          "decimals": 2
+          "decimals": 2,
+          "displayName": "Movement now"
         },
         "overrides": []
       },
@@ -1032,10 +1059,12 @@
         "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -1054,7 +1083,7 @@
     },
     {
       "type": "stat",
-      "title": "Heartbeats",
+      "title": "",
       "description": "Each one is a row in Tiger Data: location, battery and sound level from her phone.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -1079,7 +1108,8 @@
             "mode": "fixed",
             "fixedColor": "#1F9ABD"
           },
-          "mappings": []
+          "mappings": [],
+          "displayName": "Heartbeats"
         },
         "overrides": []
       },
@@ -1087,10 +1117,12 @@
         "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -1465,7 +1497,7 @@
     },
     {
       "type": "stat",
-      "title": "Check-ins sent",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -1490,7 +1522,8 @@
             "mode": "fixed",
             "fixedColor": "#FF780A"
           },
-          "mappings": []
+          "mappings": [],
+          "displayName": "Check-ins sent"
         },
         "overrides": []
       },
@@ -1498,10 +1531,12 @@
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -1520,7 +1555,7 @@
     },
     {
       "type": "stat",
-      "title": "Answered",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -1545,7 +1580,8 @@
             "mode": "fixed",
             "fixedColor": "#56A64B"
           },
-          "mappings": []
+          "mappings": [],
+          "displayName": "Answered"
         },
         "overrides": []
       },
@@ -1553,10 +1589,12 @@
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -1575,7 +1613,7 @@
     },
     {
       "type": "stat",
-      "title": "Alarms",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -1613,7 +1651,8 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "displayName": "Alarms"
         },
         "overrides": []
       },
@@ -1621,10 +1660,12 @@
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 14
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"

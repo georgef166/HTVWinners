@@ -17,7 +17,6 @@ LEVELS = [  # value, label, colour
     ("CONTACT", "Contact alerted", DRED), ("WIDER", "Backup alerted", DPURPLE), ("RESOLVED", "Home", GREEN),
 ]
 LEVEL_MAP = [{"type": "value", "options": {v: {"text": t, "color": c, "index": i} for i, (v, t, c) in enumerate(LEVELS)}}]
-STEP_COLORS = {"Out": TEAL, "Check-in": ORANGE, "Alarm": RED, "Contact": DRED, "Backup": DPURPLE}
 
 
 def q(sql, fmt="time_series", ref="A"):
@@ -44,10 +43,11 @@ def stat(title, sql, unit=None, color=BLUE, fmt="time_series", calc="lastNotNull
     if thresholds: d["thresholds"] = {"mode": "absolute", "steps": thresholds}
     if unit: d["unit"] = unit
     if decimals is not None: d["decimals"] = decimals
-    return {"type": "stat", "title": title, "description": desc, "datasource": DS, "targets": [q(sql, fmt)],
+    d["displayName"] = title  # the label sits inside the coloured tile, like a classic Grafana stat
+    return {"type": "stat", "title": "", "description": desc, "datasource": DS, "targets": [q(sql, fmt)],
             "fieldConfig": {"defaults": d, "overrides": []},
-            "options": {"colorMode": "background", "graphMode": "area" if spark else "none", "justifyMode": "center", "textMode": "value",
-                        "wideLayout": True, "showPercentChange": False, "text": {},
+            "options": {"colorMode": "background", "graphMode": "area" if spark else "none", "justifyMode": "center", "textMode": "value_and_name",
+                        "wideLayout": True, "showPercentChange": False, "text": {"titleSize": 14},
                         "reduceOptions": {"calcs": [calc], "fields": "/.*/" if text else "", "values": False}}}
 
 
@@ -91,6 +91,7 @@ def bargauge(title, sql, unit, steps, lo=0, hi=100, desc="", mode="gradient"):
             "fieldConfig": {"defaults": {"unit": unit, "min": lo, "max": hi, "color": {"mode": "thresholds"}, "decimals": 0,
                                          "thresholds": {"mode": "absolute", "steps": steps}}, "overrides": []},
             "options": {"orientation": "horizontal", "displayMode": mode, "valueMode": "color", "namePlacement": "left", "showUnfilled": True,
+                        "text": {"titleSize": 13, "valueSize": 24},
                         "sizing": "auto", "minVizHeight": 16, "maxVizHeight": 300,
                         "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": True}}}
 
@@ -98,9 +99,11 @@ def bargauge(title, sql, unit, steps, lo=0, hi=100, desc="", mode="gradient"):
 def geomap(title, targets, layers, lat=43.655, lon=-79.39, zoom=12, desc=""):
     return {"type": "geomap", "title": title, "description": desc, "datasource": DS, "targets": targets,
             "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": PURPLE}}, "overrides": []},
-            "options": {"basemap": {"type": "carto", "name": "Dark", "config": {"theme": "dark", "showLabels": True}},
+            "options": {"basemap": {"type": "xyz", "name": "Dark", "config": {
+                            "url": "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+                            "attribution": "Tiles © Esri"}},
                         "controls": {"showZoom": True, "mouseWheelZoom": False, "showAttribution": True},
-                        "view": {"id": "coords", "lat": lat, "lon": lon, "zoom": zoom, "allLayers": True},
+                        "view": {"id": "fit", "lat": lat, "lon": lon, "zoom": zoom, "maxZoom": 15, "allLayers": True, "padding": 12},
                         "layers": layers, "tooltip": {"mode": "details"}}}
 
 
@@ -250,12 +253,9 @@ w.at(geomap("Where the nights went", [q(f"""SELECT time_bucket('5 minutes', e.ti
       "location": {"mode": "coords", "latitude": "latitude", "longitude": "longitude"},
       "config": {"blur": 18, "radius": 9, "weight": {"fixed": 1, "min": 0, "max": 1}}}], lat=43.68, lon=-79.36, zoom=11,
     desc="Heartbeat locations from every night, five-minute averages."), 0, 5, 9, 9)
-w.at(donut("Time at each step", f"""WITH c AS (SELECT e.time, e.detail->>'to' AS lvl, lead(e.time) OVER (PARTITION BY e.session_id ORDER BY e.time) AS nxt {JE}
-      WHERE {P} AND e.kind = 'level_change' AND $__timeFilter(e.time))
-    SELECT CASE lvl WHEN 'ARMED' THEN 'Out' WHEN 'NUDGE' THEN 'Check-in' WHEN 'ALARM' THEN 'Alarm' WHEN 'CONTACT' THEN 'Contact' WHEN 'WIDER' THEN 'Backup' END AS "step",
-      round((sum(EXTRACT(EPOCH FROM nxt - time)) / 60)::numeric) AS "minutes"
-    FROM c WHERE nxt IS NOT NULL AND lvl <> 'RESOLVED' GROUP BY 1 ORDER BY 2 DESC""", STEP_COLORS, "m",
-    "Minutes spent on each step of the ladder across the week."), 9, 5, 7, 9)
+w.at(donut("How fast she answered", f"""SELECT CASE WHEN m.value < 5 THEN 'Under 5 s' WHEN m.value < 15 THEN '5 to 15 s' WHEN m.value < 30 THEN '15 to 30 s' ELSE 'Over 30 s' END AS "reply",
+      count(*) AS "check-ins" {J} WHERE {P} AND m.metric = 'reply_s' AND $__timeFilter(m.time) GROUP BY 1 ORDER BY min(m.value)""",
+    {"Under 5 s": GREEN, "5 to 15 s": TEAL, "15 to 30 s": ORANGE, "Over 30 s": RED}, desc="Every check-in this week by reply time. Slow replies make the next one come sooner."), 9, 5, 7, 9)
 w.at(bargauge("Battery when she got home", f"""SELECT {NIGHT} AS "night", (SELECT value FROM metrics WHERE session_id = s.id AND metric = 'battery_pct' ORDER BY time DESC LIMIT 1) AS "Battery"
     FROM sessions s WHERE {P} AND $__timeFilter(s.armed_at) ORDER BY s.armed_at""", "percent",
     [{"color": RED, "value": None}, {"color": ORANGE, "value": 20}, {"color": GREEN, "value": 40}], desc="Red under 20%: a dead phone looks like silence."), 16, 5, 8, 9)
