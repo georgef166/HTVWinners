@@ -1,20 +1,40 @@
 {
   "uid": "nos-night",
-  "title": "Night Out Switch",
+  "title": "tenshi \u00b7 Tonight",
+  "description": "One night in tenshi, live from Tiger Data.",
   "tags": [
-    "night-out-switch",
+    "tenshi",
     "tiger-data"
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 3,
+  "version": 4,
   "editable": false,
   "graphTooltip": 1,
   "refresh": "5s",
+  "liveNow": false,
+  "fiscalYearStartMonth": 0,
   "time": {
     "from": "now-15m",
     "to": "now"
   },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ]
+  },
+  "links": [
+    {
+      "title": "The week",
+      "type": "link",
+      "url": "/grafana/d/nos-week",
+      "icon": "dashboard"
+    }
+  ],
   "templating": {
     "list": [
       {
@@ -37,34 +57,118 @@
   },
   "panels": [
     {
-      "id": 100,
       "type": "text",
       "title": "",
+      "transparent": true,
+      "options": {
+        "mode": "markdown",
+        "content": "<div style=\"display:flex;align-items:center;gap:14px\"><img src=\"/favicon.svg\" width=\"64\" style=\"display:block\"><div><div style=\"font-size:24px;font-weight:600;letter-spacing:.02em\">tenshi \u00b7 tonight</div><div style=\"opacity:.7;font-size:14px\">Live from Tiger Data: every signal is a row in the <code>metrics</code> hypertable. Audio is never stored, only a score.</div></div></div>"
+      },
+      "id": 1,
       "gridPos": {
         "x": 0,
         "y": 0,
         "w": 24,
         "h": 3
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "### Night Out Switch: one night, as a time series\nSignals from the phone and the Switch, stored in **Tiger Data** (hypertables `events` and `metrics`, compressed after a day, deleted after 7). Audio is never stored: only the score of a 30-second check."
       }
     },
     {
-      "id": 1,
+      "type": "stat",
+      "title": "Right now",
+      "description": "The escalation level the server is at for this night.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT level AS value FROM sessions WHERE id = '$session'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5FD0D8"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "ARMED": {
+                  "text": "Out tonight",
+                  "color": "#5FD0D8",
+                  "index": 0
+                },
+                "NUDGE": {
+                  "text": "Check-in",
+                  "color": "#F0B04A",
+                  "index": 1
+                },
+                "ALARM": {
+                  "text": "Alarm",
+                  "color": "#FF4F4A",
+                  "index": 2
+                },
+                "CONTACT": {
+                  "text": "Contact alerted",
+                  "color": "#FF4F4A",
+                  "index": 3
+                },
+                "WIDER": {
+                  "text": "Backup alerted",
+                  "color": "#FF4F4A",
+                  "index": 4
+                },
+                "RESOLVED": {
+                  "text": "Home",
+                  "color": "#5FB3BB",
+                  "index": 5
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 2,
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 5,
+        "h": 5
+      }
+    },
+    {
       "type": "stat",
       "title": "Out for",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 3,
-        "w": 6,
-        "h": 4
       },
       "targets": [
         {
@@ -79,11 +183,24 @@
           "rawSql": "SELECT EXTRACT(EPOCH FROM now() - armed_at) AS value FROM sessions WHERE id = '$session'"
         }
       ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D1B896"
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
       "options": {
         "colorMode": "value",
         "graphMode": "none",
-        "justifyMode": "auto",
+        "justifyMode": "center",
         "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -92,31 +209,21 @@
           "values": false
         }
       },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#2F45FF"
-          },
-          "unit": "s"
-        },
-        "overrides": []
+      "id": 3,
+      "gridPos": {
+        "x": 5,
+        "y": 3,
+        "w": 4,
+        "h": 5
       }
     },
     {
-      "id": 2,
       "type": "stat",
       "title": "Check-ins answered",
-      "description": "",
+      "description": "Running count of check-ins answered, from the phone or the Switch.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
-      },
-      "gridPos": {
-        "x": 6,
-        "y": 3,
-        "w": 6,
-        "h": 4
       },
       "targets": [
         {
@@ -127,15 +234,27 @@
           },
           "rawQuery": true,
           "editorMode": "code",
-          "format": "table",
-          "rawSql": "SELECT count(*) AS value FROM events WHERE session_id = '$session' AND kind = 'checkin_ack'"
+          "format": "time_series",
+          "rawSql": "SELECT time, count(*) OVER (ORDER BY time) AS value FROM events WHERE session_id = '$session' AND kind = 'checkin_ack' ORDER BY time"
         }
       ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5FB3BB"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
       "options": {
         "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
+        "graphMode": "area",
+        "justifyMode": "center",
         "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -144,49 +263,124 @@
           "values": false
         }
       },
+      "id": 4,
+      "gridPos": {
+        "x": 9,
+        "y": 3,
+        "w": 4,
+        "h": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Average reply",
+      "description": "How fast check-ins get answered. Slower replies make the next check-in come sooner.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time, avg(value) OVER (ORDER BY time) AS value FROM metrics WHERE session_id = '$session' AND metric = 'reply_s' ORDER BY time"
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "#10B981"
+            "fixedColor": "#5FD0D8"
+          },
+          "mappings": [],
+          "unit": "s",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "id": 5,
+      "gridPos": {
+        "x": 13,
+        "y": 3,
+        "w": 4,
+        "h": 5
+      }
+    },
+    {
+      "type": "gauge",
+      "title": "Battery",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time, value FROM metrics WHERE session_id = '$session' AND metric = 'battery_pct' ORDER BY time"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#FF4F4A",
+                "value": null
+              },
+              {
+                "color": "#F0B04A",
+                "value": 20
+              },
+              {
+                "color": "#5FD0D8",
+                "value": 40
+              }
+            ]
           }
         },
         "overrides": []
-      }
-    },
-    {
-      "id": 3,
-      "type": "stat",
-      "title": "Average reply",
-      "description": "",
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "tiger"
       },
-      "gridPos": {
-        "x": 12,
-        "y": 3,
-        "w": 6,
-        "h": 4
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "tiger"
-          },
-          "rawQuery": true,
-          "editorMode": "code",
-          "format": "table",
-          "rawSql": "SELECT avg(value) AS value FROM metrics WHERE session_id = '$session' AND metric = 'reply_s'"
-        }
-      ],
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "textMode": "value",
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -195,31 +389,21 @@
           "values": false
         }
       },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#2F45FF"
-          },
-          "unit": "s"
-        },
-        "overrides": []
+      "id": 6,
+      "gridPos": {
+        "x": 17,
+        "y": 3,
+        "w": 3,
+        "h": 5
       }
     },
     {
-      "id": 4,
       "type": "stat",
-      "title": "30-second checks that flagged something",
-      "description": "",
+      "title": "Danger heard",
+      "description": "30-second clips where Whisper (on our own server) heard a plea for help or aggression.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
-      },
-      "gridPos": {
-        "x": 18,
-        "y": 3,
-        "w": 6,
-        "h": 4
       },
       "targets": [
         {
@@ -234,11 +418,36 @@
           "rawSql": "SELECT count(*) AS value FROM metrics WHERE session_id = '$session' AND metric = 'distress_score' AND value >= 0.5"
         }
       ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds",
+            "fixedColor": "#5FD0D8"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5FB3BB",
+                "value": null
+              },
+              {
+                "color": "#FF4F4A",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "justifyMode": "auto",
+        "justifyMode": "center",
         "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -247,31 +456,22 @@
           "values": false
         }
       },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#FF4D3D"
-          }
-        },
-        "overrides": []
+      "id": 7,
+      "gridPos": {
+        "x": 20,
+        "y": 3,
+        "w": 4,
+        "h": 5
       }
     },
     {
-      "id": 5,
       "type": "state-timeline",
       "title": "Escalation ladder",
+      "description": "Armed, check-in, alarm, contact, backup: each step's timer runs on the server.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
       },
-      "gridPos": {
-        "x": 0,
-        "y": 7,
-        "w": 24,
-        "h": 5
-      },
-      "description": "Each step of the night: armed, check-in, alarm, contact alerted.",
       "targets": [
         {
           "refId": "A",
@@ -285,14 +485,6 @@
           "rawSql": "SELECT time, detail->>'to' AS \"level\" FROM events WHERE session_id = '$session' AND kind = 'level_change' AND $__timeFilter(time) ORDER BY time"
         }
       ],
-      "options": {
-        "showValue": "auto",
-        "mergeValues": true,
-        "rowHeight": 0.8,
-        "legend": {
-          "showLegend": false
-        }
-      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -303,50 +495,85 @@
               "type": "value",
               "options": {
                 "ARMED": {
-                  "color": "#2F45FF",
+                  "text": "Out tonight",
+                  "color": "#5FD0D8",
                   "index": 0
                 },
                 "NUDGE": {
-                  "color": "#FF9500",
+                  "text": "Check-in",
+                  "color": "#F0B04A",
                   "index": 1
                 },
                 "ALARM": {
-                  "color": "#FF4D3D",
+                  "text": "Alarm",
+                  "color": "#FF4F4A",
                   "index": 2
                 },
                 "CONTACT": {
-                  "color": "#C2121F",
+                  "text": "Contact alerted",
+                  "color": "#FF4F4A",
                   "index": 3
                 },
                 "WIDER": {
-                  "color": "#7A0B14",
+                  "text": "Backup alerted",
+                  "color": "#FF4F4A",
                   "index": 4
                 },
                 "RESOLVED": {
-                  "color": "#8E8E93",
+                  "text": "Home",
+                  "color": "#5FB3BB",
                   "index": 5
                 }
               }
             }
-          ]
+          ],
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0
+          }
         },
         "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.75,
+        "alignValue": "center",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "id": 8,
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 4
       }
     },
     {
-      "id": 6,
-      "type": "timeseries",
-      "title": "Sound around her (dB, loudness only)",
-      "description": "time_bucket over the metrics hypertable",
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "tiger"
-      },
+      "id": 9,
+      "type": "row",
+      "title": "Phone signals",
+      "collapsed": false,
+      "panels": [],
       "gridPos": {
         "x": 0,
         "y": 12,
-        "w": 12,
-        "h": 8
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Sound around her",
+      "description": "Loudness only, never audio. The red band is where shouting starts.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
       },
       "targets": [
         {
@@ -358,61 +585,104 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT time_bucket('5 seconds', time) AS time, avg(value) AS \"average\" FROM metrics WHERE session_id = '$session' AND metric = 'sound_db' AND $__timeFilter(time) GROUP BY 1 ORDER BY 1"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "tiger"
-          },
-          "rawQuery": true,
-          "editorMode": "code",
-          "format": "time_series",
-          "rawSql": "SELECT time_bucket('5 seconds', time) AS time, max(value) AS \"peak\" FROM metrics WHERE session_id = '$session' AND metric = 'sound_peak_db' AND $__timeFilter(time) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT time_bucket('5 seconds', time) AS time, avg(value) AS \"average\", max(value) AS \"peak\" FROM metrics WHERE session_id = '$session' AND metric IN ('sound_db', 'sound_peak_db') AND $__timeFilter(time) GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "custom": {
             "drawStyle": "line",
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 12,
+            "fillOpacity": 22,
+            "gradientMode": "opacity",
             "showPoints": "never",
             "pointSize": 7,
-            "spanNulls": true
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
           },
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "#5FD0D8"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "#FF4F4A",
+                "value": -15
+              }
+            ]
           },
           "unit": "dB"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "peak"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D1B896"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
+          "showLegend": true,
           "displayMode": "list",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "multi"
+          "mode": "multi",
+          "sort": "none"
         }
+      },
+      "id": 10,
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 8
       }
     },
     {
-      "id": 7,
       "type": "timeseries",
-      "title": "Movement (m/s\u00b2)",
-      "description": "",
+      "title": "Movement",
+      "description": "From the phone's motion sensor. Dancing spikes, a still phone flatlines.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 12,
-        "w": 12,
-        "h": 8
       },
       "targets": [
         {
@@ -431,43 +701,67 @@
         "defaults": {
           "custom": {
             "drawStyle": "line",
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 12,
+            "fillOpacity": 22,
+            "gradientMode": "opacity",
             "showPoints": "never",
             "pointSize": 7,
-            "spanNulls": true
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "color": {
             "mode": "fixed",
-            "fixedColor": "#2F45FF"
-          }
+            "fixedColor": "#8FA6D6"
+          },
+          "unit": "accMS2"
         },
         "overrides": []
       },
       "options": {
         "legend": {
+          "showLegend": false,
           "displayMode": "list",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "multi"
+          "mode": "multi",
+          "sort": "none"
         }
+      },
+      "id": 11,
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 8
       }
     },
     {
-      "id": 8,
+      "id": 12,
+      "type": "row",
+      "title": "TimescaleDB analysis",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
       "type": "timeseries",
-      "title": "Time-stream analysis: sound anomaly (z-score vs rolling baseline)",
-      "description": "How unusual each peak is compared with the last 20 readings. Above 2 is a spike worth a 30-second check.",
+      "title": "Sound anomaly (z-score)",
+      "description": "Each reading against its own rolling baseline. Above 2 is unusual for this night.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 20,
-        "w": 12,
-        "h": 8
       },
       "targets": [
         {
@@ -479,55 +773,138 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT time, (value - avg(value) OVER w) / NULLIF(stddev_samp(value) OVER w, 0) AS \"z-score\", 2 AS \"flag line\" FROM metrics WHERE session_id = '$session' AND metric = 'sound_peak_db' AND $__timeFilter(time) WINDOW w AS (ORDER BY time ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) ORDER BY time"
+          "rawSql": "SELECT time, (value - avg(value) OVER w) / NULLIF(stddev_samp(value) OVER w, 0) AS \"z-score\" FROM metrics WHERE session_id = '$session' AND metric = 'sound_db' AND $__timeFilter(time) WINDOW w AS (ORDER BY time ROWS BETWEEN 30 PRECEDING AND CURRENT ROW) ORDER BY time"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "custom": {
             "drawStyle": "line",
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 12,
+            "fillOpacity": 22,
+            "gradientMode": "opacity",
             "showPoints": "never",
             "pointSize": 7,
-            "spanNulls": true
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
           },
           "color": {
             "mode": "fixed",
-            "fixedColor": "#FF4D3D"
+            "fixedColor": "#F0B04A"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "#FF4F4A",
+                "value": 2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "id": 13,
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Per-minute rollup (continuous aggregate)",
+      "description": "metrics_1m is a TimescaleDB continuous aggregate: minute averages kept fresh in the background.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT bucket AS time, max(avg) FILTER (WHERE metric = 'sound_db') AS \"Sound (dB)\", max(avg) FILTER (WHERE metric = 'movement') AS \"Movement\", max(avg) FILTER (WHERE metric = 'battery_pct') AS \"Battery (%)\" FROM metrics_1m WHERE session_id = '$session' AND metric IN ('sound_db', 'movement', 'battery_pct') AND $__timeFilter(bucket) GROUP BY bucket ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "gradientMode": "opacity",
+            "showPoints": "always",
+            "pointSize": 7,
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5FD0D8"
           }
         },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "flag line"
+              "options": "Movement"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#8E8E93"
+                  "fixedColor": "#8FA6D6"
                 }
-              },
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Battery (%)"
+            },
+            "properties": [
               {
-                "id": "custom.lineStyle",
+                "id": "color",
                 "value": {
-                  "fill": "dash",
-                  "dash": [
-                    6,
-                    6
-                  ]
+                  "mode": "fixed",
+                  "fixedColor": "#D1B896"
                 }
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 0
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 1
               }
             ]
           }
@@ -535,140 +912,43 @@
       },
       "options": {
         "legend": {
+          "showLegend": true,
           "displayMode": "list",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "multi"
+          "mode": "multi",
+          "sort": "none"
         }
-      }
-    },
-    {
-      "id": 9,
-      "type": "timeseries",
-      "title": "Per-minute rollup (continuous aggregate metrics_1m)",
-      "description": "Pre-computed by Tiger Data in the background, so long nights stay fast.",
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "tiger"
       },
+      "id": 14,
       "gridPos": {
         "x": 12,
-        "y": 20,
+        "y": 22,
         "w": 12,
         "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "tiger"
-          },
-          "rawQuery": true,
-          "editorMode": "code",
-          "format": "time_series",
-          "rawSql": "SELECT bucket AS time, metric, avg AS value FROM metrics_1m WHERE session_id = '$session' AND metric IN ('sound_db', 'movement', 'battery_pct') AND $__timeFilter(bucket) ORDER BY 1"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 12,
-            "showPoints": "never",
-            "pointSize": 7,
-            "spanNulls": true
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
       }
     },
     {
-      "id": 10,
-      "type": "timeseries",
-      "title": "Battery (%)",
-      "description": "",
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "tiger"
-      },
+      "id": 15,
+      "type": "row",
+      "title": "Check-ins, the Switch and danger checks",
+      "collapsed": false,
+      "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 28,
-        "w": 8,
-        "h": 7
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "tiger"
-          },
-          "rawQuery": true,
-          "editorMode": "code",
-          "format": "time_series",
-          "rawSql": "SELECT time, value AS \"battery\" FROM metrics WHERE session_id = '$session' AND metric = 'battery_pct' AND $__timeFilter(time) ORDER BY time"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 12,
-            "showPoints": "never",
-            "pointSize": 7,
-            "spanNulls": true
-          },
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#10B981"
-          },
-          "unit": "percent",
-          "min": 0,
-          "max": 100
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
+        "y": 30,
+        "w": 24,
+        "h": 1
       }
     },
     {
-      "id": 11,
       "type": "timeseries",
-      "title": "Reply time per check-in (s)",
+      "title": "Reply time per check-in",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
-      },
-      "gridPos": {
-        "x": 8,
-        "y": 28,
-        "w": 8,
-        "h": 7
       },
       "targets": [
         {
@@ -687,15 +967,23 @@
         "defaults": {
           "custom": {
             "drawStyle": "bars",
+            "lineInterpolation": "linear",
             "lineWidth": 2,
             "fillOpacity": 80,
-            "showPoints": "always",
+            "gradientMode": "opacity",
+            "showPoints": "never",
             "pointSize": 7,
-            "spanNulls": true
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "color": {
             "mode": "fixed",
-            "fixedColor": "#2F45FF"
+            "fixedColor": "#5FB3BB"
           },
           "unit": "s"
         },
@@ -703,85 +991,30 @@
       },
       "options": {
         "legend": {
+          "showLegend": false,
           "displayMode": "list",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "multi"
+          "mode": "multi",
+          "sort": "none"
         }
-      }
-    },
-    {
-      "id": 12,
-      "type": "timeseries",
-      "title": "30-second distress checks (score)",
-      "description": "",
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "tiger"
       },
-      "gridPos": {
-        "x": 16,
-        "y": 28,
-        "w": 8,
-        "h": 7
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "tiger"
-          },
-          "rawQuery": true,
-          "editorMode": "code",
-          "format": "time_series",
-          "rawSql": "SELECT time, value AS \"score\" FROM metrics WHERE session_id = '$session' AND metric = 'distress_score' AND $__timeFilter(time) ORDER BY time"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "points",
-            "lineWidth": 2,
-            "fillOpacity": 12,
-            "showPoints": "always",
-            "pointSize": 7,
-            "spanNulls": true
-          },
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#FF4D3D"
-          },
-          "min": 0,
-          "max": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 13,
-      "type": "timeseries",
-      "title": "Temperature from the Switch (\u00b0C)",
-      "description": "",
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "tiger"
-      },
+      "id": 16,
       "gridPos": {
         "x": 0,
-        "y": 35,
-        "w": 12,
+        "y": 31,
+        "w": 8,
         "h": 7
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Temperature from the Switch",
+      "description": "Red below 5\u00b0C: likely outside in the cold.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
       },
       "targets": [
         {
@@ -800,15 +1033,35 @@
         "defaults": {
           "custom": {
             "drawStyle": "line",
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 12,
+            "fillOpacity": 22,
+            "gradientMode": "scheme",
             "showPoints": "never",
             "pointSize": 7,
-            "spanNulls": true
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
           },
           "color": {
-            "mode": "fixed",
-            "fixedColor": "#FF9500"
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#FF4F4A",
+                "value": null
+              },
+              {
+                "color": "#5FD0D8",
+                "value": 5
+              }
+            ]
           },
           "unit": "celsius"
         },
@@ -816,27 +1069,109 @@
       },
       "options": {
         "legend": {
+          "showLegend": false,
           "displayMode": "list",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "multi"
+          "mode": "multi",
+          "sort": "none"
         }
+      },
+      "id": 17,
+      "gridPos": {
+        "x": 8,
+        "y": 31,
+        "w": 8,
+        "h": 7
       }
     },
     {
-      "id": 14,
-      "type": "table",
-      "title": "What happened tonight",
+      "type": "timeseries",
+      "title": "Danger checks",
+      "description": "Each dot is a 30-second clip checked by Whisper. Above the line alerts the contact.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "tiger"
       },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "tiger"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time, value AS \"score\" FROM metrics WHERE session_id = '$session' AND metric = 'distress_score' AND $__timeFilter(time) ORDER BY time"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "points",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 22,
+            "gradientMode": "scheme",
+            "showPoints": "always",
+            "pointSize": 7,
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5FB3BB",
+                "value": null
+              },
+              {
+                "color": "#FF4F4A",
+                "value": 0.5
+              }
+            ]
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "id": 18,
       "gridPos": {
-        "x": 12,
-        "y": 35,
-        "w": 12,
+        "x": 16,
+        "y": 31,
+        "w": 8,
         "h": 7
+      }
+    },
+    {
+      "type": "table",
+      "title": "What happened tonight",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "tiger"
       },
       "targets": [
         {
@@ -848,17 +1183,56 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT time, kind AS \"event\", coalesce(detail->>'to', detail->>'reason', detail->>'score', '') AS \"detail\" FROM events WHERE session_id = '$session' AND kind <> 'heartbeat' AND $__timeFilter(time) ORDER BY time DESC LIMIT 50"
+          "rawSql": "SELECT time AS \"Time\", CASE kind WHEN 'checkin_sent' THEN 'Check-in sent' WHEN 'checkin_ack' THEN 'Checked in' WHEN 'stand_down' THEN 'PIN cancelled the alarm' WHEN 'contact_ack' THEN 'Contact is on it' WHEN 'danger_alert' THEN 'Danger heard, contact alerted' WHEN 'distress_check' THEN 'Danger check' WHEN 'level_change' THEN 'Level: ' || initcap(detail->>'to') WHEN 'device' THEN 'Switch: ' || coalesce(detail->>'type', '') WHEN 'resolved' THEN 'Night ended' ELSE kind END AS \"What\" FROM events WHERE session_id = '$session' AND kind NOT IN ('heartbeat', 'summary') AND NOT (kind = 'device' AND detail->>'type' = 'reading') AND $__timeFilter(time) ORDER BY time DESC LIMIT 40"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              },
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        },
+        "sortBy": []
+      },
+      "id": 19,
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 24,
+        "h": 9
+      }
     }
   ],
-  "links": [
-    {
-      "title": "The week",
-      "type": "link",
-      "url": "/grafana/d/nos-week/night-out-switch-the-week",
-      "icon": "dashboard"
-    }
-  ]
+  "annotations": {
+    "list": []
+  }
 }
