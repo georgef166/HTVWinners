@@ -251,7 +251,7 @@ w.at(geomap("Where the nights went", [q(f"""SELECT time_bucket('5 minutes', e.ti
     WHERE {P} AND e.kind = 'heartbeat' AND e.lat IS NOT NULL AND $__timeFilter(e.time) GROUP BY 1, s.id ORDER BY 1""", "table", "A")],
     [{"type": "heatmap", "name": "Nights", "filterData": {"id": "byRefId", "options": "A"}, "tooltip": False,
       "location": {"mode": "coords", "latitude": "latitude", "longitude": "longitude"},
-      "config": {"blur": 22, "radius": 14, "weight": {"fixed": 1, "min": 0, "max": 1}}}], lat=43.695, lon=-79.345, zoom=11.3, fit=False,
+      "config": {"blur": 14, "radius": 7, "weight": {"fixed": 1, "min": 0, "max": 1}}}], lat=43.712, lon=-79.335, zoom=11, fit=False,
     desc="Heartbeat locations from every night, five-minute averages."), 0, 5, 9, 9)
 w.at(donut("How fast she answered", f"""SELECT CASE WHEN m.value < 5 THEN 'Under 5 s' WHEN m.value < 15 THEN '5 to 15 s' WHEN m.value < 30 THEN '15 to 30 s' ELSE 'Over 30 s' END AS "reply",
       count(*) AS "check-ins" {J} WHERE {P} AND m.metric = 'reply_s' AND $__timeFilter(m.time) GROUP BY 1 ORDER BY min(m.value)""",

@@ -492,9 +492,9 @@
         },
         "view": {
           "id": "coords",
-          "lat": 43.695,
-          "lon": -79.345,
-          "zoom": 11.3,
+          "lat": 43.712,
+          "lon": -79.335,
+          "zoom": 11,
           "maxZoom": 15,
           "allLayers": true,
           "padding": 12
@@ -514,8 +514,8 @@
               "longitude": "longitude"
             },
             "config": {
-              "blur": 22,
-              "radius": 14,
+              "blur": 14,
+              "radius": 7,
               "weight": {
                 "fixed": 1,
                 "min": 0,

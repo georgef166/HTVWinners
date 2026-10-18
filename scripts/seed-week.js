@@ -129,6 +129,7 @@ async function seedNight(plan, index) {
     }
     const reply = clamp(between(2, 9) + 40 * late * late * plan.loud * rand(), 1.5, 110);
     const ackT = new Date(t.getTime() + reply * 1000);
+    if (rand() < 0.35) ev(ackT, 'device', { type: 'touch' });  // answered on the Switch, phone still in her bag
     ev(ackT, 'checkin_ack');
     ev(ackT, 'level_change', { from: 'NUDGE', to: 'ARMED' });
     m(ackT, 'reply_s', Math.round(reply));
