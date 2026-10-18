@@ -16,7 +16,6 @@
   <script src="/sound.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/trace.js"></script>
   <style>
     body { transition: background-color .35s ease; }
     .pin {
@@ -79,14 +78,14 @@
     <!-- Alert: CONTACT / WIDER -->
     <section data-view="alert" class="view hidden flex-col pb-44 pt-8 text-white">
       <h1 id="alertHeadline" class="display text-[2.15rem] font-extrabold leading-[1.08]">
-        <span class="name"></span> hasn't responded for <span id="since" class="tnum"></span>
+        <span class="name"></span> hasn't answered since <span id="since" class="tnum whitespace-nowrap"></span>
       </h1>
       <p id="widerNote" class="mt-4 hidden rounded-2xl bg-black/20 px-4 py-3 text-[15px] font-bold leading-snug"></p>
       <p id="ackNote" class="mt-4 hidden rounded-2xl bg-white/15 px-4 py-3 text-[15px] font-bold leading-snug">You said you're on it. <span class="name"></span>'s phone now shows that you're coming.</p>
 
-      <div class="relative isolate mt-7 overflow-hidden rounded-[28px] border-4 border-white/85 bg-[#2a1018]">
+      <div class="relative isolate mt-6 overflow-hidden rounded-[16px] border border-white/25 bg-[#2a1018]">
         <div id="map" class="h-64 w-full"></div>
-        <a id="directions" target="_blank" rel="noopener" class="absolute right-3 top-3 z-[500] hidden items-center gap-2 rounded-full bg-black px-4 py-2.5 text-[15px] font-bold text-white shadow-lg">
+        <a id="directions" target="_blank" rel="noopener" class="absolute right-3 top-3 z-[500] hidden min-h-[44px] items-center gap-2 rounded-full bg-white px-4 text-[15px] font-semibold text-[#2a1119]">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 19-9-9 19-2-8-8-2Z"/></svg>
           Directions
         </a>
@@ -105,15 +104,8 @@
         </div>
       </dl>
 
-      <div class="mt-5 rounded-[20px] bg-black/15 px-4 pb-2 pt-3">
-        <div class="flex items-center justify-between text-[13px] font-semibold text-white/90">
-          <span><span class="name"></span>'s signal</span>
-          <span>line: <span class="name"></span> &nbsp;dots: her phone</span>
-        </div>
-        <canvas id="trace" class="mt-1 h-20 w-full"></canvas>
-      </div>
 
-      <div class="mt-6 rounded-[24px] bg-white p-5 text-[#1d1d1f]">
+      <div class="mt-6 rounded-[16px] border border-white/10 bg-white/[.06] p-5">
         <h2 class="display text-lg font-semibold">What to do now</h2>
         <ol id="nextStep" class="mt-3 space-y-2.5 text-[17px] font-semibold leading-snug"></ol>
       </div>
@@ -126,24 +118,19 @@
 
       <h2 class="display mt-8 text-lg font-semibold">What we know</h2>
       <p id="facts" class="mt-2 text-[17px] leading-relaxed text-white/90"></p>
-      <p id="aiSource" class="mt-3 hidden items-start gap-2 text-[14px] font-semibold leading-snug text-white/90">
-        <svg class="mt-0.5 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-        <span id="aiSourceText"></span>
-      </p>
 
-      <button id="resolve" class="mt-8 min-h-[3rem] self-start text-[15px] font-bold text-white/90 underline underline-offset-4">False alarm / resolved</button>
-      <p class="mt-2 text-[15px] text-white/90">If you believe <span class="name"></span> is in danger, call 911.</p>
+      <button id="resolve" class="mt-8 min-h-[44px] self-start rounded-full border border-white/25 px-5 text-[15px] font-semibold text-white/90 hover:bg-white/10">It was a false alarm</button>
     </section>
 
     <!-- Always-reachable actions while alerting -->
     <div id="actionBar" class="fixed inset-x-0 bottom-0 z-[900] hidden border-t border-white/10 bg-[#2a1119] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
-      <div class="mx-auto grid max-w-md grid-cols-2 gap-3">
-        <a id="call" class="btn whitespace-nowrap bg-white px-4 text-lg text-[#b3261e]">
+      <div class="mx-auto grid max-w-md grid-cols-[1.5fr_1fr] gap-3">
+        <a id="call" class="btn min-h-[3.25rem] whitespace-nowrap bg-white px-4 text-lg font-semibold text-[#b3261e]">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>
           <span>Call <span class="name"></span></span>
         </a>
-        <button id="ack" class="btn btn-sodium whitespace-nowrap px-4 text-lg">I'm on it</button>
-        <a id="barDirections" target="_blank" rel="noopener" class="btn btn-sodium hidden whitespace-nowrap px-4 text-lg">Directions</a>
+        <button id="ack" class="btn min-h-[3.25rem] whitespace-nowrap border border-white/50 px-4 text-lg text-white hover:bg-white/10">I'm on it</button>
+        <a id="barDirections" target="_blank" rel="noopener" class="btn hidden min-h-[3.25rem] whitespace-nowrap border border-white/50 px-4 text-lg text-white hover:bg-white/10">Directions</a>
       </div>
     </div>
 
@@ -293,24 +280,18 @@
 
       $('#actionBar').classList.toggle('hidden', !alerting);
       if (alerting) {
-        $('#since').textContent = ago(s.seconds_since_response);
+        // An absolute time doesn't tick or re-wrap the headline every second
+        $('#since').textContent = clock(s.now_ms - s.seconds_since_response * 1000);
         const { facts, step } = splitSummary(s.summary || '', s.user_name);
         $('#facts').textContent = facts;
-        const SOURCE = {
-          vultr: `Written by our own AI model, running on our servers. ${s.user_name}'s night is never sent to an AI company.`,
-          gemini: 'Summary written with Google Gemini from the facts above.',
-        };
-        $('#aiSource').classList.toggle('hidden', !SOURCE[s.summary_source]);
-        $('#aiSource').classList.toggle('flex', !!SOURCE[s.summary_source]);
-        $('#aiSourceText').textContent = SOURCE[s.summary_source] || '';
         // The step escalates (call, go there, 911), so show it as an ordered list.
         const steps = step.split(/;\s*|\.\s+(?=[A-Z])/).map((t) => t.trim().replace(/\.$/, '')).filter(Boolean);
-        $('#nextStep').innerHTML = steps.map((t, i) => `<li class="flex gap-3"><span class="display flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-signal text-[13px] font-semibold text-white">${i + 1}</span><span class="pt-0.5">${esc(t.charAt(0).toUpperCase() + t.slice(1))}.</span></li>`).join('');
+        $('#nextStep').innerHTML = steps.map((t, i) => `<li class="flex gap-3"><span class="display flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[13px] font-semibold text-[#2a1119]">${i + 1}</span><span class="pt-0.5">${esc(t.charAt(0).toUpperCase() + t.slice(1))}.</span></li>`).join('');
         $('#call').href = `tel:${s.user_phone}`;
         $('#ackNote').classList.toggle('hidden', !s.contact_acked);
 
         const o = s.outlook || { signals: [], phone_reporting: null };
-        $('#phoneDot').className = `mt-1.5 h-3 w-3 shrink-0 rounded-full ${o.phone_reporting ? 'bg-white breathe' : 'bg-black/60'}`;
+        $('#phoneDot').className = `mt-1.5 h-3 w-3 shrink-0 rounded-full ${o.phone_reporting ? 'bg-white breathe' : 'bg-white/35'}`;
         $('#phoneText').textContent = o.phone_reporting == null
           ? `${s.user_name}'s phone hasn't reported in yet.`
           : o.phone_reporting
@@ -343,10 +324,6 @@
         $('#battery').textContent = pct != null ? `${pct}%` : '–';
         $('#lowBattery').classList.toggle('hidden', pct == null || pct > 20);
         if (prevView !== 'alert') takeover();
-        if (s.trace) {
-          if (!signal) signal = new SignalTrace(document.getElementById('trace'), { tone: 'alert', showLabels: false });
-          signal.update(s.trace);
-        }
         if (prevView !== 'alert' && prevView !== null) {
           alertSound();
           navigator.vibrate && navigator.vibrate([500, 200, 500]);

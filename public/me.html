@@ -54,23 +54,21 @@
     </div>
   </div>
 
-  <div class="mx-auto flex min-h-[100dvh] max-w-md flex-col px-6 pb-8 pt-5">
+  <div class="mx-auto flex h-[100dvh] max-w-md flex-col overflow-y-auto px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
     <header class="flex items-center justify-between">
       <span class="flex items-center gap-2" id="brand">
         <span id="logo"></span>
         <span class="wordmark text-[20px]">tenshi</span>
       </span>
-      <span class="chip rounded-full border border-white/15 px-3 py-1.5 text-[13px] font-semibold text-mist">
-        Contact: <span class="contact-name text-paper">…</span>
-      </span>
+      <a id="nightLink" class="flex min-h-[44px] items-center rounded-full px-3 text-[14px] font-medium text-mist hover:text-paper" target="_blank" rel="noopener">Your night ›</a>
     </header>
 
     <main class="flex flex-1 flex-col">
 
       <!-- ARMED -->
       <section data-view="ARMED" id="armedView" class="view boot hidden flex-1 flex-col">
-        <div class="flex flex-1 flex-col items-center justify-center py-8">
-          <div class="relative aspect-square w-full max-w-[260px]" data-boot style="--i:0">
+        <div class="flex flex-1 flex-col items-center justify-center py-4">
+          <div class="relative aspect-square w-full max-w-[230px]" data-boot style="--i:0">
             <svg viewBox="0 0 300 300" class="absolute inset-0 -rotate-90" aria-hidden="true">
               <circle cx="150" cy="150" r="136" fill="none" stroke-width="8" class="ring-track" />
               <circle cx="150" cy="150" r="136" fill="none" stroke-width="8" class="ring-fill" data-ring style="stroke-dasharray: 854.5; stroke-dashoffset: 854.5" />
@@ -78,7 +76,7 @@
             <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
               <span class="breathe h-3 w-3 rounded-full bg-mint"></span>
               <span class="display tnum mt-5 text-[4.25rem] font-semibold leading-none" data-clock>–:––</span>
-              <span class="mt-3 text-[15px] font-semibold text-mist">until your next check-in</span>
+              <span class="mt-3 text-[15px] font-semibold text-mist">until check-in</span>
             </div>
           </div>
           <h1 class="display mt-7 text-3xl font-bold" data-boot style="--i:1">You're armed</h1>
@@ -101,10 +99,9 @@
             </p>
           </div>
         </div>
-        <div class="route-slot mb-8"></div>
-        <button id="disarmBtn" class="btn btn-ghost w-full">Disarm, I'm home</button>
-        <a id="nightLink" class="mt-2 block min-h-[2.5rem] w-full text-center text-[15px] font-medium text-sodium" target="_blank" rel="noopener">Your night so far ›</a>
-        <button id="earlyOk" class="mt-1 min-h-[3rem] w-full text-[15px] font-semibold text-mist hover:text-paper">I'm fine, reset the timer</button>
+        <div class="route-slot mb-6"></div>
+        <button id="disarmBtn" class="btn btn-ghost w-full">I'm home, turn it off</button>
+        <button id="earlyOk" class="mt-1 min-h-[44px] w-full text-[15px] font-medium text-mist hover:text-paper">I'm fine, reset the timer</button>
       </section>
 
       <!-- NUDGE -->
@@ -124,20 +121,20 @@
       <!-- ALARM: flashing red/white, PIN to stand down -->
       <section data-view="ALARM" class="view hidden flex-1 flex-col items-center justify-center text-center">
         <div class="fixed inset-x-0 top-0 h-2 opacity-30" style="background:currentColor" aria-hidden="true"></div><div class="fixed inset-x-0 top-0 h-2" aria-hidden="true"><div class="h-full bg-current" data-bar></div></div>
-        <h1 class="display text-[2.6rem] font-extrabold leading-[1.05]">Tap your PIN if you're OK</h1>
+        <h1 class="display text-[2.3rem] font-extrabold leading-[1.05]" style="text-wrap: balance">Tap your PIN if you're OK</h1>
         <p class="mt-4 text-lg font-bold" data-countdown><span data-live><span class="contact-name">Your contact</span> is alerted in <span class="tnum" data-secs>15</span>s</span><span data-zero hidden>Alerting <span class="contact-name">your contact</span> now…</span></p>
-        <div class="keypad mt-8 w-full max-w-[300px]"></div>
+        <div class="keypad mt-6 w-full"></div>
       </section>
 
       <!-- CONTACT / WIDER -->
       <section data-view="CONTACT" class="view hidden flex-1 flex-col">
-        <div class="flex flex-1 flex-col items-center justify-center py-6 text-center">
-          <span id="contactBadge" class="flex h-16 w-16 items-center justify-center rounded-full bg-signal/20 text-signal">
+        <div class="flex flex-1 flex-col items-center justify-center py-2 text-center">
+          <span id="contactBadge" class="flex h-12 w-12 items-center justify-center rounded-full bg-signal/20 text-signal">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
           </span>
-          <h1 id="contactHeadline" class="display mt-6 text-[2.1rem] font-bold leading-tight">Your contact has been alerted</h1>
+          <h1 id="contactHeadline" class="display mt-4 text-[1.9rem] font-bold leading-tight" style="text-wrap: balance">Your contact has been alerted</h1>
           <p id="contactSub" class="mt-3 max-w-[32ch] text-lg text-mist">They can see your last location.</p>
-          <div class="keypad mt-8 w-full max-w-[280px]"></div>
+          <div class="keypad mt-4 w-full"></div>
         </div>
         <div class="route-slot"></div>
       </section>
@@ -240,17 +237,18 @@
         <div class="pin-dots" aria-live="polite"></div>
         <div class="keypad-grid mt-7">
           ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => `<button class="key" data-d="${d}" aria-label="${d}">${d}</button>`).join('')}
-          <button class="key key-text" data-act="clear">Clear</button>
+          <button class="key key-text" data-act="back" aria-label="Delete last digit"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-6 7 6 7h12z"/><path d="m16 9-5 5M11 9l5 5"/></svg></button>
           <button class="key" data-d="0" aria-label="0">0</button>
-          <button class="key key-text" data-act="ok">Done</button>
+          <button class="key key-ok" data-act="ok" aria-label="Enter PIN" disabled><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
         </div>
-        <p class="pin-err mt-4 h-5 text-[15px] font-bold" role="alert"></p>`;
+        <p class="pin-err mt-3 h-5 text-[15px] font-semibold" role="alert"></p>`;
       const dots = container.querySelector('.pin-dots');
       const errEl = container.querySelector('.pin-err');
       const render = () => {
         const slots = Math.max(4, pin.length);
         dots.innerHTML = Array.from({ length: slots }, (_, i) => `<span class="${i < pin.length ? 'on' : ''}"></span>`).join('');
         dots.setAttribute('aria-label', `${pin.length} digits entered`);
+        container.querySelector('[data-act="ok"]').disabled = pin.length < 4;
       };
       const submit = async () => {
         if (pin.length < 4) { errEl.textContent = 'Your PIN is at least 4 digits'; return; }
@@ -267,7 +265,7 @@
         const b = e.target.closest('button'); if (!b) return;
         errEl.textContent = '';
         if (b.dataset.d) { if (pin.length < 8) pin += b.dataset.d; }
-        else if (b.dataset.act === 'clear') pin = '';
+        else if (b.dataset.act === 'back') pin = pin.slice(0, -1);
         else if (b.dataset.act === 'ok') return submit();
         render();
       });
@@ -392,7 +390,7 @@
       const left = NOS.clock.left(deadline) ?? 0;
       // A countdown at zero changes its words instead of showing "0 seconds"
       $$('[data-countdown]').forEach((el) => { el.querySelector('[data-live]').hidden = left === 0; el.querySelector('[data-zero]').hidden = left !== 0; });
-      $$('[data-clock]').forEach((el) => { el.textContent = left ? fmt(left) : 'Now'; });
+      $$('[data-clock]').forEach((el) => { el.textContent = deadline == null ? '–:––' : left ? fmt(left) : 'Now'; });
       $$('[data-secs]').forEach((el) => { el.textContent = left; });
       $$('[data-secs-word]').forEach((el) => { el.textContent = left === 1 ? 'second' : 'seconds'; });
       const frac = state.window_s ? Math.min(1, leftMs / 1000 / state.window_s) : 0;

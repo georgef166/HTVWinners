@@ -179,14 +179,21 @@ body.app.ok { background: #0f2f32; }
 .ok-button:hover { background: rgb(var(--signal-rgb) / .92); }
 
 /* ---------- Keypad ---------- */
-.keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem; }
+/* iOS-style keypad: 72px circles, a backspace key and a confirm key that wakes up at 4 digits */
+.keypad-grid { display: grid; grid-template-columns: repeat(3, 72px); justify-content: center; gap: 14px 26px; }
 .key {
-  height: 4.4rem; border-radius: 999px; font-family: var(--font-display); font-weight: 400; font-size: 1.85rem;
-  color: inherit; background: rgb(var(--paper-rgb) / .08); border: 0;
-  transition: background-color .12s ease, transform .1s ease;
+  width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 400; font-size: 28px;
+  color: inherit; background: rgb(var(--paper-rgb) / .1); border: 0;
+  transition: background-color .12s ease, transform .1s ease, opacity .15s ease;
 }
-.key:active { transform: scale(.95); background: rgb(var(--paper-rgb) / .2); }
-.key-text { font-family: var(--font-text); font-size: 1rem; font-weight: 500; background: transparent; }
+.key:hover { background: rgb(var(--paper-rgb) / .16); }
+.key:active { transform: scale(.94); background: rgb(var(--paper-rgb) / .26); }
+.key-text { background: transparent; }
+.key-ok { background: var(--paper); color: var(--ink); }
+.key-ok:hover { background: rgb(var(--paper-rgb) / .9); }
+.key:disabled { opacity: .35; cursor: default; transform: none; }
+.key-ok:disabled { background: rgb(var(--paper-rgb) / .1); color: var(--paper); }
 .pin-dots { display: flex; justify-content: center; gap: .9rem; height: 1rem; }
 .pin-dots span { width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid currentColor; opacity: .5; }
 .pin-dots span.on { background: currentColor; opacity: 1; }
