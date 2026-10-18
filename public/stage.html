@@ -267,7 +267,7 @@
     // Packet colours come from the theme tokens so the wires match everything else.
     const css = getComputedStyle(document.body);
     const C = Object.fromEntries(['sodium', 'mint', 'signal', 'paper', 'gold'].map((k) => [k, `rgb(${css.getPropertyValue(`--${k}-rgb`).trim()})`]));
-    const DEVICE_FEED = { touch: 'Switch: touch check-in', code: 'Switch: joystick code entered', nfc: 'Switch: home tag tapped' };
+    const DEVICE_FEED = { touch: 'Switch: touch check-in', code: 'Switch: joystick code entered' };
 
     function packet(wire, { color, reverse = false, big = false, ms = 900 }) {
       const p = document.createElement('span');

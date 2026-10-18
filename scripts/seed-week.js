@@ -151,9 +151,8 @@ async function seedNight(plan, index) {
     m(t, 'distress_score', plan.falseAlarm);
   }
 
-  // Home: tapped the NFC tag by the door.
-  ev(end, 'device', { type: 'nfc', home: true });
-  ev(end, 'resolved', { by: 'home_tag' });
+  // Home: turned it off with her PIN.
+  ev(end, 'resolved', { by: 'user_disarm' });
   ev(end, 'level_change', { from: 'ARMED', to: 'RESOLVED' });
 
   events.sort((a, b) => a[0] - b[0]);
