@@ -448,7 +448,7 @@ const WING_FEATHERS = [
   { rx: 0.4, ry: -0.13, ang: 4, L: 1.9, W: 0.33, bend: 0.11, z: 0.05, barbs: true },
   { rx: 0.36, ry: -0.26, ang: -17, L: 1.4, W: 0.3, bend: 0.1, z: 0.0, barbs: true },
 ];
-const F_DEPTH = 0.04, F_BEVEL = 0.02;
+const F_DEPTH = 0.04, F_BEVEL = 0.03;
 
 function featherCurve(f, sx) {
   const a = (f.ang * PI) / 180, dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
@@ -476,7 +476,7 @@ function featherGeo(f, sx, low) {
   }
   const pts = [...A, ...B.reverse().slice(1, -1)];
   return new THREE.ExtrudeGeometry(new THREE.Shape(pts), {
-    depth: F_DEPTH, bevelEnabled: true, bevelThickness: F_BEVEL, bevelSize: 0.02, bevelSegments: low ? 1 : 2, curveSegments: 1,
+    depth: F_DEPTH, bevelEnabled: true, bevelThickness: F_BEVEL, bevelSize: 0.025, bevelSegments: low ? 2 : 4, curveSegments: 1,
   });
 }
 
@@ -486,7 +486,9 @@ function buildWings(M, lowPower) {
   const mats = [M.goldLight, M.gold, M.goldDeep, M.gold];
   [1, -1].forEach((sx) => {
     WING_FEATHERS.forEach((f, i) => {
-      const m = new THREE.Mesh(featherGeo(f, sx, lowPower), f.pave ? M.goldLight : i === 2 ? M.gold : M.goldDeep);
+      // caps: satin brushed along the feather; sides + bevel: polished
+      const angle = sx > 0 ? f.ang : 180 - f.ang;
+      const m = new THREE.Mesh(featherGeo(f, sx, lowPower), [M.feather(angle, f.pave ? 1 : i === 2 ? 0 : 2), M.goldBase]);
       m.position.z = f.z;
       g.add(m);
       const { c, nrm, w } = featherCurve(f, sx);
@@ -494,7 +496,7 @@ function buildWings(M, lowPower) {
       // midrib
       const rib = [];
       for (let k = 0; k <= 10; k++) { const t = 0.08 + (0.84 * k) / 10, p = c(t); rib.push(new THREE.Vector3(p[0], p[1], zTop + 0.004)); }
-      g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rib), lowPower ? 8 : 16, 0.012, 4, false), M.goldDeep));
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rib), lowPower ? 8 : 16, 0.012, 4, false), M.engrave));
       // engraved barbs on the plain lower feathers
       if (f.barbs && !lowPower) {
         for (let t = 0.16; t < 0.86; t += 0.07) {
@@ -527,7 +529,7 @@ function buildWings(M, lowPower) {
     g.add(im);
   }
   if (barbs.length) {
-    const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.012, 0.01), M.goldDeep, barbs.length);
+    const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.012, 0.01), M.engrave, barbs.length);
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), ax = new THREE.Vector3(0, 0, 1), sc = new THREE.Vector3(), pp = new THREE.Vector3();
     barbs.forEach(([x, y, z, a, len], k) => {
       q.setFromAxisAngle(ax, a); sc.set(len, 1, 1); pp.set(x, y, z);
@@ -538,26 +540,37 @@ function buildWings(M, lowPower) {
   }
   // gold keyhole web joining the two wings under the centre stone (same outline as the back plate's web)
   const web = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(webPoly().map(([x, y]) => new THREE.Vector2(x, y))), {
-    depth: 0.05, bevelEnabled: true, bevelThickness: F_BEVEL, bevelSize: 0.02, bevelSegments: 1, curveSegments: 1,
-  }), M.goldBase);
+    depth: 0.05, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.045, bevelSegments: lowPower ? 3 : 6, curveSegments: 1,
+  }), M.gold);
   g.add(web);
-  // small gold hub where the wings meet, below the centre stone
-  const hub = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), M.gold);
-  hub.scale.set(1.5, 1, 0.55); hub.position.set(0, -0.02, 0.1);
-  g.add(hub);
   // eyelet lugs at the top outer tip of each wing (jump rings pass through these holes)
   [1, -1].forEach((sx) => {
     const t = tipInfo(sx);
     const sh = new THREE.Shape(circlePoly(0, 0, LUG_R, lowPower ? 16 : 28).map(([x, y]) => new THREE.Vector2(x, y)));
     sh.holes.push(new THREE.Path(circlePoly(0, 0, LUG_HOLE, 16).map(([x, y]) => new THREE.Vector2(x, y))));
-    const lug = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: F_DEPTH, bevelEnabled: true, bevelThickness: F_BEVEL, bevelSize: 0.015, bevelSegments: 1, curveSegments: 1 }), M.goldLight);
+    const lug = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: F_DEPTH, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.025, bevelSegments: lowPower ? 2 : 4, curveSegments: 1 }), M.goldLight);
     lug.position.set(t.H.x, t.H.y, WING_FEATHERS[0].z);
     g.add(lug);
   });
   return g;
 }
 
-function buildCenterStone(M) {
+function buildNeck(M, lowPower) {
+  const g = new THREE.Group();
+  const prof = [[0.0, 0.15], [0.07, 0.147], [0.13, 0.13], [0.18, 0.09], [0.2, 0.03], [0.155, -0.06], [0.105, -0.15], [0.09, -0.22], [0.11, -0.3], [0.16, -0.38], [0.2, -0.45], [0.2, -0.5]];
+  const pts = new THREE.SplineCurve(prof.map(([r, y]) => new THREE.Vector2(r, y))).getPoints(lowPower ? 18 : 40);
+  const neck = new THREE.Mesh(new THREE.LatheGeometry(pts, lowPower ? 16 : 36), M.gold);
+  neck.scale.set(1, 1, 0.5);
+  g.add(neck);
+  // bail band wrapped around the waist
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.04, lowPower ? 8 : 14, lowPower ? 18 : 36), M.gold);
+  band.rotation.x = PI / 2; band.scale.set(1, 0.55, 1); band.position.set(0, -0.21, 0);
+  g.add(band);
+  g.position.set(0, 0, 0.19);
+  return g;
+}
+
+function buildCenterStone(M, lowPower = false) {
   const g = new THREE.Group();
   // round brilliant: table, crown, girdle, pavilion (8 flat-shaded facet columns)
   const prof = [[0, 0.1], [0.15, 0.1], [0.28, 0.01], [0.28, -0.01], [0.14, -0.14], [0, -0.22]].map(([r, y]) => new THREE.Vector2(r, y));
@@ -565,19 +578,28 @@ function buildCenterStone(M) {
   stone.rotation.x = PI / 2; // table faces +Z
   stone.position.z = 0.06;
   g.add(stone);
-  // four prongs at 45 degrees + a collar cup
-  for (let k = 0; k < 4; k++) {
-    const a = PI / 4 + (k * PI) / 2, x = Math.cos(a) * 0.29, y = Math.sin(a) * 0.29;
-    const pr = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.3, 8), M.gold);
-    pr.rotation.x = PI / 2; pr.position.set(x, y, -0.01);
-    g.add(pr);
-    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), M.gold);
-    tip.position.set(x * 0.97, y * 0.97, 0.135);
-    g.add(tip);
-  }
-  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.12, 0.14, 16), M.gold);
-  cup.rotation.x = PI / 2; cup.position.z = -0.08;
+  // flared cast cup (lathe, concave blend) with four tapered prongs that curve out of it and hook over the girdle
+  const cupProf = [[0.0, -0.19], [0.09, -0.185], [0.15, -0.15], [0.2, -0.09], [0.265, -0.03], [0.305, 0.02], [0.31, 0.045]];
+  const cupPts = new THREE.SplineCurve(cupProf.map(([r, y]) => new THREE.Vector2(r, y))).getPoints(lowPower ? 14 : 28);
+  cupPts.push(new THREE.Vector2(0.285, 0.062), new THREE.Vector2(0.0, 0.062)); // rounded rim, flat inside under the stone
+  const cup = new THREE.Mesh(new THREE.LatheGeometry(cupPts.reverse(), lowPower ? 16 : 32), M.gold);
+  cup.rotation.x = PI / 2;
   g.add(cup);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.292, 0.035, lowPower ? 6 : 10, lowPower ? 24 : 48), M.gold);
+  rim.position.z = 0.045; g.add(rim);
+  for (let k = 0; k < 4; k++) {
+    const a = PI / 4 + (k * PI) / 2, ca = Math.cos(a), sa = Math.sin(a);
+    const P = (r, z) => new THREE.Vector3(ca * r, sa * r, z);
+    const curve = new THREE.CatmullRomCurve3([P(0.17, -0.12), P(0.27, -0.04), P(0.325, 0.04), P(0.3, 0.12), P(0.235, 0.17)]);
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, lowPower ? 8 : 16, 0.036, lowPower ? 6 : 10, false), M.gold);
+    g.add(tube);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.047, lowPower ? 8 : 12, lowPower ? 6 : 8), M.gold);
+    tip.position.copy(P(0.232, 0.172));
+    g.add(tip);
+    const root = new THREE.Mesh(new THREE.SphereGeometry(0.058, 10, 8), M.gold); // blends the prong into the cup flare
+    root.position.copy(P(0.29, 0.0)); root.scale.set(1, 1, 1.5);
+    g.add(root);
+  }
   return g;
 }
 
@@ -617,10 +639,7 @@ function buildPear(M, lowPower) {
   g.add(gem);
   // thin smooth bezel hugging the girdle
   const o = Array.from({ length: lowPower ? 40 : 72 }, (_, i) => { const [x, y] = pearPt(0.78, 2.3, i / (lowPower ? 40 : 72)); return new THREE.Vector3(x, y, 0); });
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(o, true, 'centripetal'), lowPower ? 40 : 80, 0.045, 6, true), M.gold));
-  // collar at the tip, threaded by the bail
-  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.13, 0.22, 12), M.gold);
-  collar.position.y = 1.2; g.add(collar);
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(o, true, 'centripetal'), lowPower ? 40 : 96, 0.048, lowPower ? 6 : 12, true), M.gold));
   return g;
 }
 
@@ -764,17 +783,15 @@ export function buildNecklace({ lowPower = false } = {}) {
   root.add(pcb.group);
 
   root.add(buildWings(M, lowPower));
-  const cs = buildCenterStone(M);
-  cs.position.set(0, 0.68, 0.19);
+  const cs = buildCenterStone(M, lowPower);
+  cs.position.set(0, 0.68, 0.225);
   root.add(cs);
   const pear = buildPear(M, lowPower);
   pear.scale.setScalar(PEAR_SC);
   pear.position.set(0, PEAR_Y, 0.2);
   root.add(pear);
-  // bail ring wrapped around the collar and sunk into the web
-  const bail = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.03, 8, 22), M.gold);
-  bail.rotation.y = PI / 2; bail.position.set(0, -0.3, 0.1);
-  root.add(bail);
+  // one cast neck: flares out of the web, pinches at the bail, flares again into the gem bezel
+  root.add(buildNeck(M, lowPower));
 
   // ---- hardware components (-Z) ----
   const builders = { touch: () => buildTouch(M), buzzer: () => buildBuzzer(M), baro: () => buildBaro(M), brain: () => buildBrain(M, lowPower) };

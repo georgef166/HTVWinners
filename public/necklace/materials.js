@@ -12,6 +12,47 @@ export const COLORS = {
   aqua: 0x5fd0d8,
 };
 
+
+// Extra bright gradient strips inside the room environment so polished gold shows sweeping reflections.
+function addEnvStrips(envScene) {
+  const strip = (w, h, rgb, k, x, y, z) => {
+    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(rgb[0] * k, rgb[1] * k, rgb[2] * k), side: THREE.DoubleSide, toneMapped: false });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+    m.position.set(x, y, z);
+    m.lookAt(0, 0, 0);
+    envScene.add(m);
+  };
+  strip(0.5, 5.0, [1.0, 0.93, 0.8], 6, -2.6, 0.8, 1.6);   // tall warm softbox, left
+  strip(0.35, 5.0, [0.8, 0.92, 1.0], 5, 2.7, 0.6, 1.0);   // tall cool strip, right
+  strip(3.2, 0.3, [1.0, 1.0, 1.0], 7, 0.0, 2.9, 1.2);     // overhead bar
+  strip(2.4, 0.25, [1.0, 0.85, 0.6], 4, 0.0, -1.8, 2.2);  // low warm bounce
+  strip(0.3, 3.5, [1, 1, 1], 5, 0.0, 0.5, -2.8);          // rim strip behind
+}
+
+// Procedural fine brushed-line map (grey, lines run along +u). Returns a CanvasTexture.
+let _brush;
+function brushTexture() {
+  if (_brush) return _brush;
+  const W = 256, H = 256, cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  c.fillStyle = '#9a9a9a'; c.fillRect(0, 0, W, H);
+  for (let i = 0; i < 520; i++) {
+    const y = rnd() * H, x = rnd() * W, len = 30 + rnd() * 150, v = 110 + Math.floor(rnd() * 110);
+    c.strokeStyle = `rgba(${v},${v},${v},${0.25 + rnd() * 0.4})`;
+    c.lineWidth = 0.6 + rnd() * 0.9;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x + len, y + (rnd() - 0.5) * 0.8); c.stroke();
+    if (x + len > W) { c.beginPath(); c.moveTo(x - W, y); c.lineTo(x - W + len, y); c.stroke(); }
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(0.7, 0.7);
+  t.anisotropy = 4;
+  _brush = t;
+  return t;
+}
+
 /** PMREM room environment, key + rim lights, ACES tone mapping, sRGB output. */
 export function setupLighting(scene, renderer) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -20,6 +61,7 @@ export function setupLighting(scene, renderer) {
 
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envScene = new RoomEnvironment();
+  addEnvStrips(envScene);
   const envTex = pmrem.fromScene(envScene, 0.04).texture;
   scene.environment = envTex;
   envScene.traverse((o) => {
@@ -72,15 +114,40 @@ export function makeTextMaterial(items, wCm, hCm, { pxPerCm = 260, color = '#C9D
 
 export function createMaterials({ lowPower = false } = {}) {
   const std = (o) => new THREE.MeshStandardMaterial(o);
-  const gold = std({ color: COLORS.gold, roughness: 0.25, metalness: 1, envMapIntensity: 1.2 });
+  const GOLD = 0xe3cc96;
+  const phys = (o) => new THREE.MeshPhysicalMaterial(lowPower
+    ? { color: o.color, metalness: 1, roughness: Math.max(o.roughness, 0.22), envMapIntensity: o.env }
+    : { color: o.color, metalness: 1, roughness: o.roughness, envMapIntensity: o.env, clearcoat: 0.6, clearcoatRoughness: 0.08, anisotropy: 0.35, anisotropyRotation: o.rot || 0.5, sheen: 0 });
+  const gold = phys({ color: GOLD, roughness: 0.17, env: 1.25 });
+  // satin brushed feather faces; one instance per feather angle so the brushing follows the feather (cached)
+  const featherCache = new Map();
+  const feather = (angDeg, tone = 0) => {
+    const key = angDeg.toFixed(1) + ':' + tone;
+    if (featherCache.has(key)) return featherCache.get(key);
+    const col = [0xe3cc96, 0xebd9ae, 0xd6bd85][tone] || GOLD;
+    const m = phys({ color: col, roughness: lowPower ? 0.25 : 0.34, env: 1.2, rot: (angDeg * Math.PI) / 180 });
+    if (!lowPower) {
+      const t = brushTexture().clone();
+      t.needsUpdate = true;
+      t.center.set(0.5, 0.5);
+      t.rotation = (angDeg * Math.PI) / 180;
+      m.roughnessMap = t;
+      m.bumpMap = t;
+      m.bumpScale = 0.9;
+    }
+    featherCache.set(key, m);
+    return m;
+  };
   const M = {
     gold,
-    goldBase: std({ color: 0x8f7544, roughness: 0.4, metalness: 1, envMapIntensity: 1.0 }),
-    goldDeep: std({ color: COLORS.goldDeep, roughness: 0.3, metalness: 1, envMapIntensity: 1.1 }),
-    goldLight: std({ color: COLORS.goldLight, roughness: 0.2, metalness: 1, envMapIntensity: 1.3 }),
-    chain: std({ color: COLORS.gold, roughness: 0.22, metalness: 1, envMapIntensity: 1.3 }),
+    goldBase: phys({ color: 0xd9c188, roughness: 0.16, env: 1.2 }),
+    goldDeep: phys({ color: 0xd6bd85, roughness: 0.2, env: 1.2 }),
+    goldLight: phys({ color: 0xedddb4, roughness: 0.18, env: 1.3 }),
+    chain: phys({ color: GOLD, roughness: 0.13, env: 1.35 }),
+    feather,
     pave: std({ color: 0xffffff, roughness: 0.06, metalness: 0, emissive: 0xffffff, emissiveIntensity: 0.18, envMapIntensity: 2.2, flatShading: true }),
-    centerStone: std({ color: 0xf6faff, roughness: 0.03, metalness: 0.1, emissive: 0xdde8ff, emissiveIntensity: 0.12, envMapIntensity: 2.6, flatShading: true }),
+    centerStone: std({ color: 0xffffff, roughness: 0.04, metalness: 0.05, emissive: 0xeaf1ff, emissiveIntensity: 0.55, envMapIntensity: 1.4, flatShading: true }),
+    engrave: phys({ color: 0xb0914f, roughness: 0.38, env: 0.9 }),
     gem: lowPower
       ? new THREE.MeshPhysicalMaterial({ color: 0xe6f4ff, roughness: 0.04, metalness: 0, transparent: true, opacity: 0.62, envMapIntensity: 2.2, flatShading: true, clearcoat: 1 })
       : new THREE.MeshPhysicalMaterial({
