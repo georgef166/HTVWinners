@@ -80,9 +80,10 @@ ${failures ? `\x1b[31m${failures} check(s) failed.\x1b[0m` : '\x1b[32mEverything
   Stage      ${stage}
   Grafana    ${base}/grafana/d/nos-week
 
-  Test the audio yourself: on the stage, flip the switch to start the night,
-  allow the microphone, then yell "Help!" at the laptop. Jordan's phone turns
-  red within a few seconds and lists what was heard.
+  Test the audio yourself: on the stage, flip the switch to start the night and
+  allow the microphone. Talk near the laptop and the bottom strip shows what
+  Whisper on Vultr heard and each row landing in Tiger Data. Yell "Help!" and
+  Jordan's phone turns red within a few seconds.
   No mic handy? Press h on the stage (presenter shortcut) to fake it.
 ${bridge ? '\n  Bridge is running. Ctrl+C to stop.\n' : ''}`);
 if (!bridge) process.exit(failures ? 1 : 0);
