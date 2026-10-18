@@ -2,28 +2,19 @@
 //
 //   Touch sensor  check in ("I'm OK") without unlocking the phone
 //   Joystick      optional gesture PIN to cancel an alarm: up=1 right=2 down=3 left=4, press to send
-//   NFC reader    tap the home tag by the front door to end the night (Grove NFC / PN532, or an RC522)
-//   NFC tag       Grove NFC Tag (M24LR64E): holds the night's link, so tapping a phone on the Switch opens it
 //   LED + buzzer  armed / nudge / alarm, even if the phone is dead or in a bag
 //   BMP280        temperature + pressure readings for the prediction engine (cold exposure)
 //   LED matrix    icons: fuse bar while armed, ? on nudge, ! on alarm, check when OK
 //
 // Talks to the Night Out Switch server over WiFi. See hardware/README.md for wiring.
-// Defaults match a Seeed Grove Base Shield: touch D4, LED D6, buzzer D8, BMP280 on I2C, Grove NFC on UART.
+// Defaults match a Seeed Grove Base Shield: touch D4, LED D6, buzzer D8, barometer on I2C.
 
 // ---------- Which parts are attached ----------
 #define USE_JOYSTICK 0   // 1 if a joystick is wired (KY-023 on A0/A1/D2, or Grove thumb joystick on A0)
-#define NFC_RC522 0      // 1 for an SPI RC522 reader instead of the Grove NFC (PN532)
 #define SILENT 0         // 1 mutes the buzzer (quiet rooms); the LED and matrix still show everything
 
 #include <WiFiS3.h>
-#include <SPI.h>
 #include <Wire.h>
-#if NFC_RC522
-#include <MFRC522.h>
-#else
-#include <Adafruit_PN532.h>
-#endif
 #include <Adafruit_BMP280.h>
 #include "dps310.h"
 #include "Arduino_LED_Matrix.h"
@@ -36,10 +27,6 @@ const int PIN_BUZZER = 8;     // buzzer
 const int PIN_JOY_X = A0;     // joystick X
 const int PIN_JOY_Y = A1;     // joystick Y
 const int PIN_JOY_SW = 2;     // KY-023 SW (LOW when pressed); the Grove joystick signals a press as X near 1023
-const int PIN_RFID_SS = 10;   // RC522 SDA/SS  (SCK=13, MOSI=11, MISO=12 on the SPI header)
-const int PIN_RFID_RST = 9;   // RC522 RST
-const int PIN_PN532_RST = A3; // unused pins: the Grove NFC has no reset/IRQ lines, but the library
-const int PIN_PN532_IRQ = A2; // sets them up anyway, so point it at the empty A2 port
 const bool JOY_INVERT_Y = false;  // flip if "up" registers as "down" on your module
 
 // ---------- Timing ----------
@@ -47,22 +34,10 @@ const unsigned long POLL_MS = 1000;
 const unsigned long READING_MS = 10000;
 const unsigned long CODE_IDLE_MS = 6000;
 
-#if NFC_RC522
-MFRC522 rfid(PIN_RFID_SS, PIN_RFID_RST);
-#else
-// Grove NFC speaks UART by default (the shield's UART port is Serial1 on the R4); I2C is tried as a fallback.
-Adafruit_PN532 nfcUart(PIN_PN532_RST, &Serial1);
-Adafruit_PN532 nfcI2c(PIN_PN532_IRQ, PIN_PN532_RST, &Wire);
-Adafruit_PN532* nfc = nullptr;
-#endif
 Adafruit_BMP280 bmp;
 DPS310 dps;
 enum Climate { CLIMATE_NONE, CLIMATE_BMP, CLIMATE_DPS } climate = CLIMATE_NONE;
 ArduinoLEDMatrix matrix;
-bool haveNfc = false;
-const uint8_t TAG_ADDR = 0x53;  // Grove NFC Tag user memory
-bool haveTag = false;
-String tagLink = "";        // link currently on the tag
 
 struct State {
   String level = "NONE";
@@ -73,7 +48,7 @@ struct State {
 } st;
 
 String code = "";
-unsigned long lastPoll = 0, lastReading = 0, lastCodeInput = 0, lastNfc = 0, okUntil = 0, hintUntil = 0;
+unsigned long lastPoll = 0, lastReading = 0, lastCodeInput = 0, okUntil = 0, hintUntil = 0;
 bool touchWas = false, swWas = false;
 bool touchPending = false;  // a tap seen while the board was busy, handled on the next loop
 
@@ -190,7 +165,7 @@ int sendEvent(const String& json) {
 
 String field(const String& body, const char* key) {
   String k = String(key) + "=";
-  int i = body.startsWith(k) ? 0 : body.indexOf(";" + k);  // match whole keys only (the link contains '=')
+  int i = body.startsWith(k) ? 0 : body.indexOf(";" + k);  // match whole keys only
   if (i < 0) return "";
   if (i > 0) i++;
   int end = body.indexOf(';', i);
@@ -209,70 +184,11 @@ void pollState() {
   st.window = max(1L, field(out, "W").toInt());
   st.acked = field(out, "A") == "1";
   st.outlook = field(out, "O");
-  String link = field(out, "U");
-  link.trim();
-  if (haveTag && link.length() && link != tagLink && writeTagLink(link)) tagLink = link;
   bool wasAlarming = prev == "ALARM" || prev == "CONTACT" || prev == "WIDER";
   if (wasAlarming && st.level == "ARMED") celebrate();  // stood down
   bool wasOut = prev != "NONE" && prev != "RESOLVED" && prev.length();
   if (wasOut && (st.level == "NONE" || st.level == "RESOLVED")) celebrate();  // night over
   if (prev != st.level) { Serial.print("level "); Serial.println(st.level); }
-}
-
-// ---------- NFC tag (M24LR64E on I2C) ----------
-// The tag is ISO 15693 (NFC Forum Type 5). Its user memory answers on I2C at 0x53 with 16-bit addresses and
-// takes writes 4 bytes at a time. A phone reads an NDEF message: capability container, then an NDEF TLV
-// holding one URI record.
-
-bool tagWrite4(uint16_t addr, const uint8_t* b) {
-  Wire.beginTransmission(TAG_ADDR);
-  Wire.write(addr >> 8); Wire.write(addr & 0xFF);
-  Wire.write(b, 4);
-  if (Wire.endTransmission() != 0) return false;
-  for (int i = 0; i < 20; i++) {  // wait out the EEPROM write (about 5 ms): the chip NAKs until it's done
-    delay(2);
-    Wire.beginTransmission(TAG_ADDR);
-    if (Wire.endTransmission() == 0) return true;
-  }
-  return false;
-}
-
-bool tagRead(uint16_t addr, uint8_t* b, uint8_t n) {
-  Wire.beginTransmission(TAG_ADDR);
-  Wire.write(addr >> 8); Wire.write(addr & 0xFF);
-  if (Wire.endTransmission(false) != 0 || Wire.requestFrom(TAG_ADDR, n) != n) return false;
-  for (uint8_t i = 0; i < n; i++) b[i] = Wire.read();
-  return true;
-}
-
-bool writeTagLink(const String& url) {
-  // URI record payload: an abbreviation code, then the rest of the link.
-  uint8_t code = 0;
-  String rest = url;
-  if (url.startsWith("https://")) { code = 0x04; rest = url.substring(8); }
-  else if (url.startsWith("http://")) { code = 0x03; rest = url.substring(7); }
-  int payload = 1 + rest.length();
-  int record = 4 + payload;  // header, type length, payload length, type 'U'
-  if (record > 250) { Serial.println("NFC tag: link too long"); return false; }
-
-  uint8_t buf[264];
-  int n = 0;
-  buf[n++] = 0xE1; buf[n++] = 0x40; buf[n++] = 0xFF; buf[n++] = 0x01;  // CC: NDEF, v1.0 read/write, 2040 bytes, multi-block read
-  buf[n++] = 0x03; buf[n++] = record;                                   // NDEF message TLV
-  buf[n++] = 0xD1; buf[n++] = 0x01; buf[n++] = payload; buf[n++] = 'U'; // well-known short record, type U
-  buf[n++] = code;
-  for (unsigned i = 0; i < rest.length(); i++) buf[n++] = rest[i];
-  buf[n++] = 0xFE;                                                      // terminator TLV
-  while (n % 4) buf[n++] = 0x00;
-
-  for (int i = 0; i < n; i += 4) {
-    if (!tagWrite4(i, buf + i)) { Serial.println("NFC tag: write failed"); return false; }
-  }
-  uint8_t check[264];  // read it back to be sure
-  for (int i = 0; i < n; i += 32) if (!tagRead(i, check + i, min(32, n - i))) return false;
-  if (memcmp(buf, check, n) != 0) { Serial.println("NFC tag: verify failed"); return false; }
-  Serial.print("NFC tag: wrote "); Serial.println(url);
-  return true;
 }
 
 // ---------- Feedback ----------
@@ -372,54 +288,6 @@ void readJoystick() {
   if (code.length() && millis() - lastCodeInput > CODE_IDLE_MS) code = "";
 }
 
-String hexUid(const uint8_t* b, uint8_t n) {
-  String uid = "";
-  for (uint8_t i = 0; i < n; i++) { if (b[i] < 0x10) uid += "0"; uid += String(b[i], HEX); }
-  uid.toUpperCase();
-  return uid;
-}
-
-void setupNfc() {
-#if NFC_RC522
-  SPI.begin();
-  rfid.PCD_Init();
-  byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
-  haveNfc = v != 0x00 && v != 0xFF;
-#else
-  Adafruit_PN532* tries[2] = { &nfcUart, &nfcI2c };
-  for (Adafruit_PN532* r : tries) {
-    if (r->begin() && r->getFirmwareVersion()) { nfc = r; break; }
-  }
-  if (nfc) { nfc->SAMConfig(); haveNfc = true; }
-  if (haveNfc) Serial.println(nfc == &nfcI2c ? "NFC ready (Grove NFC on I2C)" : "NFC ready (Grove NFC on UART)");
-#endif
-  if (!haveNfc) Serial.println("NFC reader not found (home tag off)");
-#if NFC_RC522
-  else Serial.println("NFC ready (RC522)");
-#endif
-}
-
-void readNfc() {
-  static unsigned long lastScan = 0;
-  if (!haveNfc || millis() - lastNfc < 3000 || millis() - lastScan < 250) return;
-  lastScan = millis();
-#if NFC_RC522
-  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) return;
-  String uid = hexUid(rfid.uid.uidByte, rfid.uid.size);
-  rfid.PICC_HaltA();
-#else
-  uint8_t buf[7], len = 0;
-  if (!nfc->readPassiveTargetID(PN532_MIFARE_ISO14443A, buf, &len, 40)) return;  // short timeout keeps touch responsive
-  String uid = hexUid(buf, len);
-#endif
-  lastNfc = millis();
-  Serial.print("nfc tag "); Serial.println(uid);
-  chirp(1568, 60);
-  int status = sendEvent("{\"type\":\"nfc\",\"tag\":\"" + uid + "\"}");
-  if (status == 200) { st.level = "RESOLVED"; okUntil = millis() + 3000; celebrate(); }
-  else errorBuzz();
-}
-
 // Temperature (°C) and pressure (hPa) from whichever sensor is attached.
 bool readClimate(float& tempC, float& hpa) {
   if (climate == CLIMATE_DPS) return dps.readBoth(tempC, hpa);
@@ -460,7 +328,6 @@ void connectWifi() {
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print("WiFi: trying "); Serial.print(WIFI_SSID);
     Serial.print(" | climate "); Serial.print(climate == CLIMATE_DPS ? "DPS310" : climate == CLIMATE_BMP ? "BMP280" : "missing");
-    Serial.print(" | NFC "); Serial.print(haveNfc ? "ok" : "missing");
     Serial.print(" | I2C "); Serial.print(i2cFound);
     float t, p; if (readClimate(t, p)) { Serial.print("| "); Serial.print(t, 1); Serial.print("C "); Serial.print(p, 1); Serial.print("hPa"); }
     Serial.print(" | A0-A3"); for (int a : {A0, A1, A2, A3}) { Serial.print(' '); Serial.print(analogRead(a)); }
@@ -494,10 +361,6 @@ void setup() {
   float t, p;
   if (readClimate(t, p)) { Serial.print(climate == CLIMATE_DPS ? "DPS310" : "BMP280"); Serial.print(" ready: "); Serial.print(t, 1); Serial.print(" C, "); Serial.print(p, 1); Serial.println(" hPa"); }
   else Serial.println("No temperature sensor found (readings off)");
-  setupNfc();
-  Wire.beginTransmission(TAG_ADDR);
-  haveTag = Wire.endTransmission() == 0;
-  Serial.println(haveTag ? "NFC tag found: it will hold the night's link" : "No NFC tag");
 
   usbLink = !wifiConfigured();
   if (usbLink) Serial.println("No WiFi set in arduino_secrets.h: using the USB link (run npm run switch-bridge)");
@@ -512,7 +375,6 @@ void loop() {
   if (t - lastReading >= READING_MS) { lastReading = t; sendReading(); }
   readTouch();
   readJoystick();
-  readNfc();
   driveOutputs();
   delay(10);
 }
