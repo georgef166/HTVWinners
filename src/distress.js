@@ -9,7 +9,7 @@ const TIMEOUT_MS = Number(process.env.WHISPER_TIMEOUT_MS) || 20000;
 // danger: 'high' for a plea for help, 'elevated' for aggression. Any of them alerts the contact at once.
 const CUES = [
   { key: 'help', label: 'someone shouting for help', re: /\b(help( me)?|somebody help|someone help)\b/i, danger: 'high', weight: 0.4 },
-  { key: 'stop', label: 'someone saying stop or get away', re: /\b(stop( it)?|get off( me)?|let (me )?go|leave me alone|don'?t touch( me)?|back off|get away( from me)?)\b/i, danger: 'high', weight: 0.4 },
+  { key: 'stop', label: 'someone saying stop or get away', re: /\b(stop( it)?|get (the \w+ )?(off|away)( from)?( me)?|let (me )?go|leave me alone|don'?t touch( me)?|back off)\b/i, danger: 'high', weight: 0.4 },
   { key: 'police', label: 'someone asking for the police', re: /\b(call (the )?(police|cops)|call 911)\b/i, danger: 'high', weight: 0.4 },
   { key: 'aggression', label: 'someone swearing aggressively', re: /\b(f+u+c+k\w*|motherf\w*|shit\w*|bitch\w*|asshole|bastard|cunt)\b/i, danger: 'elevated', weight: 0.3 },
 ];
