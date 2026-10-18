@@ -1,3 +1,8 @@
+# Our http:// block below does the HTTP-to-HTTPS redirects itself, so it can leave /api/switch/* on plain HTTP.
+{
+	auto_https disable_redirects
+}
+
 # HTTPS for phones (location and battery need a secure page). SITE_HOST comes from .env; ALT_HOSTS lists other
 # names served the same way (www, and the old sslip.io address so existing links and QR codes keep working).
 {$SITE_HOST} {$ALT_HOSTS} {
