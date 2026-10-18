@@ -64,7 +64,7 @@ export function attachListening(server, { loadSession, recordDistress, enabled }
       const danger = dangerOf(heard.spoken);
       // A plea needs a raised voice; swearing needs a real shout, since people swear in normal conversation too.
       const over = peak - (room ?? baseline ?? peak);
-      const loud = danger === 'elevated' ? over >= 18 || peak > -10 : over >= 10 || peak > -15;
+      const loud = danger === 'elevated' ? over >= 20 || peak > -12 : over >= 10 || peak > -15;
       let alerted = alertedNow;
       if (danger && loud && !fired) {
         fired = true;
