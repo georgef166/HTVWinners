@@ -65,7 +65,8 @@
       .phones { height: 430px; }
       .phone { transform-origin: top left; }
       .phone-back { transform: scale(.82) rotate(-6deg); }
-      .phone-front { transform-origin: bottom right; transform: scale(.82) rotate(4deg); animation: none; }
+      /* right: 12px keeps the tilted phone's corner from poking past the screen edge */
+      .phone-front { right: 12px; transform-origin: bottom right; transform: scale(.82) rotate(4deg); animation: none; }
     }
   </style>
   <link rel="stylesheet" href="/tw.css" />
