@@ -214,3 +214,10 @@ body.app.ok { background: #0f2f32; }
 
 .route-draw[data-reveal] { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { .route-draw .stop-dot, .route-draw .stop-name, .route-draw .stop-desc { opacity: 1; transform: none; } .route-draw .stop:not(:last-child)::after { transform: translateY(-50%); } }
+
+/* Mobile: nothing pushes the page sideways, and small text links get a finger-sized hit area on touch screens */
+body { overflow-x: clip; }
+@media (pointer: coarse) {
+  #navDemo, #replayIntro, #bannerLink { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; }
+  nav a[href^="#"], nav a[href$=".html"] { padding: 12px 0; }
+}
